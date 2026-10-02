@@ -118,18 +118,25 @@
     <input id="note-titre" type="text" maxlength="80" placeholder="Titre (facultatif)" aria-label="Titre de la note" hidden>
     <div class="bloc-outils"><button type="button" id="bloc-plus" aria-haspopup="menu" aria-expanded="false" title="Ajouter un bloc">+ Ajouter</button><span class="bloc-astuce">ou tapez / en début de ligne</span>
       <div id="bloc-menu" class="bloc-menu" role="menu" hidden>
+        <p class="bm-tete">Texte</p>
         <button type="button" role="menuitem" data-bloc="1"><b class="bm-i">H1</b>Titre 1</button>
         <button type="button" role="menuitem" data-bloc="2"><b class="bm-i">H2</b>Titre 2</button>
         <button type="button" role="menuitem" data-bloc="3"><b class="bm-i">H3</b>Titre 3</button>
+        <button type="button" role="menuitem" data-bloc="4"><b class="bm-i">H4</b>Titre 4</button>
         <button type="button" role="menuitem" data-bloc="puce"><b class="bm-i">•</b>Liste à puces</button>
         <button type="button" role="menuitem" data-bloc="num"><b class="bm-i">1.</b>Liste numérotée</button>
-        <button type="button" role="menuitem" data-bloc="texte"><b class="bm-i">¶</b>Texte simple</button>
-        <button type="button" role="menuitem" data-bloc="media"><b class="bm-i">▣</b>Photo ou vidéo</button>
+        <button type="button" role="menuitem" data-bloc="citation"><b class="bm-i">❝</b>Citation</button>
+        <button type="button" role="menuitem" data-bloc="separateur"><b class="bm-i">—</b>Séparateur</button>
+        <p class="bm-tete">Médias</p>
+        <button type="button" role="menuitem" data-bloc="image"><b class="bm-i"><svg viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12"/><path d="M2.5 13l4-4 3.5 3.5 2.5-2.5 5 5"/><circle cx="13.5" cy="7.5" r="1.3"/></svg></b>Image</button>
+        <button type="button" role="menuitem" data-bloc="video"><b class="bm-i"><svg viewBox="0 0 20 20"><rect x="2.5" y="5" width="11" height="10"/><path d="M13.5 9l4-2.5v7l-4-2.5"/></svg></b>Vidéo</button>
+        <button type="button" role="menuitem" data-bloc="fichier"><b class="bm-i"><svg viewBox="0 0 20 20"><path d="M5 2.5h7l3 3v12H5z M12 2.5v3h3"/></svg></b>Fichier</button>
       </div></div>
     <textarea id="texte" rows="5" maxlength="4000" placeholder="Écrivez. Ce texte ne quitte jamais cet appareil."></textarea>
     <div id="zone-media">
       <div class="rang-media" hidden><button type="button" id="choisir-media" class="ajout-media">+ Photo ou vidéo</button></div>
       <input id="fichiers-media" type="file" accept="image/*,video/*" multiple hidden>
+      <input id="fichiers-autres" type="file" multiple hidden>
       <div id="vignettes-ecrire"></div>
     </div>
     <div id="tags-sugg" class="tags-sugg" hidden></div>
@@ -268,5 +275,21 @@
 </div>
 
 <script type="module" src="src/main.js"></script>
+
+<div id="barre-clavier" class="barre-clavier" role="toolbar" aria-label="Mise en forme" hidden>
+  <button type="button" data-barre="menu" aria-label="Ajouter un bloc"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14"/></svg></button>
+  <button type="button" data-bloc="1" aria-label="Titre 1">H1</button>
+  <button type="button" data-bloc="2" aria-label="Titre 2">H2</button>
+  <button type="button" data-bloc="3" aria-label="Titre 3">H3</button>
+  <button type="button" data-bloc="4" aria-label="Titre 4">H4</button>
+  <button type="button" data-bloc="puce" aria-label="Liste à puces">•</button>
+  <button type="button" data-bloc="num" aria-label="Liste numérotée">1.</button>
+  <button type="button" data-bloc="citation" aria-label="Citation">❝</button>
+  <button type="button" data-bloc="separateur" aria-label="Séparateur">—</button>
+  <button type="button" data-bloc="image" aria-label="Image"><svg viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12"/><path d="M2.5 13l4-4 3.5 3.5 2.5-2.5 5 5"/><circle cx="13.5" cy="7.5" r="1.3"/></svg></button>
+  <button type="button" data-bloc="video" aria-label="Vidéo"><svg viewBox="0 0 20 20"><rect x="2.5" y="5" width="11" height="10"/><path d="M13.5 9l4-2.5v7l-4-2.5"/></svg></button>
+  <button type="button" data-bloc="fichier" aria-label="Fichier"><svg viewBox="0 0 20 20"><path d="M5 2.5h7l3 3v12H5z M12 2.5v3h3"/></svg></button>
+  <button type="button" data-barre="fermer" class="bc-fermer" aria-label="Fermer le clavier"><svg viewBox="0 0 20 20"><path d="M5 8l5 5 5-5"/></svg></button>
+</div>
 </body>
 </html>

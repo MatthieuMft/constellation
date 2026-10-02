@@ -3,7 +3,7 @@
 //   chaque mise en ligne change VERSION : le navigateur installe alors la nouvelle version en arrière-plan,
 //   puis la page se recharge d'elle-même (voir main.js). Donc : incrémenter VERSION à chaque livraison ;
 // - rappel du soir : notification (periodic background sync, quand le navigateur l'autorise) et clic qui rouvre l'appli.
-const VERSION = 'constellation-v14';
+const VERSION = 'constellation-v15';
 const T = 'vendor/three@0.170.0/';
 const COQUILLE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
   'src/main.js', 'src/store.js', 'src/embed.js', 'src/layout.js', 'src/themes.js', 'src/rendu.js', 'src/reglages.js',

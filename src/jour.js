@@ -15,8 +15,10 @@ function blocs(texte) {
   let liste = null;
   const fermer = () => { if (liste) { out.push(liste); liste = null; } };
   for (const l of texte.split('\n')) {
-    const m = l.match(/^(#{1,3}) +(.*)$/), pu = l.match(/^[-•*] +(.*)$/), nu = l.match(/^(\d+)\. +(.*)$/);
+    const m = l.match(/^(#{1,4}) +(.*)$/), pu = l.match(/^[-•*] +(.*)$/), nu = l.match(/^(\d+)\. +(.*)$/), ci = l.match(/^> ?(.*)$/);
     if (m && m[2].trim()) { pousser(); fermer(); out.push(el('h4', { class: 'titre-' + m[1].length }, m[2])); }
+    else if (/^ *(-{3,}|—+) *$/.test(l)) { pousser(); fermer(); out.push(el('hr', {})); }
+    else if (ci) { pousser(); fermer(); const der = out[out.length - 1]; if (der && der.tagName === 'BLOCKQUOTE') der.append('\n' + ci[1]); else out.push(el('blockquote', {}, ci[1])); }
     else if (pu || nu) {
       pousser(); const tag = pu ? 'ul' : 'ol';
       if (!liste || liste.tagName.toLowerCase() !== tag) { fermer(); liste = el(tag, nu && +nu[1] !== 1 ? { start: nu[1] } : {}); }
@@ -63,6 +65,7 @@ export function monterJour(zone, ctx) {
       const b = el('button', { class: 'vignette', 'aria-label': t('Ouvrir {nom}', { nom: m.nom || t('le média') }), onclick: () => ctx.voirMedia(item, m) });
       ctx.mediaUrl(m.cle).then(u => {
         if (!u) { b.textContent = t('introuvable'); return; }
+        if (m.kind === 'fichier') { b.classList.add('vignette-fichier'); b.append(el('span', {}, m.nom || t('Fichier'))); return; }
         b.append(m.kind === 'video' ? el('video', { src: u, muted: true, preload: 'metadata', playsinline: true }) : el('img', { src: u, alt: m.nom || '' }));
         if (m.kind === 'video') b.append(el('i', { class: 'lecture' }, '▶'));
       });

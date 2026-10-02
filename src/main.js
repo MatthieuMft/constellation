@@ -623,6 +623,7 @@ async function supprimerItem(item) {
 // visionneuse de médias
 async function voirMedia(item, med = item.media) {
   const u = await media.url(med.cle); if (!u) return;
+  if (med.kind === 'fichier') { Object.assign(document.createElement('a'), { href: u, download: med.nom || 'fichier' }).click(); return; }
   const c = $('vis-contenu'); c.replaceChildren();
   const m = med.kind === 'video' ? Object.assign(document.createElement('video'), { src: u, controls: true, autoplay: true, playsInline: true }) : Object.assign(document.createElement('img'), { src: u, alt: item.legende || '' });
   c.append(m); if (item.type === 'media' && item.legende) { const p = document.createElement('p'); p.textContent = item.legende; c.append(p); }
@@ -779,7 +780,7 @@ function garderBrouillon() {
 function lireBrouillon() { try { return JSON.parse(localStorage.getItem(CLE_BROUILLON)); } catch (e) { return null; } }
 function effacerBrouillon() { try { localStorage.removeItem(CLE_BROUILLON); } catch (e) {} }
 $('texte').addEventListener('input', () => { $('interim').textContent = ''; garderBrouillon(); });
-function fermerEcrire() { fermerBlocs(); garderBrouillon(); creature.finEcriture(); arreterDictee(); edition = null; fichiersEnAttente = []; document.body.classList.remove('ecriture'); $('ecrire').hidden = true; $('texte').value = ''; $('note-titre').value = ''; $('nbc').textContent = '0'; accueil.surEcrireFerme(); }
+function fermerEcrire() { fermerBlocs(); montrerBarre(false); garderBrouillon(); creature.finEcriture(); arreterDictee(); edition = null; fichiersEnAttente = []; document.body.classList.remove('ecriture'); $('ecrire').hidden = true; $('texte').value = ''; $('note-titre').value = ''; $('nbc').textContent = '0'; accueil.surEcrireFerme(); }
 // « + » : ouvre directement le journal
 $('nouveau').addEventListener('click', () => { fermerMenu(); if ($('ecrire').hidden) ouvrirEcrire(); else fermerEcrire(); });
 $('voile-menu').addEventListener('click', () => fermerMenu());
@@ -787,7 +788,8 @@ $('annuler').addEventListener('click', fermerEcrire);
 $('ecrire-fermer').addEventListener('click', fermerEcrire);
 // menu de blocs, comme dans Notion : « + Ajouter » au-dessus du texte, ou « / » en début de ligne.
 // Le texte reste du texte : « # », « ## », « ### » pour les titres, « - » pour les puces, « 1. » pour les listes numérotées.
-const PREFIXES = { 1: '# ', 2: '## ', 3: '### ', puce: '- ', num: '1. ', texte: '' };
+const PREFIXES = { 1: '# ', 2: '## ', 3: '### ', 4: '#### ', puce: '- ', num: '1. ', citation: '> ', texte: '' };
+const ENTREES = { image: ['fichiers-media', 'image/*'], video: ['fichiers-media', 'video/*'], fichier: ['fichiers-autres', ''] };
 let blocSlash = -1;                                                      // position du « / » tapé, à effacer quand on choisit
 function ouvrirBlocs(slash = -1) { blocSlash = slash; $('bloc-menu').hidden = false; $('bloc-plus').setAttribute('aria-expanded', 'true'); requestAnimationFrame(() => $('bloc-menu').scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
 function fermerBlocs() { blocSlash = -1; $('bloc-menu').hidden = true; $('bloc-plus').setAttribute('aria-expanded', 'false'); }
@@ -795,9 +797,13 @@ function poserBloc(k) {
   const ta = $('texte'); let v = ta.value, pos = ta.selectionStart;
   if (blocSlash >= 0 && v[blocSlash] === '/') { v = v.slice(0, blocSlash) + v.slice(blocSlash + 1); pos = blocSlash; }
   fermerBlocs();
-  if (k === 'media') { ta.value = v; ta.dispatchEvent(new Event('input')); $('fichiers-media').click(); return; }
+  if (ENTREES[k]) { ta.value = v; ta.dispatchEvent(new Event('input')); const [id, acc] = ENTREES[k], f = $(id); if (acc) f.accept = acc; f.click(); return; }
+  if (k === 'separateur') {                                                // une ligne « --- » à part, puis on continue en dessous
+    const avant = v.slice(0, pos), apres = v.slice(ta.selectionEnd), ins = (avant && !avant.endsWith('\n') ? '\n' : '') + '---\n';
+    ta.value = avant + ins + apres; const c = pos + ins.length; ta.focus(); ta.setSelectionRange(c, c); ta.dispatchEvent(new Event('input')); return;
+  }
   const deb = v.lastIndexOf('\n', pos - 1) + 1, fin = (v.indexOf('\n', pos) + 1 || v.length + 1) - 1, ligne = v.slice(deb, fin);
-  const m = ligne.match(/^(#{1,3} |- |\d+\. )/), nue = m ? ligne.slice(m[0].length) : ligne;
+  const m = ligne.match(/^(#{1,4} |- |\d+\. |> )/), nue = m ? ligne.slice(m[0].length) : ligne;
   let pre = PREFIXES[k];
   if (k === 'num') { const avant = v.slice(0, Math.max(0, deb - 1)), prec = avant.slice(avant.lastIndexOf('\n') + 1).match(/^(\d+)\. /); pre = (prec ? +prec[1] + 1 : 1) + '. '; }
   const neuve = m && m[0] === pre ? nue : pre + nue;                     // reprendre le même bloc le retire
@@ -820,7 +826,24 @@ $('texte').addEventListener('keydown', e => {
   else { const suite = m[2] ? (+m[2] + 1) + '. ' : '- ', ins = '\n' + suite; ta.value = v.slice(0, pos) + ins + v.slice(ta.selectionEnd); ta.setSelectionRange(pos + ins.length, pos + ins.length); }
   ta.dispatchEvent(new Event('input'));
 });
-document.addEventListener('pointerdown', e => { if (!$('bloc-menu').hidden && !e.target.closest('.bloc-outils')) fermerBlocs(); });
+document.addEventListener('pointerdown', e => { if (!$('bloc-menu').hidden && !e.target.closest('.bloc-outils, #barre-clavier')) fermerBlocs(); });
+// barre au-dessus du clavier (mobile first, à la Notion) : tous les blocs à portée du pouce
+const barre = $('barre-clavier'), tactile = matchMedia('(pointer: coarse)');
+function placerBarre() {
+  const vv = window.visualViewport, bas = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+  document.documentElement.style.setProperty('--clavier', bas + 'px');
+}
+function montrerBarre(on) { $('barre-clavier').hidden = !on; document.body.classList.toggle('barre-on', on); if (on) placerBarre(); else fermerBlocs(); }
+$('texte').addEventListener('focus', () => { if (tactile.matches || innerWidth < 700) montrerBarre(true); });
+$('texte').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('texte') && $('bloc-menu').hidden) montrerBarre(false); }, 150));
+if (window.visualViewport) { visualViewport.addEventListener('resize', placerBarre); visualViewport.addEventListener('scroll', placerBarre); }
+barre.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });   // garder le clavier ouvert
+barre.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.barre === 'menu') { $('bloc-menu').hidden ? ouvrirBlocs() : fermerBlocs(); return; }
+  if (b.dataset.barre === 'fermer') { fermerBlocs(); $('texte').blur(); montrerBarre(false); return; }
+  poserBloc(b.dataset.bloc);
+});
 $('texte').addEventListener('input', () => { $('nbc').textContent = $('texte').value.length + ' / 4000'; });
 
 // photos et vidéos en attente d'enregistrement (glissées dans l'entrée du jour)
@@ -828,12 +851,13 @@ function rendreVignettes() {
   const z = $('vignettes-ecrire'); z.replaceChildren();
   fichiersEnAttente.forEach((f, i) => {
     const d = document.createElement('div'), u = URL.createObjectURL(f); d.className = 'mini';
-    d.append(Object.assign(document.createElement(f.type.startsWith('video/') ? 'video' : 'img'), { src: u, muted: true }));
+    const sorte = f.type.startsWith('video/') ? 'video' : f.type.startsWith('image/') ? 'img' : null;
+    d.append(sorte ? Object.assign(document.createElement(sorte), { src: u, muted: true }) : Object.assign(document.createElement('span'), { className: 'mini-fichier', textContent: f.name || t('Fichier') }));
     const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', t('Retirer')); x.addEventListener('click', () => { fichiersEnAttente.splice(i, 1); rendreVignettes(); }); d.append(x); z.append(d);
   });
 }
 $('choisir-media').addEventListener('click', () => $('fichiers-media').click());       // sur téléphone, le choix propose aussi l'appareil photo
-$('fichiers-media').addEventListener('change', ev => { fichiersEnAttente.push(...ev.target.files); ev.target.value = ''; rendreVignettes(); });
+for (const id of ['fichiers-media', 'fichiers-autres']) $(id).addEventListener('change', ev => { fichiersEnAttente.push(...ev.target.files); ev.target.value = ''; rendreVignettes(); });
 
 addEventListener('keydown', e => {
   const dansChamp = /INPUT|TEXTAREA/.test(document.activeElement.tagName);
@@ -968,7 +992,7 @@ $('exporter').addEventListener('click', async () => {
     const blob = new Blob([texte], { type: 'application/json' }), a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = nomFichier; a.click(); URL.revokeObjectURL(a.href);
   }
-  if (videos) statutTemporaire(tn(videos, '{n} vidéo non incluse dans l’export (trop lourde).', '{n} vidéos non incluses dans l’export (trop lourdes).'), 6000);
+  if (videos) statutTemporaire(tn(videos, '{n} vidéo ou fichier non inclus dans l’export (trop lourd).', '{n} vidéos ou fichiers non inclus dans l’export (trop lourds).'), 6000);
 });
 $('importer').addEventListener('change', async ev => {
   const f = ev.target.files[0]; if (!f) return;

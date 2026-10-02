@@ -1,4 +1,4 @@
-// Photos et vidéos : stockées dans IndexedDB, sur l'appareil. Les images sont réduites (1600 px, JPEG) pour rester légères.
+// Photos, vidéos et fichiers : stockés dans IndexedDB, sur l'appareil. Les images sont réduites (1600 px, JPEG) pour rester légères.
 import { t } from './langue.js';
 const NOM = 'constellation-media', MAGASIN = 'fichiers';
 export const LIMITE_VIDEO = 150 * 1024 * 1024;                     // 150 Mo
@@ -20,9 +20,9 @@ async function reduireImage(fichier, max = 1600) {
 
 // retourne { cle, kind, nom, w?, h? }
 export async function stocker(fichier) {
-  const kind = fichier.type.startsWith('video/') ? 'video' : fichier.type.startsWith('image/') ? 'image' : null;
-  if (!kind) throw new Error(t('Type de fichier non pris en charge'));
+  const kind = fichier.type.startsWith('video/') ? 'video' : fichier.type.startsWith('image/') ? 'image' : 'fichier';
   if (kind === 'video' && fichier.size > LIMITE_VIDEO) throw new Error(t('Vidéo trop lourde (150 Mo maximum)'));
+  if (kind === 'fichier' && fichier.size > LIMITE_VIDEO) throw new Error(t('Fichier trop lourd (150 Mo maximum)'));
   const k = cle();
   if (kind === 'image') { const { blob, w, h } = await reduireImage(fichier); await tx('readwrite', s => s.put(blob, k)); return { cle: k, kind, nom: fichier.name, w, h }; }
   await tx('readwrite', s => s.put(fichier, k)); return { cle: k, kind, nom: fichier.name };
