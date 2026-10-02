@@ -3,16 +3,8 @@
 //   chaque mise en ligne change VERSION : le navigateur installe alors la nouvelle version en arrière-plan,
 //   puis la page se recharge d'elle-même (voir main.js). Donc : incrémenter VERSION à chaque livraison ;
 // - rappel du soir : notification (periodic background sync, quand le navigateur l'autorise) et clic qui rouvre l'appli.
-const VERSION = 'constellation-v17';
-const T = 'vendor/three@0.170.0/';
-const COQUILLE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
-  'src/main.js', 'src/store.js', 'src/embed.js', 'src/layout.js', 'src/themes.js', 'src/rendu.js', 'src/reglages.js',
-  'src/cache.js', 'src/analyse.js', 'src/panneaux.js', 'src/ciel.js', 'src/sauvegarde.js',
-  'src/palette.js', 'src/volume.js', 'src/finition.js', 'src/evenements.js', 'src/scenes.js', 'src/creature.js', 'src/lueur3d.js', 'src/lueur3d-formes.js', 'src/lueur3d-accessoires.js', 'src/lueur3d-habits.js',
-  'src/temps.js', 'src/monde.js', 'src/jour.js', 'src/media.js', 'src/rappels.js', 'src/rythme.js', 'src/dates.js', 'src/marques.js', 'src/lueur-ui.js', 'src/langue.js', 'src/en.js', 'src/etoiles.js', 'src/boutique.js', 'src/accueil.js', 'src/decor.js', 'src/ciel-ui.js',
-  T + 'three.module.min.js', ...['controls/OrbitControls.js', 'postprocessing/EffectComposer.js', 'postprocessing/RenderPass.js', 'postprocessing/ShaderPass.js',
-    'postprocessing/OutputPass.js', 'postprocessing/UnrealBloomPass.js', 'postprocessing/MaskPass.js', 'postprocessing/Pass.js',
-    'shaders/CopyShader.js', 'shaders/OutputShader.js', 'shaders/LuminosityHighPassShader.js'].map(f => T + 'addons/' + f)];
+const VERSION = 'constellation-v18';
+const COQUILLE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'app.js'];   // v18 : tout le code tient dans app.js
 
 self.addEventListener('install', e => {          // cache: 'reload' : on prend les fichiers frais, pas ceux du cache HTTP
   e.waitUntil(caches.open(VERSION).then(c => Promise.allSettled(COQUILLE.map(u => c.add(new Request(u, { cache: 'reload' }))))).then(() => self.skipWaiting()));

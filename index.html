@@ -11,68 +11,12 @@
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 <!-- Three.js est servi par le site lui-même (même connexion, mis en cache par le service worker) -->
-<script type="importmap">
-{ "imports": {
-  "three": "./vendor/three@0.170.0/three.module.min.js",
-  "three/addons/": "./vendor/three@0.170.0/addons/"
-} }
-</script>
 <!-- tous les modules sont demandés d'un coup, au lieu d'être découverts import après import -->
-<link rel="modulepreload" href="vendor/three@0.170.0/three.module.min.js">
-<link rel="modulepreload" href="src/main.js">
-<link rel="modulepreload" href="src/analyse.js">
-<link rel="modulepreload" href="src/cache.js">
-<link rel="modulepreload" href="src/ciel.js">
-<link rel="modulepreload" href="src/creature.js">
-<link rel="modulepreload" href="src/lueur3d.js">
-<link rel="modulepreload" href="src/lueur3d-formes.js">
-<link rel="modulepreload" href="src/lueur3d-accessoires.js">
-<link rel="modulepreload" href="src/lueur3d-habits.js">
-<link rel="modulepreload" href="src/dates.js">
-<link rel="modulepreload" href="src/embed.js">
-<link rel="modulepreload" href="src/en.js">
-<link rel="modulepreload" href="src/evenements.js">
-<link rel="modulepreload" href="src/finition.js">
-<link rel="modulepreload" href="src/jour.js">
-<link rel="modulepreload" href="src/langue.js">
-<link rel="modulepreload" href="src/layout.js">
-<link rel="modulepreload" href="src/lueur-ui.js">
-<link rel="modulepreload" href="src/marques.js">
-<link rel="modulepreload" href="src/media.js">
-<link rel="modulepreload" href="src/monde.js">
-<link rel="modulepreload" href="src/palette.js">
-<link rel="modulepreload" href="src/panneaux.js">
-<link rel="modulepreload" href="src/rappels.js">
-<link rel="modulepreload" href="src/reglages.js">
-<link rel="modulepreload" href="src/rendu.js">
-<link rel="modulepreload" href="src/rythme.js">
-<link rel="modulepreload" href="src/sauvegarde.js">
-<link rel="modulepreload" href="src/scenes.js">
-<link rel="modulepreload" href="src/store.js">
-<link rel="modulepreload" href="src/temps.js">
-<link rel="modulepreload" href="src/themes.js">
-<link rel="modulepreload" href="src/volume.js">
-<link rel="modulepreload" href="src/etoiles.js">
-<link rel="modulepreload" href="src/boutique.js">
-<link rel="modulepreload" href="src/ciel-ui.js">
-<link rel="modulepreload" href="src/decor.js">
-<link rel="modulepreload" href="src/accueil.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/controls/OrbitControls.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/EffectComposer.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/RenderPass.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/ShaderPass.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/OutputPass.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/UnrealBloomPass.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/MaskPass.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/Pass.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/shaders/CopyShader.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/shaders/OutputShader.js">
-<link rel="modulepreload" href="vendor/three@0.170.0/addons/shaders/LuminosityHighPassShader.js">
 </head>
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1070528"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -80,32 +24,46 @@
   </div>
 </div>
 <script>
-// écran de chargement : pourcentage, message si c'est long, erreur visible au lieu d'un écran figé (v17)
+// Chargement (v18) : tout le site tient dans app.js (construit par construire.sh depuis src/). Ce petit script le télécharge
+// en affichant le pourcentage, puis le lance. Toute erreur s'affiche en clair (avec sa cause) au lieu d'un écran figé.
 (function () {
   var ch = document.getElementById('chargement'); if (!ch) return;
   var en = (function () { try { var l = localStorage.getItem('constellation.langue'); if (l) return l === 'en'; } catch (e) {} return !/^fr\b/i.test(navigator.language || 'fr'); })();
-  var T = en ? { lent: 'Taking longer than usual…', err: 'Something is blocking the loading:', fic: 'A file could not be downloaded. Check your connection, then reload.', rec: 'Reload' } : { lent: 'C’est plus long que d’habitude…', err: 'Un problème bloque le chargement :', fic: 'Un fichier n’a pas pu être téléchargé. Vérifiez la connexion, puis rechargez.', rec: 'Recharger' };
+  var T = en ? { lent: 'Taking longer than usual…', err: 'Something is blocking the loading:', fic: 'The site could not be downloaded. Check your connection, then reload.', rec: 'Reload', det: 'Detail:' }
+             : { lent: 'C’est plus long que d’habitude…', err: 'Un problème bloque le chargement :', fic: 'Le site n’a pas pu être téléchargé. Vérifiez la connexion, puis rechargez.', rec: 'Recharger', det: 'Détail :' };
   var pct = document.createElement('b'); pct.id = 'charge-pct'; pct.textContent = '0 %'; ch.appendChild(pct);
   var info = document.createElement('div'); info.id = 'charge-info'; ch.appendChild(info);
-  var val = 0, attendus = document.querySelectorAll('link[rel=modulepreload]').length + 1, vus = {}, n = 0;
-  window.__charge = function (v) { if (v <= val) return; val = v; pct.textContent = Math.round(v) + ' %'; };
-  try { new PerformanceObserver(function (l) { l.getEntries().forEach(function (e) { if (/\.js(\?|$)/.test(e.name) && !vus[e.name]) { vus[e.name] = 1; n++; window.__charge(Math.min(60, n / attendus * 60)); } }); }).observe({ type: 'resource', buffered: true }); } catch (e) {}
+  var val = 0; window.__charge = function (v) { if (v <= val) return; val = v; pct.textContent = Math.round(v) + ' %'; };
   function reparer() {                        // vider l'ancienne version gardée par le téléphone, puis recharger
     var fin = function () { location.reload(); };
     try { Promise.all([navigator.serviceWorker ? navigator.serviceWorker.getRegistrations().then(function (r) { return Promise.all(r.map(function (x) { return x.unregister(); })); }) : 0,
       window.caches ? caches.keys().then(function (k) { return Promise.all(k.map(function (x) { return caches.delete(x); })); }) : 0]).then(fin, fin); } catch (e) { fin(); }
   }
-  function montrer(texte) {
+  function montrer(texte, detail) {
     if (window.__charge_fini) return;
     info.replaceChildren(); var p = document.createElement('p'); p.textContent = texte; info.appendChild(p);
+    if (detail) { var d = document.createElement('p'); d.className = 'charge-detail'; d.textContent = T.det + ' ' + detail; info.appendChild(d); }
     var b = document.createElement('button'); b.type = 'button'; b.textContent = T.rec; b.onclick = reparer; info.appendChild(b);
   }
   window.addEventListener('error', function (e) {
     var c = e.target; if (c && c !== window && !/^(SCRIPT|LINK)$/.test(c.tagName)) return;
-    montrer(e.message ? T.err + ' ' + e.message : T.fic);
+    if (e.message) montrer(T.err, e.message + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')); else montrer(T.fic);
   }, true);
-  window.addEventListener('unhandledrejection', function (e) { var r = e.reason; montrer(T.err + ' ' + (r && r.message || r)); });
-  setTimeout(function () { if (!info.firstChild) montrer(T.lent); }, 20000);
+  window.addEventListener('unhandledrejection', function (e) { var r = e.reason; montrer(T.err, String(r && r.message || r)); });
+  setTimeout(function () { if (!info.firstChild) montrer(T.lent, Math.round(val) + ' %'); }, 20000);
+  var src = ch.getAttribute('data-app'), taille = +ch.getAttribute('data-taille') || 0;
+  if (!src || !taille) return;                // export en un seul fichier : le code est déjà dans la page
+  fetch(src).then(function (r) {
+    if (!r.ok) throw new Error(src + ' : HTTP ' + r.status);
+    if (!r.body || !r.body.getReader) return r.text();
+    var lect = r.body.getReader(), morceaux = [], recu = 0;
+    return (function lire() { return lect.read().then(function (o) {
+      if (o.done) { if (recu < taille * .98) throw new Error(src + ' : ' + recu + ' / ' + taille + ' octets'); return new Blob(morceaux).text(); }
+      morceaux.push(o.value); recu += o.value.length; window.__charge(Math.min(60, recu / taille * 60)); return lire(); }); })();
+  }).then(function (code) {
+    window.__charge(60);
+    var s = document.createElement('script'); s.type = 'module'; s.src = URL.createObjectURL(new Blob([code], { type: 'text/javascript' })); document.body.appendChild(s);
+  }).catch(function (e) { montrer(T.fic, String(e && e.message || e)); });
 })();
 </script>
 
@@ -304,7 +262,6 @@
   <button id="installer" hidden>Installer l’appli</button>
 </div>
 
-<script type="module" src="src/main.js"></script>
 
 <div id="barre-clavier" class="barre-clavier" role="toolbar" aria-label="Mise en forme" hidden>
   <button type="button" data-barre="menu" aria-label="Ajouter un bloc"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14"/></svg></button>

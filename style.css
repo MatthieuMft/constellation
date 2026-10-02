@@ -671,3 +671,4 @@ body.barre-on #ecrire .p-corps { padding-bottom: 60px; }
 #charge-info { grid-row: 3; grid-column: 1; justify-self: center; align-self: start; margin: 70px 24px 0; max-width: 340px; text-align: center; font: 13px/1.5 var(--serif); color: var(--soft); overflow-wrap: anywhere; }
 #charge-info p { margin: 0 0 14px; }
 #chargement > * { grid-column: 1; }
+#charge-info .charge-detail { font: 11px/1.4 var(--mono); opacity: .75; }
