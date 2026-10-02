@@ -320,7 +320,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const { e } = cand.sort((a, b) => b.p - a.p)[0];
     souvenir = { id: e.id, fin: performance.now() + 11000, arrive() {
       const jours = Math.round((Date.now() - e.date) / 86400000), quand = jours <= 0 ? t('aujourd’hui') : jours === 1 ? t('hier') : t('il y a {n} jours', { n: jours });
-      const brut = e.text.replace(/\s+/g, ' ').trim(), court = brut.length > 78 ? brut.slice(0, 76).replace(/\s+\S*$/, '') + '…' : brut;
+      const brut = e.text.replace(/^#{1,3} +/gm, '').replace(/\s+/g, ' ').trim(), court = brut.length > 78 ? brut.slice(0, 76).replace(/\s+\S*$/, '') + '…' : brut;
       fx = { expr: { joie: 'joie', melancolie: 'triste', tempete: 'wow', elan: 'leve', calme: null }[e.mood] || null, jusqu: performance.now() + 5000 };
       dire((EN ? '“' + court + '”' : '« ' + court + ' »') + ' · ' + quand, { duree: 7500, priorite: true, clic: () => ouvrirPensee(e.id) });
     } };

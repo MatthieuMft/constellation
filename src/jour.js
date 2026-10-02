@@ -8,6 +8,13 @@ const el = (tag, attrs = {}, ...enfants) => {
   Object.entries(attrs).forEach(([k, v]) => k === 'class' ? n.className = v : k.startsWith('on') ? n.addEventListener(k.slice(2), v) : v === false || v == null ? 0 : n.setAttribute(k, v === true ? '' : v));
   n.append(...enfants.flat().filter(x => x != null && x !== false)); return n;
 };
+// le texte d'une entrée : les lignes « # », « ## », « ### » deviennent des titres, le reste des paragraphes
+function blocs(texte) {
+  const out = []; let para = [];
+  const pousser = () => { const s = para.join('\n').replace(/^\n+|\n+$/g, ''); if (s) out.push(el('p', {}, s)); para = []; };
+  for (const l of texte.split('\n')) { const m = l.match(/^(#{1,3}) +(.*)$/); if (m && m[2].trim()) { pousser(); out.push(el('h4', { class: 'titre-' + m[1].length }, m[2])); } else para.push(l); }
+  pousser(); return out;
+}
 const heure = ms => new Date(ms).toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit' });
 
 // ctx : { items(cle), humeur(cle), setHumeur(cle, mood, couleur), couleur(k), ajouter(cle), modifier(item), supprimer(item), basculerFait(item, fait), voirMedia(item, media), mediaUrl(cle) }
@@ -20,7 +27,7 @@ export function monterJour(zone, ctx) {
     if (c) carte.style.setProperty('--c', c);
     carte.append(el('div', { class: 'tete' }, item.sample ? el('span', { class: 'exemple', title: t('Entrée inventée pour l’exemple') }, t('exemple')) : null, el('time', {}, heure(item.date)), actions(item)));
     if (item.titre) carte.append(el('h3', {}, item.titre));
-    if (item.texte) carte.append(el('p', {}, item.texte));
+    if (item.texte) carte.append(...blocs(item.texte));
     if (item.medias && item.medias.length) carte.append(grilleMedias(item, item.medias));
     const tags = ctx.tagsDe(item); if (tags.length) carte.append(el('div', { class: 'tags' }, tags.map(tg => el('button', { class: 'tag', title: t('Voir toutes les entrées #{tag}', { tag: tg }), onclick: () => ctx.filtrer(tg) }, '#' + tg))));
     return carte;

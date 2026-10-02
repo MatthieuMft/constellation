@@ -785,6 +785,13 @@ $('nouveau').addEventListener('click', () => { fermerMenu(); if ($('ecrire').hid
 $('voile-menu').addEventListener('click', () => fermerMenu());
 $('annuler').addEventListener('click', fermerEcrire);
 $('ecrire-fermer').addEventListener('click', fermerEcrire);
+// titres 1, 2, 3 : « # », « ## », « ### » en début de ligne ; le bouton pose, change ou retire le titre de la ligne du curseur
+document.querySelectorAll('#titres button').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
+document.querySelectorAll('#titres button').forEach(b => b.addEventListener('click', () => {
+  const ta = $('texte'), v = ta.value, pos = ta.selectionStart, deb = v.lastIndexOf('\n', pos - 1) + 1, fin = (v.indexOf('\n', pos) + 1 || v.length + 1) - 1;
+  const ligne = v.slice(deb, fin), m = ligne.match(/^#{1,3} /), pre = '#'.repeat(+b.dataset.n) + ' ', nue = m ? ligne.slice(m[0].length) : ligne, neuve = m && m[0] === pre ? nue : pre + nue;
+  ta.value = v.slice(0, deb) + neuve + v.slice(fin); const c = deb + neuve.length; ta.focus(); ta.setSelectionRange(c, c); ta.dispatchEvent(new Event('input'));
+}));
 $('texte').addEventListener('input', () => { $('nbc').textContent = $('texte').value.length + ' / 4000'; });
 
 // photos et vidéos en attente d'enregistrement (glissées dans l'entrée du jour)
