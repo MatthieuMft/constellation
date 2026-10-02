@@ -109,6 +109,18 @@ function lire() { try { const o = JSON.parse(localStorage.getItem(CLE)); if (o &
 let etat = Object.assign({ solde: 0, credites: [], achats: [], eteints: [], migre11: false }, lire() || {});
 const ecrire = () => { try { localStorage.setItem(CLE, JSON.stringify(etat)); } catch (e) {} };
 
+// MODE ESSAI (v16, demande de Matthieu) : tout est débloqué par défaut pour voir chaque effet sans écrire des semaines.
+// Les interrupteurs (lune, aurores…) arrivent éteints, à allumer soi-même. Remettre false pour retrouver la progression.
+export const TOUT_DEBLOQUE = true;
+if (TOUT_DEBLOQUE) {
+  const neufs = ARTICLES.filter(a => !etat.achats.includes(a.cle));
+  if (neufs.length) {
+    etat.achats.push(...neufs.map(a => a.cle));
+    etat.eteints = [...new Set([...etat.eteints, ...neufs.filter(a => a.type === 'interrupteur').map(a => a.cle)])];
+    ecrire();
+  }
+}
+
 export const articles = cat => cat ? ARTICLES.filter(a => a.cat === cat) : ARTICLES;
 export const article = k => PAR_CLE[k] || null;
 export const groupe = (cat, k) => (GROUPES[cat] || []).find(g => g.cle === k) || null;
@@ -116,7 +128,7 @@ export const solde = () => etat.solde;
 export const possede = k => etat.achats.includes(k);
 export const actif = k => possede(k) && !((PAR_CLE[k] || {}).type === 'interrupteur' && etat.eteints.includes(k));   // acheté (et allumé)
 export const restants = cat => articles(cat).filter(a => !possede(a.cle)).length;
-export const debloque = (cle, nJours) => nJours >= (PALIERS.find(p => p.cle === cle) || { j: 0 }).j;
+export const debloque = (cle, nJours) => TOUT_DEBLOQUE || nJours >= (PALIERS.find(p => p.cle === cle) || { j: 0 }).j;
 
 // à chaque enregistrement : ✦10 pour chaque jour écrit qui n'a pas encore rapporté. Renvoie le gain.
 // La première fois (mise à jour depuis une version sans poussière), les jours déjà écrits rapportent aussi.
