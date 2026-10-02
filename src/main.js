@@ -512,8 +512,9 @@ function boucle() {
 
   // scène complète, puis flou de champ et lueur
   finition.uniforms.uTime.value = t; volume.rendre(t);
+  creature.rendreVignettes(renderer);                  // vignettes 3D de la boutique en attente (dans un coin de l'écran, recouvert juste après)
   composer.render();
-  renderer.autoClear = false; renderer.render(sceneUI, camera); renderer.autoClear = true;         // la mascotte : nette, jamais floutée
+  renderer.autoClear = false; renderer.clearDepth(); renderer.render(sceneUI, camera); renderer.autoClear = true;   // la mascotte : nette, jamais floutée ; profondeur vidée (la passe de sortie la laisse à 0), elle s'occulte elle-même
   requestAnimationFrame(boucle);
 }
 
@@ -1290,6 +1291,7 @@ function appliquerObjets() {
 function ouvrirBoutique(cle, onglet) { const a = cle && etoiles.article(cle); fermerPanneaux(); boutique.ouvrir(a ? a.cat : (onglet || 'lueur'), cle); }
 const boutique = monterBoutique($('boutique'), {
   surChange: () => appliquerObjets(),
+  vignette3D: (toile, o) => creature.vignette(toile, o),   // vignettes de la lueur : la vraie lueur 3D portant l'article
   equipe: a => etoiles.porte(a, creature.perso(), R) || (a.type === 'interrupteur' && etoiles.actif(a.cle)),
   equiper: (a, oui) => {
     if (a.type === 'interrupteur') { if (etoiles.actif(a.cle) !== !!oui) etoiles.basculer(a.cle); }
@@ -1338,6 +1340,7 @@ function choisirLangue() {
       renderer.setRenderTarget(composer.readBuffer);
       if (renderer.extensions.has('KHR_parallel_shader_compile')) { const p = renderer.compileAsync(scene, camera); renderer.setRenderTarget(null); await Promise.race([p, new Promise(r => setTimeout(r, 3000))]); }
       else { renderer.compile(scene, camera); renderer.setRenderTarget(null); renderer.compile(sceneUI, camera); }   // sous l'écran de chargement : le temps d'attente ne se voit pas
+      creature.prechauffer(renderer, camera);         // la lueur 3D et TOUTES ses parties (même pas encore achetées) : rien ne fige au premier affichage ni au premier achat
     } catch (e) { renderer.setRenderTarget(null); }
     caches.forEach(o => { o.visible = false; }); }
   majBoutonSauvegarde(); chargementInitial = false; demarrerIntro(); setTimeout(() => inviteDuSoir(), 9500);

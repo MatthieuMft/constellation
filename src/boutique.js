@@ -10,6 +10,8 @@
 //     (source 'perso' : ailes, bras, pieds, étincelles) ; etoiles.patch(article, oui) donne le patch à appliquer.
 //     surChange : après tout changement (achat, choix, interrupteur) ; surAchat : juste après un achat (toast, effet).
 //     ouvrirReglage : un article « reglage » à toi a été touché (ouvrir « Personnaliser ma lueur » ou « … mon ciel » sur lui).
+//     vignette3D(canvas, o) (facultatif) : les articles de la lueur montrent la vraie lueur 3D qui les porte (creature.vignette, voir LUEUR3D) ;
+//     sans lui, les anciennes vignettes dessinées en 2D.
 import { t } from './langue.js';
 import * as E from './etoiles.js';
 import { THEMES } from './themes.js';
@@ -344,6 +346,26 @@ const DESSINS = {
     for (const [px, py, r] of [[50, 54, 3], [44, 46, 2.4], [56, 44, 2.4], [50, 38, 2]]) point(x, '#cfe8ff', px, py, r * 1.6, .8); },
 };
 
+// ── la lueur en 3D (rendue une fois par la scène : creature.vignette) : l'article porté, de trois-quarts, sur le fond sombre des vignettes.
+//    perso : le patch de l'article ; R, cx, cy (px sur 160) facultatifs : sinon cadrée sur ce qu'elle porte ; apres : décor 2D par-dessus ; une liste = plusieurs lueurs
+const LUEUR3D = {
+  'forme-chat': { perso: { forme: 'chat' } }, 'forme-fantome': { perso: { forme: 'fantome' } }, 'forme-coeur': { perso: { forme: 'coeur' } }, 'forme-etoile': { perso: { forme: 'etoile' } },
+  'texture-nacre': { perso: { texture: 'nacre' } }, 'texture-givre': { perso: { texture: 'givre' } }, 'texture-paillettes': { perso: { texture: 'paillettes' } }, 'texture-nebuleuse': { perso: { texture: 'nebuleuse' } },
+  'couleur-lueur': { perso: { couleur: '#ff9ec0' }, cy: 72, R: 27, apres: x => nuancier(x, ['#ffd98a', '#ff9ec0', '#8fd0ff', '#b9a0ff', '#8ff0c0']) },
+  'expression-rieuse': { perso: { expression: 'rieuse' }, az: -.3 }, 'expression-reveuse': { perso: { expression: 'reveuse' }, az: -.3 },
+  'expression-malicieuse': { perso: { expression: 'malicieuse' }, az: -.3 }, 'expression-etonnee': { perso: { expression: 'etonnee' }, az: -.3 },
+  'couleur-yeux': { perso: { yeuxCouleur: '#4fa8ff', yeux: 1.25 }, cy: 72, R: 27, az: -.3, apres: x => nuancier(x, ['#4fa8ff', '#8ff0c0', '#b9a0ff', '#ff9ec0']) },
+  'yeux-etoiles': { etoiles: true, perso: { yeux: 1.3 }, az: -.3 },
+  'taille-yeux': { perso: { yeux: 1.45 }, cy: 74, R: 29, az: -.3, apres: x => { fleche(x, 80, 136, 52, 136); fleche(x, 80, 136, 108, 136); } },
+  'acc-anneau': { perso: { acc: 1 } }, 'acc-antenne': { perso: { acc: 2 } }, 'acc-lunettes': { perso: { acc: 3 } }, 'acc-couronne': { perso: { acc: 4 } }, 'acc-chapeau': { perso: { acc: 5 } },
+  'couleur-accessoire': { perso: { acc: 1, accCouleur: '#ff8fc0' } },
+  'habit-echarpe': { perso: { habit: 1 } }, 'habit-noeud': { perso: { habit: 2 } }, 'habit-cape': { perso: { habit: 3 } },
+  'membres-ailes': { perso: { ailes: true } }, 'membres-bras': { perso: { bras: true } }, 'membres-pieds': { perso: { pieds: true } },
+  'taille-lueur': [{ cx: 42, cy: 96, R: 14 }, { cx: 106, cy: 80, R: 28, apres: x => fleche(x, 56, 132, 92, 132) }],
+  'etincelles': { cx: 94, cy: 68, R: 26, apres: x => { add(x); const r = graine(4);
+    for (let i = 0; i < 9; i++) { const k = i / 8, px = 70 - k * 50 + (r() - .5) * 14, py = 92 + k * 46 + (r() - .5) * 14; i % 3 ? point(x, '#ffe9a8', px, py, 3 + r() * 4, .9 - k * .4) : scintille(x, px, py, 7 - k * 3, '#ffe9a8', .95 - k * .4); } } },
+};
+
 function vignette(c, k) {
   const x = c.getContext('2d'), W = c.width; x.fillStyle = '#05060f'; x.fillRect(0, 0, W, W); x.save(); x.scale(W / 160, W / 160);
   if (k === 'yeux-etoiles') {
@@ -379,7 +401,9 @@ export function monterBoutique(zone, ctx) {
   const mot = el('p', { class: 'bq-mot', role: 'status', 'aria-live': 'polite' }); zone.append(mot);
   let onglet = 'lueur', minuteur = 0;
   const toiles = {};                                   // une vignette n'est dessinée qu'une fois
-  const toile = a => toiles[a.cle] || (toiles[a.cle] = (() => { const c = el('canvas', { width: '160', height: '160', 'aria-hidden': 'true' }); vignette(c, a.cle); return c; })());
+  const toile = a => toiles[a.cle] || (toiles[a.cle] = (() => { const c = el('canvas', { width: '160', height: '160', 'aria-hidden': 'true' }), v3 = ctx.vignette3D && LUEUR3D[a.cle];
+    if (v3) { const x = c.getContext('2d'); x.fillStyle = '#05060f'; x.fillRect(0, 0, 160, 160); [].concat(v3).forEach((o, i) => ctx.vignette3D(c, i ? { mode: 'lighten', ...o } : o)); }   // fond sombre en attendant la 3D
+    else vignette(c, a.cle); return c; })());
   const equipe = a => !!(ctx.equipe && ctx.equipe(a));
   const equiper = (a, oui) => { if (ctx.equiper) ctx.equiper(a, oui); };
   const signaler = a => { if (ctx.surChange) ctx.surChange(a.cle, E.actif(a.cle)); };
