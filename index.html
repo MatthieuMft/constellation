@@ -116,10 +116,19 @@
     <label class="ligne-date">Jour <input type="date" id="ecrire-date" aria-label="Jour de l’entrée"></label>
     <div id="humeurs" role="radiogroup" aria-label="Humeur du jour"></div>
     <input id="note-titre" type="text" maxlength="80" placeholder="Titre (facultatif)" aria-label="Titre de la note" hidden>
-    <div id="titres" class="titres" role="toolbar" aria-label="Mise en forme"><button type="button" data-n="1" title="Titre 1">T1</button><button type="button" data-n="2" title="Titre 2">T2</button><button type="button" data-n="3" title="Titre 3">T3</button></div>
+    <div class="bloc-outils"><button type="button" id="bloc-plus" aria-haspopup="menu" aria-expanded="false" title="Ajouter un bloc">+ Ajouter</button><span class="bloc-astuce">ou tapez / en début de ligne</span>
+      <div id="bloc-menu" class="bloc-menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-bloc="1"><b class="bm-i">H1</b>Titre 1</button>
+        <button type="button" role="menuitem" data-bloc="2"><b class="bm-i">H2</b>Titre 2</button>
+        <button type="button" role="menuitem" data-bloc="3"><b class="bm-i">H3</b>Titre 3</button>
+        <button type="button" role="menuitem" data-bloc="puce"><b class="bm-i">•</b>Liste à puces</button>
+        <button type="button" role="menuitem" data-bloc="num"><b class="bm-i">1.</b>Liste numérotée</button>
+        <button type="button" role="menuitem" data-bloc="texte"><b class="bm-i">¶</b>Texte simple</button>
+        <button type="button" role="menuitem" data-bloc="media"><b class="bm-i">▣</b>Photo ou vidéo</button>
+      </div></div>
     <textarea id="texte" rows="5" maxlength="4000" placeholder="Écrivez. Ce texte ne quitte jamais cet appareil."></textarea>
     <div id="zone-media">
-      <div class="rang-media"><button type="button" id="choisir-media" class="ajout-media">+ Photo ou vidéo</button></div>
+      <div class="rang-media" hidden><button type="button" id="choisir-media" class="ajout-media">+ Photo ou vidéo</button></div>
       <input id="fichiers-media" type="file" accept="image/*,video/*" multiple hidden>
       <div id="vignettes-ecrire"></div>
     </div>

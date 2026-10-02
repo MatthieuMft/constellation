@@ -8,12 +8,22 @@ const el = (tag, attrs = {}, ...enfants) => {
   Object.entries(attrs).forEach(([k, v]) => k === 'class' ? n.className = v : k.startsWith('on') ? n.addEventListener(k.slice(2), v) : v === false || v == null ? 0 : n.setAttribute(k, v === true ? '' : v));
   n.append(...enfants.flat().filter(x => x != null && x !== false)); return n;
 };
-// le texte d'une entrée : les lignes « # », « ## », « ### » deviennent des titres, le reste des paragraphes
+// le texte d'une entrée : « # », « ## », « ### » → titres, « - » → puces, « 1. » → liste numérotée, le reste → paragraphes
 function blocs(texte) {
   const out = []; let para = [];
   const pousser = () => { const s = para.join('\n').replace(/^\n+|\n+$/g, ''); if (s) out.push(el('p', {}, s)); para = []; };
-  for (const l of texte.split('\n')) { const m = l.match(/^(#{1,3}) +(.*)$/); if (m && m[2].trim()) { pousser(); out.push(el('h4', { class: 'titre-' + m[1].length }, m[2])); } else para.push(l); }
-  pousser(); return out;
+  let liste = null;
+  const fermer = () => { if (liste) { out.push(liste); liste = null; } };
+  for (const l of texte.split('\n')) {
+    const m = l.match(/^(#{1,3}) +(.*)$/), pu = l.match(/^[-•*] +(.*)$/), nu = l.match(/^(\d+)\. +(.*)$/);
+    if (m && m[2].trim()) { pousser(); fermer(); out.push(el('h4', { class: 'titre-' + m[1].length }, m[2])); }
+    else if (pu || nu) {
+      pousser(); const tag = pu ? 'ul' : 'ol';
+      if (!liste || liste.tagName.toLowerCase() !== tag) { fermer(); liste = el(tag, nu && +nu[1] !== 1 ? { start: nu[1] } : {}); }
+      liste.append(el('li', {}, pu ? pu[1] : nu[2]));
+    } else { fermer(); para.push(l); }
+  }
+  pousser(); fermer(); return out;
 }
 const heure = ms => new Date(ms).toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit' });
 

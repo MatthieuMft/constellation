@@ -779,19 +779,48 @@ function garderBrouillon() {
 function lireBrouillon() { try { return JSON.parse(localStorage.getItem(CLE_BROUILLON)); } catch (e) { return null; } }
 function effacerBrouillon() { try { localStorage.removeItem(CLE_BROUILLON); } catch (e) {} }
 $('texte').addEventListener('input', () => { $('interim').textContent = ''; garderBrouillon(); });
-function fermerEcrire() { garderBrouillon(); creature.finEcriture(); arreterDictee(); edition = null; fichiersEnAttente = []; document.body.classList.remove('ecriture'); $('ecrire').hidden = true; $('texte').value = ''; $('note-titre').value = ''; $('nbc').textContent = '0'; accueil.surEcrireFerme(); }
+function fermerEcrire() { fermerBlocs(); garderBrouillon(); creature.finEcriture(); arreterDictee(); edition = null; fichiersEnAttente = []; document.body.classList.remove('ecriture'); $('ecrire').hidden = true; $('texte').value = ''; $('note-titre').value = ''; $('nbc').textContent = '0'; accueil.surEcrireFerme(); }
 // « + » : ouvre directement le journal
 $('nouveau').addEventListener('click', () => { fermerMenu(); if ($('ecrire').hidden) ouvrirEcrire(); else fermerEcrire(); });
 $('voile-menu').addEventListener('click', () => fermerMenu());
 $('annuler').addEventListener('click', fermerEcrire);
 $('ecrire-fermer').addEventListener('click', fermerEcrire);
-// titres 1, 2, 3 : « # », « ## », « ### » en début de ligne ; le bouton pose, change ou retire le titre de la ligne du curseur
-document.querySelectorAll('#titres button').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
-document.querySelectorAll('#titres button').forEach(b => b.addEventListener('click', () => {
-  const ta = $('texte'), v = ta.value, pos = ta.selectionStart, deb = v.lastIndexOf('\n', pos - 1) + 1, fin = (v.indexOf('\n', pos) + 1 || v.length + 1) - 1;
-  const ligne = v.slice(deb, fin), m = ligne.match(/^#{1,3} /), pre = '#'.repeat(+b.dataset.n) + ' ', nue = m ? ligne.slice(m[0].length) : ligne, neuve = m && m[0] === pre ? nue : pre + nue;
+// menu de blocs, comme dans Notion : « + Ajouter » au-dessus du texte, ou « / » en début de ligne.
+// Le texte reste du texte : « # », « ## », « ### » pour les titres, « - » pour les puces, « 1. » pour les listes numérotées.
+const PREFIXES = { 1: '# ', 2: '## ', 3: '### ', puce: '- ', num: '1. ', texte: '' };
+let blocSlash = -1;                                                      // position du « / » tapé, à effacer quand on choisit
+function ouvrirBlocs(slash = -1) { blocSlash = slash; $('bloc-menu').hidden = false; $('bloc-plus').setAttribute('aria-expanded', 'true'); requestAnimationFrame(() => $('bloc-menu').scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
+function fermerBlocs() { blocSlash = -1; $('bloc-menu').hidden = true; $('bloc-plus').setAttribute('aria-expanded', 'false'); }
+function poserBloc(k) {
+  const ta = $('texte'); let v = ta.value, pos = ta.selectionStart;
+  if (blocSlash >= 0 && v[blocSlash] === '/') { v = v.slice(0, blocSlash) + v.slice(blocSlash + 1); pos = blocSlash; }
+  fermerBlocs();
+  if (k === 'media') { ta.value = v; ta.dispatchEvent(new Event('input')); $('fichiers-media').click(); return; }
+  const deb = v.lastIndexOf('\n', pos - 1) + 1, fin = (v.indexOf('\n', pos) + 1 || v.length + 1) - 1, ligne = v.slice(deb, fin);
+  const m = ligne.match(/^(#{1,3} |- |\d+\. )/), nue = m ? ligne.slice(m[0].length) : ligne;
+  let pre = PREFIXES[k];
+  if (k === 'num') { const avant = v.slice(0, Math.max(0, deb - 1)), prec = avant.slice(avant.lastIndexOf('\n') + 1).match(/^(\d+)\. /); pre = (prec ? +prec[1] + 1 : 1) + '. '; }
+  const neuve = m && m[0] === pre ? nue : pre + nue;                     // reprendre le même bloc le retire
   ta.value = v.slice(0, deb) + neuve + v.slice(fin); const c = deb + neuve.length; ta.focus(); ta.setSelectionRange(c, c); ta.dispatchEvent(new Event('input'));
-}));
+}
+$('bloc-plus').addEventListener('mousedown', e => e.preventDefault());
+$('bloc-plus').addEventListener('click', () => $('bloc-menu').hidden ? ouvrirBlocs() : fermerBlocs());
+document.querySelectorAll('#bloc-menu button').forEach(b => { b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => poserBloc(b.dataset.bloc)); });
+$('texte').addEventListener('input', e => {                              // « / » en début de ligne ouvre le menu
+  const ta = $('texte'), p = ta.selectionStart;
+  if (e.data === '/' && (p === 1 || ta.value[p - 2] === '\n')) ouvrirBlocs(p - 1); else if (!$('bloc-menu').hidden && blocSlash >= 0) fermerBlocs();
+});
+$('texte').addEventListener('keydown', e => {
+  const ta = $('texte');
+  if (e.key === 'Escape' && !$('bloc-menu').hidden) { e.preventDefault(); e.stopPropagation(); fermerBlocs(); return; }
+  if (e.key !== 'Enter' || e.shiftKey) return;                           // Entrée dans une liste : la puce suivante (ou sortie de liste sur une ligne vide)
+  const v = ta.value, pos = ta.selectionStart, deb = v.lastIndexOf('\n', pos - 1) + 1, ligne = v.slice(deb, pos), m = ligne.match(/^(- |(\d+)\. )/);
+  if (!m) return; e.preventDefault();
+  if (ligne === m[0]) { ta.value = v.slice(0, deb) + v.slice(pos); ta.setSelectionRange(deb, deb); }
+  else { const suite = m[2] ? (+m[2] + 1) + '. ' : '- ', ins = '\n' + suite; ta.value = v.slice(0, pos) + ins + v.slice(ta.selectionEnd); ta.setSelectionRange(pos + ins.length, pos + ins.length); }
+  ta.dispatchEvent(new Event('input'));
+});
+document.addEventListener('pointerdown', e => { if (!$('bloc-menu').hidden && !e.target.closest('.bloc-outils')) fermerBlocs(); });
 $('texte').addEventListener('input', () => { $('nbc').textContent = $('texte').value.length + ' / 4000'; });
 
 // photos et vidéos en attente d'enregistrement (glissées dans l'entrée du jour)

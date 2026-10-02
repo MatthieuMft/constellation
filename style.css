@@ -629,3 +629,17 @@ body.accueil.ac-fin footer #btn-palette { opacity: 1; pointer-events: auto; colo
 .carte h4.titre-2 { font-size: 1.2rem; }
 .carte h4.titre-3 { font-size: 1.02rem; letter-spacing: .04em; text-transform: uppercase; opacity: .85; }
 .carte h4:first-of-type { margin-top: .3em; }
+
+/* menu de blocs (v14), à la Notion : sobre, angles droits */
+.bloc-outils { position: relative; display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+#bloc-plus { min-height: 36px; padding: 0 12px; }
+.bloc-astuce { font: 11px var(--mono); color: var(--soft); letter-spacing: .04em; }
+.bloc-menu { position: absolute; left: 0; top: calc(100% + 6px); z-index: 30; min-width: 230px; display: flex; flex-direction: column; background: #070915; border: 1px solid var(--line); box-shadow: 0 12px 40px rgba(0,0,0,.55); }
+.bloc-menu[hidden] { display: none; }
+.bloc-menu button { display: flex; align-items: center; gap: 12px; border: 0; border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent); padding: 10px 14px; min-height: 44px; text-align: left; font: 400 15px var(--serif); letter-spacing: 0; }
+.bloc-menu button:last-child { border-bottom: 0; }
+.bloc-menu button:hover, .bloc-menu button:focus-visible { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+.bm-i { width: 28px; font: 600 12px var(--mono); color: var(--soft); text-align: center; }
+#ecrire .bloc-outils + textarea { margin-top: 8px; }
+.carte ul, .carte ol { margin: .3em 0 .6em; padding-left: 1.4em; font-size: 1rem; line-height: 1.55; }
+.carte li { overflow-wrap: anywhere; }
