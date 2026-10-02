@@ -1387,24 +1387,27 @@ function choisirLangue() {
 }
 
 (async () => {
+  const T0 = performance.now(), etape = (v, nom) => { window.__charge?.(v); console.info('chargement', v + ' %', nom, Math.round(performance.now()) + ' ms depuis l’ouverture'); };
+  etape(62, 'modules');
   if (!langueChoisie) await choisirLangue();
   majBoutonProfond();
   if (mode === 'profonde') { try { await chargerProfond(m => { $('statut').textContent = m; }); $('statut').textContent = ''; } catch (e) { mode = 'legere'; majBoutonProfond(); } }
   appliquerTheme();
-  await recalculer(); etoiles.crediter(joursEcrits()); appliquerObjets();
+  await recalculer(); etoiles.crediter(joursEcrits()); appliquerObjets(); etape(72, 'données');
   { const v = vueInitiale(); camera.position.copy(v.cible).addScaledVector(v.dir, DIST.semaine); controls.target.copy(v.cible); }
   // compiler les shaders avant la première image, sans geler la page quand le navigateur sait le faire en parallèle (mobiles surtout)
   // on compile TOUT, y compris ce qui est caché pour l'instant (autres niveaux de zoom) : sinon le premier zoom saccade
+  etape(78, 'ciel');
   { const caches = []; scene.traverse(o => { if (!o.visible) { caches.push(o); o.visible = true; } });
     try {
       renderer.setRenderTarget(composer.readBuffer);
       if (renderer.extensions.has('KHR_parallel_shader_compile')) { const p = renderer.compileAsync(scene, camera); renderer.setRenderTarget(null); await Promise.race([p, new Promise(r => setTimeout(r, 3000))]); }
       else { renderer.compile(scene, camera); renderer.setRenderTarget(null); renderer.compile(sceneUI, camera); }   // sous l'écran de chargement : le temps d'attente ne se voit pas
-      creature.prechauffer(renderer, camera);         // la lueur 3D et TOUTES ses parties (même pas encore achetées) : rien ne fige au premier affichage ni au premier achat
+      etape(90, 'shaders'); creature.prechauffer(renderer, camera); etape(97, 'lueur');         // la lueur 3D et TOUTES ses parties (même pas encore achetées) : rien ne fige au premier affichage ni au premier achat
     } catch (e) { renderer.setRenderTarget(null); }
     caches.forEach(o => { o.visible = false; }); }
   majBoutonSauvegarde(); chargementInitial = false; demarrerIntro(); setTimeout(() => inviteDuSoir(), 9500);
-  boucle();
+  boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
 window.__constellation = { etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde,
