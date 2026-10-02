@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#05060f">
+<meta name="description" content="Un journal en forme de ciel : une étoile par jour, des nébuleuses pour les mois et les années.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Constellation</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+<!-- Three.js est servi par le site lui-même (même connexion, mis en cache par le service worker) -->
+<script type="importmap">
+{ "imports": {
+  "three": "./vendor/three@0.170.0/three.module.min.js",
+  "three/addons/": "./vendor/three@0.170.0/addons/"
+} }
+</script>
+<!-- tous les modules sont demandés d'un coup, au lieu d'être découverts import après import -->
+<link rel="modulepreload" href="vendor/three@0.170.0/three.module.min.js">
+<link rel="modulepreload" href="src/main.js">
+<link rel="modulepreload" href="src/analyse.js">
+<link rel="modulepreload" href="src/cache.js">
+<link rel="modulepreload" href="src/ciel.js">
+<link rel="modulepreload" href="src/creature.js">
+<link rel="modulepreload" href="src/dates.js">
+<link rel="modulepreload" href="src/embed.js">
+<link rel="modulepreload" href="src/en.js">
+<link rel="modulepreload" href="src/evenements.js">
+<link rel="modulepreload" href="src/finition.js">
+<link rel="modulepreload" href="src/jour.js">
+<link rel="modulepreload" href="src/langue.js">
+<link rel="modulepreload" href="src/layout.js">
+<link rel="modulepreload" href="src/lueur-ui.js">
+<link rel="modulepreload" href="src/marques.js">
+<link rel="modulepreload" href="src/media.js">
+<link rel="modulepreload" href="src/monde.js">
+<link rel="modulepreload" href="src/palette.js">
+<link rel="modulepreload" href="src/panneaux.js">
+<link rel="modulepreload" href="src/rappels.js">
+<link rel="modulepreload" href="src/reglages.js">
+<link rel="modulepreload" href="src/rendu.js">
+<link rel="modulepreload" href="src/rythme.js">
+<link rel="modulepreload" href="src/sauvegarde.js">
+<link rel="modulepreload" href="src/scenes.js">
+<link rel="modulepreload" href="src/store.js">
+<link rel="modulepreload" href="src/temps.js">
+<link rel="modulepreload" href="src/themes.js">
+<link rel="modulepreload" href="src/volume.js">
+<link rel="modulepreload" href="src/etoiles.js">
+<link rel="modulepreload" href="src/boutique.js">
+<link rel="modulepreload" href="src/ciel-ui.js">
+<link rel="modulepreload" href="src/decor.js">
+<link rel="modulepreload" href="src/accueil.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/controls/OrbitControls.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/EffectComposer.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/RenderPass.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/ShaderPass.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/OutputPass.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/UnrealBloomPass.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/MaskPass.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/postprocessing/Pass.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/shaders/CopyShader.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/shaders/OutputShader.js">
+<link rel="modulepreload" href="vendor/three@0.170.0/addons/shaders/LuminosityHighPassShader.js">
+</head>
+<body>
+<canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
+<noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
+<div id="chargement"><span>Constellation</span>
+  <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
+    <p>Langue · Language</p>
+    <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
+    <p class="petit">Modifiable ensuite dans ⋯ → Réglages · Change it later in ⋯ → Settings</p>
+  </div>
+</div>
+
+<header>
+  <h1>Constellation</h1>
+  <nav id="fil" aria-label="Position dans le temps"></nav>
+  <p id="compte"></p>
+  <p id="bilan"></p>
+  <button id="filtre" hidden aria-label="Retirer le filtre"></button>
+</header>
+
+<!-- l'intérieur d'une journée : en-tête fixe (date, jour précédent/suivant, humeur), corps qui défile, barre d'ajout fixe -->
+<aside id="fiche" class="feuille" hidden aria-label="Journée">
+  <div class="p-grip" aria-hidden="true"></div>
+  <div class="p-tete">
+    <button id="f-prec" class="nav-jour" aria-label="Jour précédent">‹</button>
+    <div class="f-titre"><small id="f-semaine"></small><strong id="f-jour"></strong></div>
+    <button id="f-suiv" class="nav-jour" aria-label="Jour suivant">›</button>
+    <button id="f-date" class="nav-jour" aria-label="Date qui compte" title="Marquer une date qui compte">☆</button>
+    <button id="fermer" class="fermer" aria-label="Fermer la journée">×</button>
+  </div>
+  <div class="p-sous" id="f-humeur"></div>
+  <div id="f-dates" class="p-dates" hidden></div>
+  <div id="f-contenu" class="p-corps"></div>
+  <div class="p-pied ajout" id="f-ajout"></div>
+</aside>
+
+<!-- écrire : le journal du jour (une photo ou une vidéo peut s'y glisser) -->
+<section id="ecrire" class="feuille" hidden aria-label="Nouvelle entrée">
+  <div class="p-grip" aria-hidden="true"></div>
+  <div class="p-tete">
+    <strong id="ecrire-titre" class="p-titre">Journal</strong><span class="espace"></span>
+    <button id="ecrire-fermer" class="fermer" type="button" aria-label="Fermer (le brouillon est gardé)" title="Fermer">×</button>
+  </div>
+  <div class="p-corps">
+    <p class="lab" id="titre-ecrire">Qu’est-ce qui traverse ?</p>
+    <label class="ligne-date">Jour <input type="date" id="ecrire-date" aria-label="Jour de l’entrée"></label>
+    <div id="humeurs" role="radiogroup" aria-label="Humeur du jour"></div>
+    <input id="note-titre" type="text" maxlength="80" placeholder="Titre (facultatif)" aria-label="Titre de la note" hidden>
+    <textarea id="texte" rows="5" maxlength="4000" placeholder="Écrivez. Ce texte ne quitte jamais cet appareil."></textarea>
+    <div id="zone-media">
+      <div class="rang-media"><button type="button" id="choisir-media" class="ajout-media">+ Photo ou vidéo</button></div>
+      <input id="fichiers-media" type="file" accept="image/*,video/*" multiple hidden>
+      <div id="vignettes-ecrire"></div>
+    </div>
+    <div id="tags-sugg" class="tags-sugg" hidden></div>
+    <p id="interim" class="interim" aria-live="polite"></p>
+  </div>
+  <div class="p-pied rang">
+    <span id="nbc">0</span>
+    <button id="dicter" type="button" aria-pressed="false" title="Dicter à la voix">Dicter</button>
+    <span class="espace"></span>
+    <button id="annuler">Annuler</button>
+    <button id="valider" class="plein">Enregistrer</button>
+  </div>
+</section>
+
+<!-- date qui compte -->
+<section id="dateqc" class="boite-petite" hidden role="dialog" aria-label="Date qui compte">
+  <p class="lab">Une date qui compte</p>
+  <p class="sous" id="dateqc-jour"></p>
+  <input id="dateqc-titre" type="text" maxlength="60" placeholder="Anniversaire de…, départ, rendez-vous…" aria-label="Titre" autocomplete="off">
+  <label class="coche"><input type="checkbox" id="dateqc-annuelle" checked> Chaque année</label>
+  <div class="rang"><button id="dateqc-suppr" type="button">Retirer</button><span class="espace"></span><button id="dateqc-annuler" type="button">Annuler</button><button id="dateqc-ok" class="plein" type="button">Marquer</button></div>
+</section>
+
+<!-- ma lueur : couleur, accessoire, yeux… -->
+<section id="perso" class="feuille" hidden aria-label="Personnaliser la lueur">
+  <div class="p-grip" aria-hidden="true"></div>
+  <div class="p-tete"><strong class="p-titre">Personnaliser ma lueur</strong><span class="espace"></span><button id="perso-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
+  <div class="p-corps" id="perso-corps"></div>
+</section>
+
+<!-- mon ciel : ambiances, matière, lumière, astres, animations, looks… (ce qui est débloqué) -->
+<section id="perso-ciel" class="feuille" hidden aria-label="Personnaliser mon ciel">
+  <div class="p-grip" aria-hidden="true"></div>
+  <div class="p-tete"><strong class="p-titre">Personnaliser mon ciel</strong><span class="espace"></span><button id="ciel-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
+  <div class="p-corps" id="ciel-corps"></div>
+</section>
+
+<section id="nommer" hidden role="dialog" aria-label="Nommer la petite lueur">
+  <p class="lab">Une petite lueur vous a trouvé.</p>
+  <p class="sous">Comment voulez-vous l’appeler ?</p>
+  <div class="rang"><input id="nom-champ" type="text" maxlength="18" placeholder="Lueur" aria-label="Nom de la lueur" autocomplete="off"><button id="nom-ok" class="plein">Adopter</button></div>
+</section>
+
+<div id="aide" hidden role="dialog" aria-label="Comment voyager dans le ciel">
+  <h2>Voyager dans le temps</h2>
+  <ul data-t="aide-liste">
+    <li><b>Pincez</b> ou <b>molette</b> : zoomez des années jusqu’à une journée</li>
+    <li><b>Touchez</b> une nébuleuse ou une étoile pour y plonger</li>
+    <li><b>+</b> en bas : écrire · <b>◎</b> à droite : revenir à aujourd’hui</li>
+    <li><b>Glissez</b> pour tourner · <b>deux doigts</b> pour déplacer</li>
+    <li><b>⋯</b> : le menu</li>
+  </ul>
+  <div id="aide-exemples" hidden>
+    <p data-t="aide-exemples">Ce ciel contient <b>des entrées d’exemple</b>, inventées pour vous montrer à quoi il ressemble. Rien n’est à vous : effacez-les quand vous voulez, ici ou plus tard avec <b>⋯</b> → <i>Réglages</i>.</p>
+  </div>
+  <div class="rang"><button id="aide-effacer" type="button" hidden>Effacer les exemples</button><span class="espace"></span><button id="aide-ok" class="plein">Compris</button></div>
+</div>
+
+<div id="visionneuse" hidden role="dialog" aria-label="Média">
+  <button id="vis-fermer" aria-label="Fermer">×</button>
+  <div id="vis-contenu"></div>
+</div>
+
+<aside id="reglages" class="feuille tiroir" hidden aria-label="Réglages"></aside>
+<aside id="analyse" class="feuille tiroir" hidden aria-label="Analyses"></aside>
+<div id="parcours" hidden><span id="par-titre"></span><span id="par-etape"></span><button id="par-stop">Arrêter</button></div>
+<div id="bulle" hidden role="status"><span></span></div>
+<div id="vol" aria-hidden="true"></div>
+<div id="infobulle" hidden></div>
+
+<footer>
+  <button id="nouveau" aria-label="Écrire" aria-expanded="false" title="Écrire (N)">+</button>
+  <button id="btn-palette" aria-label="Menu" title="Menu">⋯</button>
+</footer>
+<button id="repere" hidden aria-label="Aller à aujourd’hui"><i></i><span>aujourd’hui</span></button>
+<div id="zoom" role="group" aria-label="Zoom dans le temps">
+  <button id="zoom-aujourdhui" aria-label="Aller à aujourd’hui" title="Aujourd’hui">◎</button>
+  <button id="zoom-plus" aria-label="Plonger d’un niveau" title="Plonger (zoom avant)">+</button>
+  <button id="zoom-moins" aria-label="Remonter d’un niveau" title="Remonter (zoom arrière)">−</button>
+</div>
+<p id="statut" role="status"></p>
+
+<div id="voile-menu" hidden></div>
+
+<!-- « ⋯ » : le menu, quatre lignes -->
+<section id="menu" class="feuille" hidden aria-label="Menu">
+  <div class="p-grip" aria-hidden="true"></div>
+  <div class="p-tete"><button id="menu-retour" class="m-retour" type="button" hidden>‹ Menu</button><strong id="menu-titre" class="p-titre">Menu</strong><span class="espace"></span><button id="menu-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
+  <div class="m-recherche" id="menu-zone-recherche"><input id="menu-champ" type="search" placeholder="Chercher une commande ou une pensée" autocomplete="off" aria-label="Chercher une commande ou une pensée"></div>
+  <div class="p-corps m-liste" id="menu-liste"></div>
+</section>
+
+<!-- boutique (✦) -->
+<section id="boutique" class="feuille" hidden aria-label="Boutique">
+  <div class="p-grip" aria-hidden="true"></div>
+  <div class="p-tete">
+    <strong class="p-titre">Boutique</strong>
+    <span class="espace"></span><span id="bq-solde" class="bq-solde"></span>
+    <button id="bq-fermer" class="fermer" type="button" aria-label="Fermer">×</button>
+  </div>
+  <div class="bq-onglets" role="tablist" aria-label="Boutique">
+    <button type="button" role="tab" id="bq-onglet-lueur" data-onglet="lueur" aria-selected="true" aria-controls="bq-corps">Ta lueur</button>
+    <button type="button" role="tab" id="bq-onglet-ciel" data-onglet="ciel" aria-selected="false" aria-controls="bq-corps" tabindex="-1">Ton ciel</button>
+  </div>
+  <div class="p-corps" id="bq-corps" role="tabpanel" aria-labelledby="bq-onglet-lueur"></div>
+</section>
+
+<!-- l'accueil raconté (premier lancement) -->
+<div id="accueil" hidden>
+  <div id="ac-points" class="ac-points" aria-hidden="true"></div>
+  <button id="ac-passer" type="button">Passer</button>
+  <div id="ac-carte" class="ac-carte cache" aria-live="polite"></div>
+</div>
+<div id="ac-bulle" hidden role="status"></div>
+<div id="toast" aria-live="polite"></div>
+
+<div id="palette" hidden role="dialog" aria-label="Commandes">
+  <div class="p-fond"></div>
+  <div class="p-boite">
+    <input id="p-champ" placeholder="une commande, ou une idée à retrouver…" autocomplete="off" aria-label="Commande ou recherche">
+    <ul id="p-liste" role="listbox"></ul>
+    <p class="p-pied-pal"><kbd>↑↓</kbd> choisir · <kbd>↵</kbd> valider · <kbd>échap</kbd> fermer</p>
+  </div>
+</div>
+
+<div id="outils" hidden>
+  <button id="profond">Sens profond : non</button>
+  <button id="exemples" hidden>Effacer les exemples</button>
+  <button id="btn-noms" aria-pressed="true">Noms</button>
+  <button id="btn-analyse">Analyses</button>
+  <button id="btn-reglages">Réglages</button>
+  <button id="btn-sauvegarde">Sauvegarde : non</button>
+  <button id="exporter">Exporter</button>
+  <label class="bouton">Importer<input id="importer" type="file" accept="application/json" hidden></label>
+  <button id="installer" hidden>Installer l’appli</button>
+</div>
+
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

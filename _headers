@@ -1,0 +1,6 @@
+# Netlify : Three.js ne change jamais à cette adresse (version dans le chemin) → gardé en cache un an
+/vendor/*
+  Cache-Control: public, max-age=31536000, immutable
+# le service worker doit toujours être relu, pour voir les nouvelles versions
+/sw.js
+  Cache-Control: no-cache
