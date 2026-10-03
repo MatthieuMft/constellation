@@ -895,3 +895,10 @@ body.calme:not(.accueil):not(.intro) footer > #nouveau { opacity: 1; pointer-eve
 .install-astuce { position: fixed; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 60; max-width: 420px; margin: 0 auto; padding: 16px 18px; background: var(--panel-s, var(--bg)); border: 1px solid var(--ink); color: var(--soft); font-size: 14px; line-height: 1.5; }
 .install-astuce b { color: var(--ink); font-weight: 500; }
 .install-astuce button { margin-top: 12px; width: 100%; }
+/* v35 : les cartes du tutoriel prennent le style des panneaux du menu (fond sombre légèrement transparent, flou, filet),
+   pour que le texte reste lisible, même devant la lueur ; la lueur se pose au-dessus de la carte */
+.ac-carte { padding: 22px 20px 18px; background: color-mix(in srgb, var(--bg) 84%, transparent); border: 1px solid var(--line); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.ac-carte:empty { padding: 0; border: 0; background: none; backdrop-filter: none; }
+.ac-carte h2, .ac-carte p { text-shadow: none; }
+.ac-carte p { color: color-mix(in srgb, var(--ink) 78%, transparent); }
+.ac-carte p:last-of-type { margin-bottom: 16px; }

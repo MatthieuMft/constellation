@@ -531,7 +531,7 @@ function boucle() {
       selection: selection && visuelsVisibles.get(selection) ? visuelsVisibles.get(selection).groupe.position : null,
       guide: parcours && parcours.courbe ? parcours.courbe.getPoint(Math.min(1, parcours.t + .07)) : null,
       curseur: pointeur, curseurActif: now - pointeur.t < 12000 && !intro.actif, curseurImmobile: (now - pointeur.t) / 1000, inactivite: (now - dernierGeste) / 1000,
-      pose: persoUI.ouvert() ? persoUI.rect() : null, phrases: phrasesLueur(),
+      pose: persoUI.ouvert() ? persoUI.rect() : carteTuto(), phrases: phrasesLueur(),
       nuit: (h >= 23 || h < 6) && !accueil.actif(), occupe, meteores: meteores.vives() }); }
   if (tremble.dur) { const k = 1 - (now - tremble.t0) / tremble.dur; if (k > 0) { const a = tremble.amp * k * k, W = innerWidth, H = innerHeight; camera.setViewOffset(W, H, (Math.random() - .5) * 2 * a, (Math.random() - .5) * 2 * a, W, H); } else { camera.clearViewOffset(); tremble.dur = 0; } }
 
@@ -1461,6 +1461,13 @@ function montrerDansLeCiel(cle) {
   const ev = { aurores: 'aurore', cometes: 'comete', baleine: 'baleine', dessins: 'dessin', satellites: 'satellite', lune: 'lune' }[cle];
   if (ev) { if (camera.position.distanceTo(controls.target) < d0 - 1) voler(controls.target.clone(), d0); setTimeout(() => evenements.declencher(ev), ev === 'lune' ? 400 : 1300); return; }
   if (cle === 'croix' || cle === 'lucioles') voler(posDuJour(aujourdhui()), DIST.semaine);
+}
+
+// v35 : pendant le tutoriel, la lueur se pose au-dessus de la carte (jamais sur le texte)
+function carteTuto() {
+  if (!document.body.classList.contains('accueil')) return null;
+  const c = $('ac-carte'); if (!c || c.classList.contains('cache') || !c.childElementCount) return null;
+  return c.getBoundingClientRect();
 }
 
 // ───────────── Démarrage ─────────────
