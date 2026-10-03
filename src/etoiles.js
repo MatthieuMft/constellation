@@ -106,9 +106,9 @@ function lire() { try { const o = JSON.parse(localStorage.getItem(CLE)); if (o &
 let etat = Object.assign({ solde: 0, credites: [], achats: [], eteints: [], migre11: false }, lire() || {});
 const ecrire = () => { try { localStorage.setItem(CLE, JSON.stringify(etat)); } catch (e) {} };
 
-// MODE ESSAI (v16, demande de Matthieu) : tout est débloqué par défaut pour voir chaque effet sans écrire des semaines.
-// Les interrupteurs (lune, aurores…) arrivent éteints, à allumer soi-même. Remettre false pour retrouver la progression.
-export const TOUT_DEBLOQUE = true;
+// MODE ESSAI (v16) : tout débloqué par défaut. Retiré en v30 (demande de Matthieu) : tout se gagne de nouveau avec la poussière.
+// Mettre true pour le retrouver (les interrupteurs arrivent éteints).
+export const TOUT_DEBLOQUE = false;
 if (TOUT_DEBLOQUE) {
   const neufs = ARTICLES.filter(a => !etat.achats.includes(a.cle));
   if (neufs.length) {
@@ -116,6 +116,8 @@ if (TOUT_DEBLOQUE) {
     etat.eteints = [...new Set([...etat.eteints, ...neufs.filter(a => a.type === 'interrupteur').map(a => a.cle)])];
     ecrire();
   }
+} else if (!etat.finEssai) {                 // v30 : on reprend ce que le mode essai avait donné (seuls les articles gratuits restent), la poussière est gardée
+  etat.achats = etat.achats.filter(k => (PAR_CLE[k] || {}).prix === 0); etat.eteints = []; etat.finEssai = true; ecrire();
 }
 
 export const articles = cat => cat ? ARTICLES.filter(a => a.cat === cat) : ARTICLES;

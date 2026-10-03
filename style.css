@@ -859,3 +859,16 @@ body.ecriture #bulle { z-index: 7; }
 .ac-heure { justify-content: center; } .ac-heure input { width: auto; }
 body.accueil #joystick, body.accueil #zoom-aujourdhui { opacity: 0; pointer-events: none; }
 #ac-carte .ac-heure { display: flex; justify-content: center; align-items: center; width: 100%; gap: 12px; } #ac-carte .ac-heure input { width: auto; flex: none; margin: 0; }
+
+/* v30 : Réglages en feuille comme le Suivi (en-tête fixe aligné, croix centrée, corps qui défile), plein écran sur téléphone */
+section#reglages { position: fixed; top: 0; bottom: 0; left: 0; right: auto; width: min(92vw, 400px); max-height: none; z-index: 6; padding: 0; overflow: hidden; background: var(--panel-s); border: 0; border-right: 1px solid var(--line); backdrop-filter: blur(20px); animation: tiroir .45s var(--ease); }
+#reglages .p-titre { font: 400 1.1rem var(--serif); padding: 8px 0; }
+#reglages .p-corps { padding: 18px 18px calc(28px + var(--safe-b)); scrollbar-width: none; }
+#reglages .p-corps::-webkit-scrollbar { display: none; }
+#reglages #reg-fermer { position: static; margin: 0; background: none; }
+#reglages button.danger { color: #ff8f8f; border-color: color-mix(in srgb, #ff8f8f 55%, transparent); }
+#reglages button.danger:hover { background: color-mix(in srgb, #ff8f8f 14%, transparent); }
+@media (max-width: 720px) {
+  section#reglages { inset: 0; width: auto; max-height: none; border: 0; padding: env(safe-area-inset-top, 0px) 0 0; animation: feuilleBas .35s var(--ease); }
+  #reglages .p-grip { display: none; }
+}

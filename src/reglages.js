@@ -29,12 +29,13 @@ export function fil(R, [k, nom, min, max], maj) {
 
 // ctx : { lire(), maj(patch), rappel?, extras?() }   (themes, moods, couleur, remplacer : acceptés, plus utilisés ici)
 // Panneau en tiroir : mouvement, rappel du soir, langue, puis données et aide.
-export function monterReglages(zone, ctx) {
+export function monterReglages(zoneP, ctx) {
+  // v30 : feuille comme le Suivi (en-tête fixe avec la croix, corps qui défile) ; avant, le titre collant chevauchait le contenu
+  const zone = zoneP.querySelector('#reg-corps'); zoneP.querySelector('#reg-fermer').addEventListener('click', () => { zoneP.hidden = true; });
   function section(titre, ...contenu) { return el('section', { class: 'reg-section' }, el('h2', {}, titre), ...contenu); }
 
   function rendre() {
     const R = ctx.lire(); zone.replaceChildren();
-    zone.append(el('button', { id: 'reg-fermer', 'aria-label': t('Fermer'), onclick: () => { zone.hidden = true; } }, '×'), el('h1', { class: 'reg-titre' }, t('Réglages')));
 
     // mouvement (accessibilité) : à 0, le ciel ne bouge plus du tout
     zone.append(section(t('Mouvement'), fil(R, ['animation', t('Animation du ciel'), 0, 2], ctx.maj),
@@ -64,7 +65,7 @@ export function monterReglages(zone, ctx) {
       el('button', { 'aria-pressed': String(LANGUE === 'en'), lang: 'en', onclick: () => changer('en') }, 'English'))));
     // données, aide… : ce qui ne mérite pas une ligne dans le menu
     let extras = []; try { extras = ctx.extras ? ctx.extras() : []; } catch (e) {}   // au tout premier rendu, main.js n'est pas encore prêt
-    extras.forEach(([titre, boutons]) => boutons.length && zone.append(section(titre, el('div', { class: 'choix' }, ...boutons.map(([nom, action]) => el('button', { onclick: action }, nom))))));
+    extras.forEach(([titre, boutons]) => boutons.length && zone.append(section(titre, el('div', { class: 'choix' }, ...boutons.map(([nom, action, cls]) => el('button', { onclick: action, class: cls || '' }, nom))))));
   }
   rendre();
   return rendre;

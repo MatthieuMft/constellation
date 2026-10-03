@@ -16,7 +16,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1087709"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1089273"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -189,7 +189,11 @@
   <div id="vis-contenu"></div>
 </div>
 
-<aside id="reglages" class="feuille tiroir" hidden aria-label="Réglages"></aside>
+<section id="reglages" class="feuille" hidden aria-label="Réglages">
+  <div class="p-grip" aria-hidden="true"></div>
+  <div class="p-tete"><strong class="p-titre">Réglages</strong><span class="espace"></span><button id="reg-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
+  <div class="p-corps" id="reg-corps"></div>
+</section>
 <section id="analyse" class="feuille" hidden aria-label="Suivi">
   <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete"><strong class="p-titre">Suivi</strong><span class="espace"></span><button id="ana-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>

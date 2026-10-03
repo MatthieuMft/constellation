@@ -1067,12 +1067,23 @@ function majReglage(patch) {
   const theme = Re.theme !== avant;
   if (theme) appliquerTheme(); else { if ('humeurs' in patch) recolorer(); appliquerCurseurs(); }
 }
+// v30 : tout effacer pour recommencer un nouveau parcours (journal, médias, lueur, poussière, réglages ; la langue est gardée)
+async function toutEffacer() {
+  if (!confirm(t('Tout effacer ? Ton journal, tes photos, ta lueur, ta poussière d’étoiles et tes réglages seront supprimés de cet appareil. Exporte d’abord le journal si tu veux en garder une copie.'))) return;
+  if (!confirm(t('Dernière vérification : cette action est définitive. Tout effacer et recommencer ?'))) return;
+  try { Object.keys(localStorage).filter(k => k.startsWith('constellation.') && k !== 'constellation.langue').forEach(k => localStorage.removeItem(k)); } catch (e) {}
+  let noms = ['constellation-media', 'constellation-cache'];
+  try { if (indexedDB.databases) noms = [...new Set([...noms, ...(await indexedDB.databases()).map(d => d.name).filter(Boolean)])]; } catch (e) {}
+  await Promise.all(noms.map(n => new Promise(ok => { try { const r = indexedDB.deleteDatabase(n); r.onsuccess = r.onerror = r.onblocked = () => ok(); setTimeout(ok, 1500); } catch (e) { ok(); } })));
+  location.reload();
+}
 const rendreReglages = monterReglages($('reglages'), {
   extras: () => [
     [t('Mes données'), [
       ...(!$('btn-sauvegarde').hidden ? [[$('btn-sauvegarde').textContent, () => $('btn-sauvegarde').click()]] : []),
       [t('Exporter le journal'), () => $('exporter').click()], [t('Importer un journal'), () => $('importer').click()],
       ...(items.some(e => e.sample) ? [[t('Effacer les entrées d’exemple'), () => $('exemples').click()]] : []),
+      [t('Tout effacer et recommencer'), toutEffacer, 'danger'],
     ]],
     [t('Aide'), [
       [t('Comment voyager dans le ciel'), () => { $('reglages').hidden = true; ouvrirAide(); }],
@@ -1468,5 +1479,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { ouvrirAnalyse: o => ouvrirAnalyse(o), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde,
+window.__constellation = { ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };
