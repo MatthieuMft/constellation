@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Étude planète maison</title>
+<style>
+  :root { --ink: #f1ece4; --soft: rgba(241,236,228,.62); --line: rgba(241,236,228,.2); --bg: #05060f; --panneau: rgba(10,12,26,.62); }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: Georgia, serif; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  button { font: 11px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: var(--panneau); border: 1px solid var(--line); padding: 10px 13px; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); cursor: pointer; }
+  button[aria-pressed=true] { background: var(--ink); color: var(--bg); }
+  #haut { position: fixed; left: 16px; right: 16px; top: calc(14px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px; }
+  #haut b { font: 400 19px Georgia, serif; } #haut small { display: block; font: 10px ui-monospace, monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); margin-top: 3px; }
+  #bas { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; align-items: center; pointer-events: none; }
+  #bas > * { pointer-events: auto; }
+  #aide { font: italic 14px Georgia, serif; color: var(--soft); text-align: center; transition: opacity .6s; pointer-events: none !important; }
+  #meteo { display: flex; gap: 6px; }
+  #etiquette { position: fixed; transform: translate(-50%, -100%); font: 11px ui-monospace, monospace; letter-spacing: .06em; padding: 6px 9px; background: var(--panneau); border: 1px solid var(--line); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); white-space: nowrap; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #etiquette.on { opacity: 1; }
+  #note { position: fixed; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom)); max-width: 460px; margin: 0 auto; padding: 18px 18px 16px; background: var(--panneau); border: 1px solid var(--line); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transform: translateY(20px); opacity: 0; transition: .35s; pointer-events: none; }
+  #note.on { transform: none; opacity: 1; pointer-events: auto; }
+  #note small { font: 10px ui-monospace, monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); display: flex; align-items: center; gap: 8px; }
+  #note small i { width: 8px; height: 8px; display: inline-block; }
+  #note p { font: 17px/1.5 Georgia, serif; margin: 10px 0 14px; }
+  #voile { position: fixed; inset: 0; background: var(--bg); opacity: 1; transition: opacity 1.2s; pointer-events: none; }
+</style>
+<script type="importmap">{ "imports": { "three": "../../vendor/three@0.170.0/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="haut"><button id="sortir">‹ Ciel</button><div><b id="nom">Astra</b><small>ta planète maison · 18 jours écrits</small></div></div>
+<div id="etiquette"></div>
+<div id="bas"><div id="aide">Glisse le doigt pour te promener. Touche un objet pour relire ta note.</div>
+  <div id="meteo"><button data-m="soleil">Soleil</button><button data-m="pluie">Pluie douce</button><button data-m="neige">Neige</button></div></div>
+<div id="note"><small><i></i><span></span></small><p></p><button id="fermer-note">Fermer</button></div>
+<div id="voile"></div>
+<script type="module">
+// Étude « planète maison » (3 oct. 2026), demandée par Matthieu après la v41 : une de tes planètes devient ta maison ;
+// chaque jour écrit y fait pousser un objet selon l'humeur (joie : cerisier, calme : sapin, élan : maisonnette, mélancolie : lanterne,
+// tempête : cristal). On y descend, la lueur s'y pose et s'y promène (façon Mario Galaxy, dans le style doux) ; toucher un objet rouvre la note.
+// La météo suit les humeurs récentes. Rien ici ne lit ni n'écrit les données de l'app (journal d'exemple).
+// ?vue=sol : directement au sol (captures) ; ?meteo=pluie|neige|soleil ; ?note=3 : ouvre la note n°3.
+import * as THREE from 'three';
+import { construire, doux, fbm, rng, PALETTES } from './planetes.js';
+import { creerLueur3D } from '../../src/lueur3d.js';
+
+const Q = new URLSearchParams(location.search);
+const R = 5;                                           // rayon de la planète maison (monde)
+const MOODS = { calme: '#6fc3ff', joie: '#ffd36b', elan: '#ff7a9c', melancolie: '#9b8cff', tempete: '#ff6b4a' };
+const NOMS_H = { calme: 'Calme', joie: 'Joie', elan: 'Élan', melancolie: 'Mélancolie', tempete: 'Tempête' };
+// journal d'exemple : 18 jours
+const JOURNAL = [
+  ['15 sept.', 'joie', 'Pique-nique au bord du lac avec Léa. Le soleil a tenu toute la journée.'],
+  ['16 sept.', 'calme', 'Journée tranquille, j’ai lu presque tout l’après-midi.'],
+  ['17 sept.', 'elan', 'J’ai enfin lancé le nouveau projet. Plein d’idées.'],
+  ['18 sept.', 'melancolie', 'Un peu de nostalgie en rangeant les vieilles photos.'],
+  ['19 sept.', 'joie', 'Concert surprise ce soir, quelle énergie !'],
+  ['20 sept.', 'calme', 'Balade en forêt, l’odeur des pins après la pluie.'],
+  ['22 sept.', 'tempete', 'Grosse dispute au travail. Besoin de souffler.'],
+  ['23 sept.', 'calme', 'Ça va mieux. Thé, plaid, série.'],
+  ['24 sept.', 'elan', 'Premier footing depuis des mois !'],
+  ['25 sept.', 'joie', 'Repas de famille, on a beaucoup ri.'],
+  ['26 sept.', 'melancolie', 'Il pleut, je pense à mamie.'],
+  ['27 sept.', 'elan', 'Atelier de céramique, mon premier bol.'],
+  ['28 sept.', 'calme', 'Grasse matinée et marché du dimanche.'],
+  ['29 sept.', 'joie', 'Bonne nouvelle pour l’appartement !'],
+  ['30 sept.', 'tempete', 'Fatigué, tout m’agace aujourd’hui.'],
+  ['1 oct.', 'calme', 'Méditation le matin, journée douce.'],
+  ['2 oct.', 'joie', 'J’ai commencé Constellation, j’adore ma petite lueur.'],
+  ['3 oct.', 'elan', 'Des planètes dans mon ciel, et bientôt une maison.'],
+];
+
+// ───── rendu ─────
+const canvas = document.getElementById('c'), renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene(), sceneUI = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(50, 1, .05, 400);
+function redim() { renderer.setSize(innerWidth, innerHeight, false); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', redim); redim();
+
+// ciel : dégradé, étoiles, une petite constellation (ton ciel, vu d'en bas), deux planètes au loin
+scene.background = new THREE.Color('#070818');
+{
+  const g = new THREE.BufferGeometry(), n = 900, p = new Float32Array(n * 3), r = rng(11), tl = new Float32Array(n);
+  for (let i = 0; i < n; i++) { const v = new THREE.Vector3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1).normalize().multiplyScalar(160); p.set([v.x, v.y, v.z], i * 3); tl[i] = .4 + r() * 1.2; }
+  g.setAttribute('position', new THREE.BufferAttribute(p, 3)); g.setAttribute('taille', new THREE.BufferAttribute(tl, 1));
+  scene.add(new THREE.Points(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uT: { value: 0 } },
+    vertexShader: `attribute float taille; uniform float uT; varying float vA; void main(){ vec4 mv = modelViewMatrix*vec4(position, 1.); vA = .55 + .45*sin(uT*1.3 + position.x*7.); gl_PointSize = taille*${(2 * Math.min(2, devicePixelRatio)).toFixed(1)}; gl_Position = projectionMatrix*mv; }`,
+    fragmentShader: `varying float vA; void main(){ float r = length(gl_PointCoord - .5)*2.; gl_FragColor = vec4(vec3(.85, .9, 1.)*exp(-r*r*4.)*vA, 1.); }` })));
+}
+const constel = new THREE.Group(); scene.add(constel);
+{
+  const pts = [[-14, 46, -60], [-6, 52, -62], [3, 49, -64], [10, 55, -60], [18, 50, -58], [8, 43, -63], [-1, 40, -66]].map(a => new THREE.Vector3(...a));
+  const cols = ['#ffd36b', '#6fc3ff', '#ff7a9c', '#ffd36b', '#9b8cff', '#6fc3ff', '#ffd36b'];
+  pts.forEach((v, i) => { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: lueurTex(), color: cols[i], blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); s.position.copy(v); s.scale.setScalar(3.2); constel.add(s); });
+  constel.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([0, 1, 2, 3, 4, 5, 6, 2].map(i => pts[i])), new THREE.LineBasicMaterial({ color: '#cfe0ff', transparent: true, opacity: .22 })));
+}
+function lueurTex() { const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d'), g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, '#fff'); g.addColorStop(.15, '#ffffffcc'); g.addColorStop(.45, '#ffffff33'); g.addColorStop(1, '#fff0'); x.fillStyle = g; x.fillRect(0, 0, 64, 64); return new THREE.CanvasTexture(c); }
+for (const [p, pos, s] of [[{ type: 'gazeuse', palette: 'oree', graine: 2, couleurs: {}, anneaux: 'large' }, [-40, 26, -90], 4], [{ type: 'gazeuse', palette: 'aqua', graine: 5, couleurs: {}, tempete: true }, [46, 14, -110], 3]]) {
+  const { groupe } = construire(p); groupe.position.set(...pos); groupe.scale.setScalar(s); scene.add(groupe);
+}
+
+// ───── la planète maison ─────
+const HOME = { type: 'solide', palette: 'astra', graine: 3, couleurs: {}, nuages: false, arbres: null, maisons: false };
+const monde = new THREE.Group(); monde.scale.setScalar(R); scene.add(monde);
+const { groupe: planete } = construire(HOME, { detail: 80 }); planete.remove(planete.children[planete.children.length - 1]); monde.add(planete);   // sans le halo (on est dessus)
+const PAL = PALETTES.solide.astra;
+// la terre ferme (même bruit que la planète) : les objets n'y poussent que là
+const sol = v => fbm(v.x * 1.5 + 11, v.y * 1.5, v.z * 1.5, HOME.graine, 4) - .5;
+const hauteur = v => 1 + Math.max(0, Math.min(sol(v), .3)) * .12;
+
+// les objets nés des notes
+const Y = new THREE.Vector3(0, 1, 0);
+const GEO = {
+  tronc: new THREE.CylinderGeometry(.08, .12, .9, 8).translate(0, .45, 0),
+  boule: new THREE.SphereGeometry(1, 20, 14),
+  sapin: (() => { const prof = []; for (let i = 0; i <= 16; i++) { const k = i / 16; prof.push(new THREE.Vector2(Math.sin(Math.PI * Math.pow(k, .7)) * .5 * (1 - k * .55), .6 + k * 1.3)); } return new THREE.LatheGeometry(prof, 18); })(),
+  murs: new THREE.CylinderGeometry(.42, .46, .7, 18).translate(0, .35, 0), toit: new THREE.ConeGeometry(.6, .6, 18).translate(0, 1, 0),
+  fenetre: new THREE.CircleGeometry(.12, 14).translate(0, .38, .45),
+  poteau: new THREE.CylinderGeometry(.05, .07, 1.3, 8).translate(0, .65, 0), cristal: new THREE.OctahedronGeometry(.45, 0),
+};
+function objet(type, couleur) {
+  const g = new THREE.Group(), m = o => doux(o);
+  if (type === 'joie') {          // cerisier : un tronc élancé, une couronne ronde faite de petites grappes (pas un chapeau plat)
+    const tr = new THREE.Mesh(GEO.tronc, m({ couleur: '#b98a78', em: .15, rim: .3 })); tr.scale.set(1, 1.5, 1); g.add(tr);
+    const r = rng(type.length * 31 + Math.floor(Math.random() * 1000));
+    for (let k = 0; k < 9; k++) { const a = k / 9 * 6.28 + r(), h = 1.35 + (r() - .5) * .7, d = .18 + r() * .28;
+      const b = new THREE.Mesh(GEO.boule, m({ couleur: k % 3 ? PAL.fleurs : '#fff4f8', atmo: '#ffffff', em: .25, rim: .6 }));
+      b.position.set(Math.cos(a) * d, h + (k === 0 ? .25 : 0), Math.sin(a) * d); b.scale.setScalar(.2 + r() * .1); g.add(b); }
+    const c = new THREE.Mesh(GEO.boule, m({ couleur: PAL.fleurs, atmo: '#ffffff', em: .25, rim: .6 })); c.position.y = 1.55; c.scale.setScalar(.27); g.add(c); }
+  else if (type === 'calme') { g.add(new THREE.Mesh(GEO.tronc, m({ couleur: '#b98a78', em: .15, rim: .3 }))); g.add(new THREE.Mesh(GEO.sapin, m({ couleur: PAL.sapin, atmo: '#ffffff', em: .3, rim: .6 }))); }
+  else if (type === 'elan') {        // maisonnette : murs carrés, toit à deux pans, cheminée, porte et fenêtre allumée (une vraie petite maison, rien d'un champignon)
+    const murs = new THREE.Mesh(new THREE.BoxGeometry(.8, .62, .7).translate(0, .31, 0), m({ couleur: PAL.murs, em: .3, rim: .5 })); g.add(murs);
+    const tri = new THREE.Shape(); tri.moveTo(-.52, 0); tri.lineTo(.52, 0); tri.lineTo(0, .46); tri.closePath();
+    g.add(new THREE.Mesh(new THREE.ExtrudeGeometry(tri, { depth: .82, bevelEnabled: false }).translate(0, .62, -.41), m({ couleur: '#8fa8ff', em: .3, rim: .6 })));
+    const ch = new THREE.Mesh(new THREE.BoxGeometry(.12, .3, .12).translate(.24, .92, -.12), m({ couleur: PAL.murs, em: .3, rim: .4 })); g.add(ch);
+    g.add(new THREE.Mesh(new THREE.PlaneGeometry(.18, .3).translate(-.15, .15, .352), new THREE.MeshBasicMaterial({ color: '#b98a78' })));
+    g.add(new THREE.Mesh(new THREE.PlaneGeometry(.16, .16).translate(.18, .34, .352), new THREE.MeshBasicMaterial({ color: '#ffe29a' }))); }
+  else if (type === 'melancolie') {   // lanterne : un poteau courbé, une petite lune de lumière qui pend
+    g.add(new THREE.Mesh(GEO.poteau, m({ couleur: '#d8d2ea', em: .2, rim: .4 })));
+    const bras = new THREE.Mesh(new THREE.CylinderGeometry(.035, .035, .5, 6), m({ couleur: '#d8d2ea', em: .2, rim: .4 })); bras.rotation.z = Math.PI / 2; bras.position.set(.22, 1.28, 0); g.add(bras);
+    const b = new THREE.Mesh(GEO.boule, m({ couleur: '#c9c0ff', atmo: '#ffffff', em: 1.1, rim: .8 })); b.position.set(.44, 1.08, 0); b.scale.setScalar(.2); g.add(b); }
+  else { for (const [x, z, s, r] of [[0, 0, 1, 0], [.35, .1, .6, .5], [-.3, -.15, .7, -.4]]) { const c = new THREE.Mesh(GEO.cristal, m({ couleur: '#ffc0b0', atmo: '#ffffff', em: .4, rim: .8, spec: .4 })); c.position.set(x, .45 * s, z); c.scale.set(.7 * s, 1.4 * s, .7 * s); c.rotation.z = r * .4; g.add(c); } }
+  // une petite lueur à la couleur de l'humeur, qui s'allume quand la lueur passe à côté
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: lueurTex(), color: couleur, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: .25 }));
+  halo.position.y = .8; halo.scale.setScalar(2.6); g.add(halo); g.userData.halo = halo;
+  return g;
+}
+const objets = [];
+// le point d'arrivée : un coin de terre ferme, qu'on tourne vers le haut (la lueur s'y pose)
+const ARRIVEE = (() => { const r = rng(5); for (let e = 0; e < 5000; e++) { const c = new THREE.Vector3(r() * 2 - 1, r() * 1 - .5, r() * 2 - 1).normalize(); if (sol(c) > .09) return c; } return Y.clone(); })();
+monde.quaternion.setFromUnitVectors(ARRIVEE, Y);
+{
+  const r = rng(77), places = [ARRIVEE];
+  for (let i = 0; i < JOURNAL.length; i++) {
+    let v = null;
+    for (let e = 0; e < 4000 && !v; e++) {
+      const c = new THREE.Vector3(r() * 2 - 1, r() * 2 - 1, r() * 2 - 1); if (c.lengthSq() > 1 || c.lengthSq() < .05) continue; c.normalize();
+      if (Math.abs(c.y) > .75 || sol(c) < .04) continue;                                       // sur la terre, loin des calottes
+      if (places.some(q => q.distanceTo(c) < .17)) continue;
+      if (c.distanceTo(ARRIVEE) < .14) continue;                                             // pas sous la lueur
+      if (i < 4 && c.distanceTo(ARRIVEE) > .5) continue;                                     // les premiers près du point d'arrivée
+      v = c;
+    }
+    if (!v) continue; places.push(v);
+    const [date, humeur, texte] = JOURNAL[i], o = objet(humeur, MOODS[humeur]);
+    o.position.copy(v).multiplyScalar(hauteur(v) - .004);
+    o.quaternion.setFromUnitVectors(Y, v).multiply(new THREE.Quaternion().setFromAxisAngle(Y, r() * 6.28));
+    const s = .075 + r() * .015; o.scale.setScalar(s); o.userData = { ...o.userData, i, date, humeur, texte, s, dir: v, pousse: 1 };
+    monde.add(o); objets.push(o);
+  }
+}
+
+// ───── la lueur ─────
+const lueur = creerLueur3D({ graine: 7 }); sceneUI.add(lueur.groupe);
+const coul = new THREE.Color('#ffd98a');
+const etat = { couleur: coul, clair: 0, app: 0, joie: 0, triste: 0, calme: 0, grands: 0, sommeil: 0, cligne: 0, eclat: 0, sourcils: 0, regard: { x: 0, y: 0 }, expr: [0, 0, 0, 0], yeuxEtoiles: 0, battement: 0, ecrase: { x: 1, y: 1 }, penche: 0,
+  perso: { forme: 'rond', texture: 'lisse', yeux: 1, acc: 0, habit: 0, ailes: false, bras: false, pieds: false } };
+const TAILLE = .2;                                   // rayon du corps (monde)
+lueur.groupe.scale.setScalar(TAILLE);
+
+// ───── météo (selon les dernières humeurs) ─────
+const recentes = JOURNAL.slice(-5).map(j => j[1]);
+const compte = k => recentes.filter(x => x === k).length;
+let meteo = Q.get('meteo') || (compte('melancolie') + compte('tempete') >= 3 ? 'pluie' : compte('calme') >= 3 ? 'neige' : 'soleil');
+const NP = 420, gp = new THREE.BufferGeometry(), pp = new Float32Array(NP * 3), graines = new Float32Array(NP);
+{ const r = rng(5); for (let i = 0; i < NP; i++) { pp.set([(r() - .5) * 14, r() * 7, (r() - .5) * 14], i * 3); graines[i] = r(); } }
+gp.setAttribute('position', new THREE.BufferAttribute(pp, 3)); gp.setAttribute('graine', new THREE.BufferAttribute(graines, 1));
+const matMeteo = new THREE.ShaderMaterial({ transparent: true, depthWrite: false,
+  uniforms: { uT: { value: 0 }, uMode: { value: 0 }, uPR: { value: Math.min(2, devicePixelRatio) } },
+  vertexShader: `attribute float graine; uniform float uT, uMode, uPR; varying float vA; varying float vG;
+    void main(){ vec3 p = position; float t = uT;
+      if (uMode < .5) { p.y = mod(p.y + t*(.15 + graine*.2), 7.); p.x += sin(t*.5 + graine*20.)*.3; }        // soleil : poussières dorées qui montent
+      else if (uMode < 1.5) { p.y = mod(p.y - t*(3. + graine*1.5), 7.); }                                     // pluie douce
+      else { p.y = mod(p.y - t*(.35 + graine*.25), 7.); p.x += sin(t*.8 + graine*30.)*.35; p.z += cos(t*.6 + graine*17.)*.3; }   // neige
+      vec4 mv = modelViewMatrix*vec4(p - vec3(0., 1.5, 0.), 1.); vG = graine;
+      vA = smoothstep(0., .8, p.y)*smoothstep(7., 5.5, p.y);
+      gl_PointSize = (uMode < .5 ? 9. : uMode < 1.5 ? 16. : 12.)*uPR*(.6 + graine*.7)*4./-mv.z; gl_Position = projectionMatrix*mv; }`,
+  fragmentShader: `uniform float uMode; varying float vA; varying float vG;
+    void main(){ vec2 q = gl_PointCoord - .5; float a;
+      vec3 c = uMode < .5 ? vec3(1., .85, .5) : uMode < 1.5 ? vec3(.6, .75, 1.) : vec3(.95, .97, 1.);
+      if (uMode > .5 && uMode < 1.5) a = exp(-q.x*q.x*260.)*smoothstep(.5, .05, abs(q.y))*.8; else a = exp(-dot(q, q)*14.)*(uMode < .5 ? .9 : 1.);
+      gl_FragColor = vec4(c, a*vA); }` });                // posée par-dessus (visible aussi sur l'herbe claire)
+const pluie = new THREE.Points(gp, matMeteo); pluie.frustumCulled = false; scene.add(pluie);
+const voileCiel = { soleil: new THREE.Color('#0d0b1e'), pluie: new THREE.Color('#0a0e1c'), neige: new THREE.Color('#10142a') };
+function choisirMeteo(m) { meteo = m; matMeteo.uniforms.uMode.value = { soleil: 0, pluie: 1, neige: 2 }[m]; document.querySelectorAll('#meteo button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === m))); }
+document.querySelectorAll('#meteo button').forEach(b => b.addEventListener('click', () => choisirMeteo(b.dataset.m)));
+choisirMeteo(meteo);
+
+// ───── se promener ─────
+// La lueur reste en haut de la planète ; c'est la planète qui tourne sous elle. Le doigt donne la direction (comme un joystick posé là où on touche).
+let doigt = null, cap = 0, vitesse = 0, capVise = 0, marche = 0;
+const dir = new THREE.Vector3(), axe = new THREE.Vector3(), _q = new THREE.Quaternion();
+canvas.addEventListener('pointerdown', e => { doigt = { x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, t: performance.now() }; try { canvas.setPointerCapture(e.pointerId); } catch (_) {} });
+canvas.addEventListener('pointermove', e => { if (doigt) { doigt.x = e.clientX; doigt.y = e.clientY; } });
+const finDoigt = e => {
+  if (!doigt) return;
+  const d = Math.hypot(doigt.x - doigt.x0, doigt.y - doigt.y0);
+  if (d < 10 && performance.now() - doigt.t < 350) toucher(e.clientX, e.clientY);
+  doigt = null;
+};
+canvas.addEventListener('pointerup', finDoigt); canvas.addEventListener('pointercancel', () => { doigt = null; });
+const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+function toucher(x, y) {
+  ndc.set(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera);
+  const hits = ray.intersectObjects(objets, true).filter(h => !h.object.isSprite);
+  if (hits.length) { let o = hits[0].object; while (o && !objets.includes(o)) o = o.parent; if (o) ouvrirNote(o); }
+}
+const noteEl = document.getElementById('note');
+function ouvrirNote(o) {
+  const u = o.userData; noteEl.querySelector('span').textContent = u.date + ' · ' + NOMS_H[u.humeur]; noteEl.querySelector('i').style.background = MOODS[u.humeur];
+  noteEl.querySelector('p').textContent = u.texte; noteEl.classList.add('on'); document.getElementById('bas').style.opacity = 0;
+  etat.joie = 1; setTimeout(() => etat.joie = 0, 900); o.userData.pousse = 0;                 // la lueur est contente, l'objet rebondit
+}
+document.getElementById('fermer-note').addEventListener('click', () => { noteEl.classList.remove('on'); document.getElementById('bas').style.opacity = 1; });
+
+// ───── arrivée / départ (on plonge depuis le ciel) ─────
+let arrivee = Q.get('vue') === 'sol' ? 1 : 0, sens = 1;
+document.getElementById('sortir').addEventListener('click', () => { sens = sens > 0 ? -1 : 1; document.getElementById('sortir').textContent = sens > 0 ? '‹ Ciel' : 'Visiter'; });
+const ease = k => k * k * (3 - 2 * k);
+const camSol = new THREE.Vector3(0, R + 2.5, 4.4), visSol = new THREE.Vector3(0, R + .05, -1.1);
+const camCiel = new THREE.Vector3(0, 6, 26), visCiel = new THREE.Vector3(0, 0, 0);
+const _p = new THREE.Vector3(), _v = new THREE.Vector3(), _w = new THREE.Vector3();
+const etiquette = document.getElementById('etiquette');
+
+// ───── boucle ─────
+let t0 = performance.now(), t = 0;
+setTimeout(() => document.getElementById('voile').style.opacity = 0, 150);
+setTimeout(() => document.getElementById('aide').style.opacity = .0, 9000);
+function boucle(now) {
+  const dt = Math.min(.05, (now - t0) / 1000); t0 = now; t += dt;
+  arrivee = Math.min(1, Math.max(0, arrivee + sens * dt / 2.6)); const a = ease(arrivee);
+  // le doigt : direction et vitesse (dans le repère de la caméra, qui regarde vers -Z)
+  let veut = 0;
+  if (doigt && a > .95) { const dx = doigt.x - doigt.x0, dy = doigt.y - doigt.y0, l = Math.hypot(dx, dy); if (l > 12) { capVise = Math.atan2(dx, -dy); veut = Math.min(1, (l - 12) / 70); } }
+  vitesse += (veut - vitesse) * Math.min(1, dt * 6);
+  let dc = capVise - cap; dc = Math.atan2(Math.sin(dc), Math.cos(dc)); cap += dc * Math.min(1, dt * 8);
+  if (vitesse > .01) {
+    dir.set(Math.sin(cap), 0, -Math.cos(cap)); axe.crossVectors(dir, Y).normalize();
+    _q.setFromAxisAngle(axe, vitesse * 1.6 * dt / R); monde.quaternion.premultiply(_q);
+  }
+  marche += vitesse * dt * 9;
+  // la lueur : posée en haut, elle sautille en marchant et regarde où elle va
+  const sautille = Math.abs(Math.sin(marche)) * .07 * vitesse;
+  const yL = R * hauteur(_w.copy(Y).applyQuaternion(monde.quaternion.clone().invert())) + TAILLE * 1.05 + sautille + Math.sin(t * 1.6) * .02 * (1 - vitesse);
+  lueur.groupe.position.set(0, yL + (1 - a) * 3, 0);
+  etat.app = a; etat.ecrase.x = 1 + .06 * vitesse * Math.sin(marche * 2); etat.ecrase.y = 1 - .06 * vitesse * Math.sin(marche * 2); etat.penche = -Math.sin(cap) * .25 * vitesse;
+  etat.cligne = (t % 4.2) < .12 ? 1 : 0; etat.regard.x = Math.sin(cap) * .6 * vitesse; etat.regard.y = .1;
+  lueur.maj(dt, t, etat);
+  // caméra : du ciel vers le sol
+  camera.position.lerpVectors(camCiel, camSol, a); _v.lerpVectors(visCiel, visSol, a); camera.lookAt(_v);
+  lueur.orienter(camera, Math.max(-1.3, Math.min(1.3, cap)) * vitesse, 0);
+  // l'objet le plus proche s'allume, son étiquette s'affiche
+  let proche = null, dmin = 1e9; lueur.groupe.getWorldPosition(_p);
+  for (const o of objets) {
+    o.getWorldPosition(_w); const d = _w.distanceTo(_p) - .3;
+    const u = o.userData; u.pousse = Math.min(1, u.pousse + dt * 1.5);
+    const rebond = 1 + Math.sin(u.pousse * Math.PI) * .25 * (1 - u.pousse);
+    o.scale.setScalar(u.s * rebond);
+    const vise = d < 1.1 ? 1 : .25; u.halo.material.opacity += (vise * .55 - u.halo.material.opacity) * Math.min(1, dt * 4);
+    if (d < dmin) { dmin = d; proche = o; }
+  }
+  if (proche && dmin < 1.1 && a > .95) { proche.getWorldPosition(_w); _w.addScaledVector(_w.clone().normalize(), .75); _w.project(camera);
+    etiquette.textContent = proche.userData.date + ' · ' + NOMS_H[proche.userData.humeur]; etiquette.style.left = (_w.x * .5 + .5) * innerWidth + 'px'; etiquette.style.top = (-_w.y * .5 + .5) * innerHeight + 'px'; etiquette.classList.add('on');
+  } else etiquette.classList.remove('on');
+  // météo autour de la lueur ; le ciel se teinte un peu
+  pluie.position.set(0, R, 0); pluie.visible = a > .3; matMeteo.uniforms.uT.value = t;
+  scene.background.lerp(voileCiel[meteo], Math.min(1, dt * 2));
+  scene.children[0].material.uniforms.uT.value = t;
+  renderer.autoClear = true; renderer.render(scene, camera);
+  renderer.autoClear = false; renderer.clearDepth(); renderer.render(sceneUI, camera); renderer.autoClear = true;
+  window.__pret = true;
+  if (Q.get('note') && !window.__noteOuverte && a > .99) { window.__noteOuverte = true; ouvrirNote(objets[+Q.get('note')]); }
+  requestAnimationFrame(boucle);
+}
+lueur.prechauffer(renderer, camera);
+requestAnimationFrame(boucle);
+window.__etude = { objets, monde, avancer: (c, s) => { capVise = c; cap = c; for (let i = 0; i < 60; i++) { dir.set(Math.sin(c), 0, -Math.cos(c)); axe.crossVectors(dir, Y).normalize(); _q.setFromAxisAngle(axe, s / 60 / R); monde.quaternion.premultiply(_q); } } };
+</script>
+</body>
+</html>
