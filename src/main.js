@@ -1351,7 +1351,8 @@ function appliquerObjets() {
 function ouvrirBoutique(cle, onglet) { const a = cle && etoiles.article(cle); fermerPanneaux(); boutique.ouvrir(a ? a.cat : (onglet || 'lueur'), cle); }
 const boutique = monterBoutique($('boutique'), {
   surChange: () => appliquerObjets(),
-  vignette3D: (toile, o) => creature.vignette(toile, o),   // vignettes de la lueur : la vraie lueur 3D portant l'article
+  vignette3D: (toile, o) => creature.vignette(toile, o),
+  apercu: toile => creature.apercu(toile),                  // l'aperçu fixe en haut : la lueur telle qu'elle est   // vignettes de la lueur : la vraie lueur 3D portant l'article
   equipe: a => etoiles.porte(a, creature.perso(), R) || (a.type === 'interrupteur' && etoiles.actif(a.cle)),
   equiper: (a, oui) => {
     if (a.type === 'interrupteur') { if (etoiles.actif(a.cle) !== !!oui) etoiles.basculer(a.cle); }

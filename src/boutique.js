@@ -10,6 +10,7 @@
 //     (source 'perso' : ailes, bras, pieds, étincelles) ; etoiles.patch(article, oui) donne le patch à appliquer.
 //     surChange : après tout changement (achat, choix, interrupteur) ; surAchat : juste après un achat (toast, effet).
 //     ouvrirReglage : un article « reglage » à toi a été touché (ouvrir « Personnaliser ma lueur » ou « … mon ciel » sur lui).
+//     apercu(canvas) (facultatif) : dessine la lueur telle qu'elle est maintenant (aperçu fixe en haut de l'onglet « Ta lueur »)
 //     vignette3D(canvas, o) (facultatif) : les articles de la lueur montrent la vraie lueur 3D qui les porte (creature.vignette, voir LUEUR3D) ;
 //     sans lui, les anciennes vignettes dessinées en 2D.
 import { t } from './langue.js';
@@ -399,6 +400,10 @@ export function monterBoutique(zone, ctx) {
   const corps = zone.querySelector('.p-corps'), soldeEl = zone.querySelector('#bq-solde');
   const onglets = [...zone.querySelectorAll('[data-onglet]')];
   const mot = el('p', { class: 'bq-mot', role: 'status', 'aria-live': 'polite' }); zone.append(mot);
+  // aperçu (v19) : en haut, la lueur telle qu'elle est, qui ne bouge pas et change à chaque article touché (onglet « Ta lueur »)
+  const apercu = el('canvas', { width: '480', height: '480', 'aria-hidden': 'true' }), boiteApercu = el('div', { class: 'bq-apercu' }, apercu);
+  corps.before(boiteApercu);
+  const majApercu = () => { const on = onglet === 'lueur' && !!ctx.apercu; boiteApercu.hidden = !on; zone.classList.toggle('bq-lueur', on); if (on) ctx.apercu(apercu); };
   let onglet = 'lueur', minuteur = 0;
   const toiles = {};                                   // une vignette n'est dessinée qu'une fois
   const toile = a => toiles[a.cle] || (toiles[a.cle] = (() => { const c = el('canvas', { width: '160', height: '160', 'aria-hidden': 'true' }), v3 = ctx.vignette3D && LUEUR3D[a.cle];
@@ -450,6 +455,7 @@ export function monterBoutique(zone, ctx) {
     soldeEl.textContent = '✦ ' + E.solde();
     onglets.forEach(b => { const on = b.dataset.onglet === onglet; b.setAttribute('aria-selected', String(on)); b.tabIndex = on ? 0 : -1; if (on) corps.setAttribute('aria-labelledby', b.id); });
     corps.replaceChildren(...contenu()); corps.scrollTop = garder ? y : 0;
+    majApercu();
   }
   function briller(cle, defiler = true) {
     const n = corps.querySelector(`[data-cle="${cle}"]`); if (!n) return;

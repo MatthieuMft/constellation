@@ -47,20 +47,21 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   // (rien ne clignote ; mêmes programmes que la lueur du ciel : aucune compilation). o = { perso, etoiles, R, cx, cy, az, el, mode, apres(ctx2d) }
   const fileV = []; let vgn = null;
   function creerVignettes() {
-    const l = creerLueur3D(), sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(22, 1, .1, 400), S = 160; sc.add(l.groupe);
+    const l = creerLueur3D(), sc = new THREE.Scene(), cam = new THREE.PerspectiveCamera(22, 1, .1, 400); let S = 160; sc.add(l.groupe);   // S : taille rendue (160 pour une vignette, plus pour l'aperçu)
     const avant = l.masque.onBeforeRender;                               // grains à l'échelle de la vignette (pas de l'écran entier)
     l.masque.onBeforeRender = (r, sc2, c, ...a) => { avant(r, sc2, c, ...a); l.U.uPx.value = S * c.projectionMatrix.elements[5] * .5; };
     const ev = { couleur: new THREE.Color(), clair: 0, app: 1, joie: 0, triste: 0, sourcils: 0, eclat: 0, calme: 0, grands: 0, sommeil: 0, cligne: 0, regard: { x: 0, y: .05 },
       expr: new THREE.Vector4(), yeuxEtoiles: 0, battement: .6, ecrase: { x: 1, y: 1 }, penche: 0, perso: null };
     const vp = new THREE.Vector4(), sci = new THREE.Vector4(), cc = new THREE.Color(), fond = new THREE.Color('#05060f');
     return (renderer, toile, o) => {
+      S = Math.min(o.S || 160, renderer.domElement.width, renderer.domElement.height); const k = S / 160;   // jamais plus grand que l'écran (sinon l'image est coupée)
       const P = Object.assign({}, PERSO0, o.perso), ie = EXPRESSIONS.indexOf(P.expression), az = o.az ?? -.45, el = o.el ?? .12;
       ev.perso = P; ev.couleur.set(P.couleur || '#ffd98a'); ev.expr.set(+(ie === 1), +(ie === 2), +(ie === 3), +(ie === 4)); ev.yeuxEtoiles = o.etoiles ? 1 : 0; ev.regard.x = az * .7;
       l.maj(1, 2.2, ev); l.maj(1, 2.2, ev);                              // dt = 1 : les articles sont là d'un coup (présence 1)
       const e = l.encombrement(), R = o.R || Math.min(33, 118 / (e.haut + e.bas), 60 / e.cote), cx = o.cx ?? 80, cy = o.cy ?? 80 + (e.haut - e.bas) * R / 2;
       const d = 80 / R / Math.tan(cam.fov * Math.PI / 360);               // le corps (rayon 1) fait R px sur 160
       cam.position.set(Math.sin(az) * Math.cos(el) * d, Math.sin(el) * d, Math.cos(az) * Math.cos(el) * d); cam.lookAt(0, 0, 0);
-      cam.setViewOffset(S, S, 80 - cx, 80 - cy, S, S); cam.updateMatrixWorld();
+      cam.setViewOffset(S, S, (80 - cx) * k, (80 - cy) * k, S, S); cam.updateMatrixWorld();
       renderer.getViewport(vp); renderer.getScissor(sci); renderer.getClearColor(cc);
       const st = renderer.getScissorTest(), ca = renderer.getClearAlpha(), ac = renderer.autoClear, s = S / renderer.getPixelRatio(), can = renderer.domElement;
       renderer.setRenderTarget(null); renderer.setViewport(0, 0, s, s); renderer.setScissor(0, 0, s, s); renderer.setScissorTest(true); renderer.setClearColor(fond, 1); renderer.autoClear = true;
@@ -343,6 +344,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     memoriser, suivre, perso, personnaliser, fete, dessiner: () => ecranPos,
     yeuxEtoiles: on => { yeuxEt = on ? 1 : 0; },
     lueur, prechauffer: (renderer, cam) => lueur.prechauffer(renderer, cam), vignette, rendreVignettes,
+    apercu: (toile, o = {}) => vignette(toile, { perso: perso(), etoiles: yeuxEt === 1, S: toile.width, az: -.35, ...o }),   // la lueur telle qu'elle est maintenant (aperçu de la boutique)
     update, majProfil, dire, souvenirMaintenant() { souvenir = null; prochainSouvenir = rnd(70, 130); lancerSouvenir(); return !!souvenir; },
     montrer() { if (montree) return; montree = true; apparition = 0; majProfil(true); base(); ndcPoint(0, .05, distRef(), pos); vel.set(0, 0, 0);   // elle naît devant toi, où que regarde la caméra
       particules.burst(pos, new THREE.Color(1, .95, .8), 40, 2.6, true); },

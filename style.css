@@ -672,3 +672,13 @@ body.barre-on #ecrire .p-corps { padding-bottom: 60px; }
 #charge-info p { margin: 0 0 14px; }
 #chargement > * { grid-column: 1; }
 #charge-info .charge-detail { font: 11px/1.4 var(--mono); opacity: .75; }
+
+/* v19 : aperçu de la lueur, fixe en haut de la boutique (onglet « Ta lueur ») ; sur téléphone, la boutique prend tout l'écran */
+.bq-apercu { flex: none; display: flex; justify-content: center; background: #05060f; border-bottom: 1px solid var(--line); }
+.bq-apercu[hidden] { display: none; }
+.bq-apercu canvas { display: block; height: 220px; width: 220px; }
+@media (max-width: 720px) {
+  #boutique.bq-lueur { top: 0; max-height: none; height: 100dvh; border-width: 0; padding-top: env(safe-area-inset-top, 0px); }
+  #boutique.bq-lueur .p-grip { display: none; }
+  .bq-apercu canvas { height: min(34dvh, 280px); width: min(34dvh, 280px); }
+}
