@@ -6,6 +6,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { MOODS, TYPES, charger, sauver, surSauvegarde, cleJour, dateDeCle, nouvelId, humeurDuJour } from './store.js';
 import * as media from './media.js';
+import { creerEditeur } from './editeur.js';
 import * as sauv from './sauvegarde.js';
 import { legere, chargerProfond, profonde, cos } from './embed.js';
 import { avecCache, empreinte, ecrire as ecrireIDB } from './cache.js';
@@ -163,9 +164,9 @@ const lactee = (() => {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('aS', new THREE.BufferAttribute(tai, 1)); g.setAttribute('aP', new THREE.BufferAttribute(ph, 1));
   const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, uniforms: { uT: { value: 0 }, uPR: { value: renderer.getPixelRatio() }, uA: { value: 0 } },
-    vertexShader: `attribute float aS; attribute float aP; uniform float uT; uniform float uPR; varying float vA; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.); gl_Position = projectionMatrix*mv; gl_PointSize = aS*uPR*1.3; vA = .3 + .5*(.5+.5*sin(uT*.5+aP)); }`,
-    fragmentShader: `uniform float uA; varying float vA; void main(){ float d = length(gl_PointCoord-.5); if(d>.5) discard; gl_FragColor = vec4(vec3(.92,.9,1.)*vA, vA*(1.-d*2.)*uA*.8); }` });
-  const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.visible = false; scene.add(pts); return pts;
+    vertexShader: `attribute float aS; attribute float aP; uniform float uT; uniform float uPR; varying float vA; void main(){ vec4 mv = modelViewMatrix*vec4(position,1.); gl_Position = projectionMatrix*mv; gl_PointSize = aS*uPR*2.4; vA = .3 + .5*(.5+.5*sin(uT*.5+aP)); }`,
+    fragmentShader: `uniform float uA; varying float vA; void main(){ float d = length(gl_PointCoord-.5); if(d>.5) discard; gl_FragColor = vec4(vec3(.92,.9,1.)*vA, vA*(1.-d*2.)*uA); }` });
+  const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.visible = false; pts.userData.ax = ax; scene.add(pts); return pts;
 })();
 
 // ───────────── Étoiles : une par jour ─────────────
@@ -441,6 +442,16 @@ function regulerResolution(now) {       // moyenne glissante du temps d'image ; 
   else if (msMoy < 15 && n < 1) n = Math.min(1, n + .1);
   if (n !== echelleDyn) { echelleDyn = n; redim(); }
 }
+// joystick virtuel (v22) : un carré en bas à gauche ; on pousse le petit carré du doigt pour se déplacer dans le ciel
+const joy = { x: 0, y: 0 }, _joyD = new THREE.Vector3(), _joyH = new THREE.Vector3();
+{
+  const z = $('joystick'), pion = z.querySelector('i'), R = 28; let id = null, cx = 0, cy = 0;
+  const poser = (dx, dy) => { const l = Math.hypot(dx, dy), k = l > R ? R / l : 1; dx *= k; dy *= k; pion.style.transform = `translate(${dx}px, ${dy}px)`; joy.x = dx / R; joy.y = -dy / R; };
+  z.addEventListener('pointerdown', e => { id = e.pointerId; const r = z.getBoundingClientRect(); cx = r.left + r.width / 2; cy = r.top + r.height / 2; z.setPointerCapture(id); poser(e.clientX - cx, e.clientY - cy); e.preventDefault(); });
+  z.addEventListener('pointermove', e => { if (e.pointerId === id) poser(e.clientX - cx, e.clientY - cy); });
+  const fin = e => { if (e.pointerId !== id) return; id = null; poser(0, 0); };
+  z.addEventListener('pointerup', fin); z.addEventListener('pointercancel', fin);
+}
 function boucle() {
   const dt = Math.min(horloge.getDelta(), .05), t = horloge.elapsedTime, now = performance.now();
   if (!document.hidden) regulerResolution(now);
@@ -469,7 +480,7 @@ function boucle() {
   if (eclatDans <= 0 && R.animation > 0 && visuelsVisibles.size) { const a = [...visuelsVisibles.values()]; a[Math.floor(Math.random() * a.length)].pulse = .8; eclatDans = (2.5 + Math.random() * 5) / R.animation; }
   meteores.update(dt, etoiles.actif('filantes-or') ? R.animation * 2.5 : etoiles.actif('filantes') ? R.animation : 0);
   poussiere.update(t, R.animation, controls.target, camera.position.distanceTo(controls.target), etoiles.actif('poussiere') ? 1 : 0);
-  lactee.material.uniforms.uA.value += ((etoiles.actif('lactee') ? 1 : 0) - lactee.material.uniforms.uA.value) * Math.min(1, dt * .5); lactee.visible = lactee.material.uniforms.uA.value > .01;
+  lactee.material.uniforms.uA.value += ((etoiles.actif('lactee') ? 1 : 0) - lactee.material.uniforms.uA.value) * Math.min(1, dt * 1.2); lactee.visible = lactee.material.uniforms.uA.value > .01;
   fonduEtiq = intro.actif ? 0 : Math.min(1, fonduEtiq + dt * .8); monde.fonduEtiquettes(fonduEtiq * fonduEtiq);
   monde.update(niveau);
   majNiveau(now);
@@ -480,6 +491,11 @@ function boucle() {
     const k = Math.min(1, (now - vol_cam.t0) / vol_cam.duree), e = ease(k);
     controls.target.lerpVectors(vol_cam.t1, vol_cam.t2, e); camera.position.lerpVectors(vol_cam.c1, vol_cam.c2, e);
     if (k >= 1) vol_cam = null;
+  }
+  if (joy.x || joy.y) {                                 // v22 : le joystick fait glisser la vue, plus vite quand on est loin
+    vol_cam = null; const d = camera.position.distanceTo(controls.target), k = Math.max(8, d) * .9 * dt;
+    _joyD.setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(joy.x * k).addScaledVector(_joyH.setFromMatrixColumn(camera.matrixWorld, 1), joy.y * k);
+    camera.position.add(_joyD); controls.target.add(_joyD);
   }
   animerIntro(now);
   controls.autoRotate = niveau === 'annees' && !selection && !vol_cam && $('ecrire').hidden && Re.vitesse > 0 && !intro.actif;
@@ -771,7 +787,8 @@ function ouvrirEcrire({ jour = null, item = null } = {}) {
   if (brouillon && (brouillon.texte || '').trim()) { $('texte').value = brouillon.texte || ''; $('nbc').textContent = $('texte').value.length + ' / 4000'; if (brouillon.jour && brouillon.jour <= aujourdhui() && !jour) d.value = brouillon.jour; $('interim').textContent = t('Brouillon retrouvé.'); }
   $('valider').textContent = item ? t('Enregistrer') : t('Cristalliser');
   $('ecrire').hidden = false; document.body.classList.add('ecriture'); accueil.surPlus();
-  $('texte').focus(); ouvertureEcriture = performance.now(); dernierTexte = ouvertureEcriture;
+  $('editeur').dataset.ph = $('texte').placeholder;   // v22 : pas de clavier d'office, on touche le texte pour écrire
+  ouvertureEcriture = performance.now(); dernierTexte = ouvertureEcriture;
 }
 const CLE_BROUILLON = 'constellation.brouillon';
 function garderBrouillon() {
@@ -789,45 +806,26 @@ $('annuler').addEventListener('click', fermerEcrire);
 $('ecrire-fermer').addEventListener('click', fermerEcrire);
 // menu de blocs, comme dans Notion : « + Ajouter » au-dessus du texte, ou « / » en début de ligne.
 // Le texte reste du texte : « # », « ## », « ### » pour les titres, « - » pour les puces, « 1. » pour les listes numérotées.
-const PREFIXES = { 1: '# ', 2: '## ', 3: '### ', 4: '#### ', puce: '- ', num: '1. ', citation: '> ', texte: '' };
+// v22 : l'éditeur affiche les blocs tels quels (editeur.js) ; le texte enregistré garde « # », « - », « 1. », « > », « --- ».
+const ed = creerEditeur($('editeur'), $('texte'));
 const ENTREES = { image: ['fichiers-media', 'image/*'], video: ['fichiers-media', 'video/*'], fichier: ['fichiers-autres', ''] };
-let blocSlash = -1;                                                      // position du « / » tapé, à effacer quand on choisit
-function ouvrirBlocs(slash = -1) { blocSlash = slash; $('bloc-menu').hidden = false; $('bloc-plus').setAttribute('aria-expanded', 'true'); requestAnimationFrame(() => $('bloc-menu').scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
-function fermerBlocs() { blocSlash = -1; $('bloc-menu').hidden = true; $('bloc-plus').setAttribute('aria-expanded', 'false'); }
+let blocSlash = false;                                                   // menu ouvert par un « / » tapé, à effacer quand on choisit
+function ouvrirBlocs(slash = false) { blocSlash = slash; $('bloc-menu').hidden = false; $('bloc-plus').setAttribute('aria-expanded', 'true'); requestAnimationFrame(() => $('bloc-menu').scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
+function fermerBlocs() { blocSlash = false; $('bloc-menu').hidden = true; $('bloc-plus').setAttribute('aria-expanded', 'false'); }
 function poserBloc(k) {
-  const ta = $('texte'); let v = ta.value, pos = ta.selectionStart;
-  if (blocSlash >= 0 && v[blocSlash] === '/') { v = v.slice(0, blocSlash) + v.slice(blocSlash + 1); pos = blocSlash; }
+  if (blocSlash) ed.retirerSlash();
   fermerBlocs();
-  if (ENTREES[k]) { ta.value = v; ta.dispatchEvent(new Event('input')); const [id, acc] = ENTREES[k], f = $(id); if (acc) f.accept = acc; f.click(); return; }
-  if (k === 'separateur') {                                                // une ligne « --- » à part, puis on continue en dessous
-    const avant = v.slice(0, pos), apres = v.slice(ta.selectionEnd), ins = (avant && !avant.endsWith('\n') ? '\n' : '') + '---\n';
-    ta.value = avant + ins + apres; const c = pos + ins.length; ta.focus(); ta.setSelectionRange(c, c); ta.dispatchEvent(new Event('input')); return;
-  }
-  const deb = v.lastIndexOf('\n', pos - 1) + 1, fin = (v.indexOf('\n', pos) + 1 || v.length + 1) - 1, ligne = v.slice(deb, fin);
-  const m = ligne.match(/^(#{1,4} |- |\d+\. |> )/), nue = m ? ligne.slice(m[0].length) : ligne;
-  let pre = PREFIXES[k];
-  if (k === 'num') { const avant = v.slice(0, Math.max(0, deb - 1)), prec = avant.slice(avant.lastIndexOf('\n') + 1).match(/^(\d+)\. /); pre = (prec ? +prec[1] + 1 : 1) + '. '; }
-  const neuve = m && m[0] === pre ? nue : pre + nue;                     // reprendre le même bloc le retire
-  ta.value = v.slice(0, deb) + neuve + v.slice(fin); const c = deb + neuve.length; ta.focus(); ta.setSelectionRange(c, c); ta.dispatchEvent(new Event('input'));
+  if (ENTREES[k]) { const [id, acc] = ENTREES[k], f = $(id); if (acc) f.accept = acc; f.click(); return; }
+  ed.poser(k);
 }
+ed.surSlash(() => ouvrirBlocs(true));
 $('bloc-plus').addEventListener('mousedown', e => e.preventDefault());
 $('bloc-plus').addEventListener('click', () => $('bloc-menu').hidden ? ouvrirBlocs() : fermerBlocs());
 document.querySelectorAll('#bloc-menu button').forEach(b => { b.addEventListener('mousedown', e => e.preventDefault()); b.addEventListener('click', () => poserBloc(b.dataset.bloc)); });
-$('texte').addEventListener('input', e => {                              // « / » en début de ligne ouvre le menu
-  const ta = $('texte'), p = ta.selectionStart;
-  if (e.data === '/' && (p === 1 || ta.value[p - 2] === '\n')) ouvrirBlocs(p - 1); else if (!$('bloc-menu').hidden && blocSlash >= 0) fermerBlocs();
-});
-$('texte').addEventListener('keydown', e => {
-  const ta = $('texte');
-  if (e.key === 'Escape' && !$('bloc-menu').hidden) { e.preventDefault(); e.stopPropagation(); fermerBlocs(); return; }
-  if (e.key !== 'Enter' || e.shiftKey) return;                           // Entrée dans une liste : la puce suivante (ou sortie de liste sur une ligne vide)
-  const v = ta.value, pos = ta.selectionStart, deb = v.lastIndexOf('\n', pos - 1) + 1, ligne = v.slice(deb, pos), m = ligne.match(/^(- |(\d+)\. )/);
-  if (!m) return; e.preventDefault();
-  if (ligne === m[0]) { ta.value = v.slice(0, deb) + v.slice(pos); ta.setSelectionRange(deb, deb); }
-  else { const suite = m[2] ? (+m[2] + 1) + '. ' : '- ', ins = '\n' + suite; ta.value = v.slice(0, pos) + ins + v.slice(ta.selectionEnd); ta.setSelectionRange(pos + ins.length, pos + ins.length); }
-  ta.dispatchEvent(new Event('input'));
-});
+$('editeur').addEventListener('keydown', e => { if (e.key === 'Escape' && !$('bloc-menu').hidden) { e.preventDefault(); e.stopPropagation(); fermerBlocs(); } });
+$('texte').addEventListener('input', e => { if (blocSlash && !(e.inputType || '').startsWith('insert')) fermerBlocs(); });
 document.addEventListener('pointerdown', e => { if (!$('bloc-menu').hidden && !e.target.closest('.bloc-outils, #barre-clavier')) fermerBlocs(); });
+
 // barre au-dessus du clavier (mobile first, à la Notion) : tous les blocs à portée du pouce
 const barre = $('barre-clavier'), tactile = matchMedia('(pointer: coarse)');
 function placerBarre() {
@@ -835,8 +833,8 @@ function placerBarre() {
   document.documentElement.style.setProperty('--clavier', bas + 'px');
 }
 function montrerBarre(on) { $('barre-clavier').hidden = !on; document.body.classList.toggle('barre-on', on); if (on) placerBarre(); else fermerBlocs(); }
-$('texte').addEventListener('focus', () => { if (tactile.matches || innerWidth < 700) montrerBarre(true); });
-$('texte').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('texte') && $('bloc-menu').hidden) montrerBarre(false); }, 150));
+$('editeur').addEventListener('focus', () => { if (tactile.matches || innerWidth < 700) montrerBarre(true); });
+$('editeur').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('editeur') && $('bloc-menu').hidden) montrerBarre(false); }, 150));
 if (window.visualViewport) { visualViewport.addEventListener('resize', placerBarre); visualViewport.addEventListener('scroll', placerBarre); }
 barre.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });   // garder le clavier ouvert
 barre.addEventListener('click', e => {
@@ -1082,7 +1080,7 @@ const _ray = new THREE.Raycaster();
 $('texte').addEventListener('input', ev => {
   dernierTexte = performance.now(); creature.taper(ev.target.value, ev.target.selectionStart);       // la mascotte lit ce qu'on écrit
   if (!/^insert/.test(ev.inputType || '')) return;
-  const r = $('texte').getBoundingClientRect();
+  const r = $('editeur').getBoundingClientRect();
   const x = r.left + r.width * (0.15 + 0.7 * ((ev.target.value.length * 37) % 100) / 100), y = r.top + 6;
   _ray.setFromCamera(new THREE.Vector2(x / innerWidth * 2 - 1, -(y / innerHeight) * 2 + 1), camera);
   const p = _ray.ray.at(9, new THREE.Vector3());
@@ -1380,13 +1378,34 @@ const boutique = monterBoutique($('boutique'), {
   },
 });
 glisserPourFermer($('boutique'), () => boutique.fermer());
+// v22 : sur téléphone, le panneau plein écran descend quelques secondes pour laisser voir tout le ciel (un toucher le fait remonter)
+let minuteurCiel = 0;
+function voirLeCiel(duree = 4800) {
+  if (!petitEcran.matches || !(boutique.ouvert() || cielUI.ouvert())) return;
+  document.body.classList.add('voir-ciel'); clearTimeout(minuteurCiel); minuteurCiel = setTimeout(rendreLePanneau, duree);
+}
+function rendreLePanneau() { clearTimeout(minuteurCiel); document.body.classList.remove('voir-ciel'); }
+addEventListener('pointerdown', () => { if (document.body.classList.contains('voir-ciel')) setTimeout(rendreLePanneau, 0); }, true);
+// v22 : regarder une planète un peu de côté, pour que l'étoile du jour (au centre) ne la cache pas
+function decale(dir) {
+  const demiH = Math.atan(Math.tan(camera.fov * Math.PI / 360) * camera.aspect), demiV = camera.fov * Math.PI / 360;
+  const v = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan(Math.tan(demiH) * .5));
+  const droite = new THREE.Vector3().crossVectors(v, new THREE.Vector3(0, 1, 0)).normalize();
+  return v.applyAxisAngle(droite, -Math.atan(Math.tan(demiV) * .45)).normalize();   // en haut à droite, loin des étoiles du centre
+}
 // v21 : allumer un astre ou une animation du ciel le montre tout de suite (la vue tourne vers la planète, l'animation se joue)
 function montrerDansLeCiel(cle) {
   const a = etoiles.article(cle); if (!a || a.cat !== 'ciel' || a.type !== 'interrupteur' || !etoiles.actif(cle)) return;
-  if (decor.PLANETES.includes(cle)) { voler(controls.target.clone(), camera.position.distanceTo(controls.target), decor.direction(cle)); setTimeout(() => decor.apparaitre(cle), 900); return; }
+  voirLeCiel(); if (selection && petitEcran.matches) fermerFiche();
+  const d0 = Math.max(DIST.semaine, camera.position.distanceTo(controls.target));   // jamais collé à une étoile : elle cacherait tout
+  if (decor.PLANETES.includes(cle)) { voler(controls.target.clone(), d0, decale(decor.direction(cle))); setTimeout(() => decor.apparaitre(cle), 900); return; }
+  if (cle === 'lactee') {                               // la vue tourne vers la bande, qui traverse l'écran en biais
+    const ax = lactee.userData.ax, v = new THREE.Vector3(); camera.getWorldDirection(v); v.addScaledVector(ax, -v.dot(ax)).normalize();
+    voler(controls.target.clone(), d0, decale(v)); return;
+  }
   if (cle === 'filantes-or' || cle === 'filantes') { meteores.rafale(3); return; }
   const ev = { aurores: 'aurore', cometes: 'comete', baleine: 'baleine', dessins: 'dessin', satellites: 'satellite', lune: 'lune' }[cle];
-  if (ev) { setTimeout(() => evenements.declencher(ev), 400); return; }
+  if (ev) { if (camera.position.distanceTo(controls.target) < d0 - 1) voler(controls.target.clone(), d0); setTimeout(() => evenements.declencher(ev), ev === 'lune' ? 400 : 1300); return; }
   if (cle === 'croix' || cle === 'lucioles') voler(posDuJour(aujourdhui()), DIST.semaine);
 }
 

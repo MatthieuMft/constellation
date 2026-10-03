@@ -25,6 +25,8 @@ export const dansLeCiel = (ax, ay, v = new THREE.Vector3()) => v.copy(AXE).addSc
 export const etalement = camera => 1 + 1.2 * clamp01((camera.aspect - .5) / 1.1);
 
 // repère de la caméra à l'instant T (les événements se placent « dans le ciel qu'on regarde »)
+// moitiés visibles (hauteur, largeur) à la distance D devant la caméra
+const visible = (camera, D) => { const h = Math.tan(camera.fov * Math.PI / 360) * D; return [h, h * camera.aspect]; };
 function repere(camera) {
   camera.updateMatrixWorld();
   const avant = new THREE.Vector3(); camera.getWorldDirection(avant);
@@ -82,8 +84,9 @@ export function creerEvenements({ scene, camera, melange, texHalo, pr = 1 }) {
   // ── Comète : une tête vive et une longue queue qui vire du cyan au magenta ──
   function comete() {
     const b = repere(camera), D = rnd(180, 250), sens = Math.random() < .5 ? -1 : 1, NP = 60;
-    const tete = b.pos.clone().addScaledVector(b.avant, D).addScaledVector(b.droite, -sens * rnd(95, 130)).addScaledVector(b.haut, rnd(15, 75));
-    const vit = b.droite.clone().multiplyScalar(sens * rnd(10, 15)).addScaledVector(b.haut, -rnd(1, 4));
+    const [demi, demiL] = visible(camera, D);                                // v22 : partir juste au bord de l'écran (téléphone en hauteur compris) et le traverser
+    const tete = b.pos.clone().addScaledVector(b.avant, D).addScaledVector(b.droite, -sens * demiL * 1.1).addScaledVector(b.haut, demi * rnd(.1, .45));
+    const vit = b.droite.clone().multiplyScalar(sens * demiL * 2.2 / rnd(7, 9)).addScaledVector(b.haut, -rnd(1, 4));
     const hist = Array.from({ length: NP }, () => tete.clone());
     const pos = new Float32Array(NP * 2 * 3), dir = new Float32Array(NP * 2 * 3), u = new Float32Array(NP * 2), cote = new Float32Array(NP * 2), idx = [];
     for (let i = 0; i < NP; i++) { u[i * 2] = u[i * 2 + 1] = i / (NP - 1); cote[i * 2] = -1; cote[i * 2 + 1] = 1; if (i < NP - 1) idx.push(i * 2, i * 2 + 1, i * 2 + 2, i * 2 + 2, i * 2 + 1, i * 2 + 3); }
@@ -180,7 +183,7 @@ export function creerEvenements({ scene, camera, melange, texHalo, pr = 1 }) {
   // ── Baleine d'étoiles : un banc de points qui nage, très loin ──
   function baleine() {
     const b = repere(camera), D = rnd(210, 250), sens = Math.random() < .5 ? -1 : 1, LONG = 95;
-    const cx = -sens * 160, y0 = rnd(5, 55), NB = 20;
+    const [demi, demiL] = visible(camera, D), L2 = Math.min(LONG, demiL * 1.1), cx = -sens * (demiL + L2 * .6), y0 = demi * rnd(.05, .35), NB = 20;   // v22 : à la taille de l'écran
     // silhouette (x de -1.3 à 1, y selon le profil) : dos, ventre, nageoire caudale, œil
     const base = [];
     for (let i = 0; i <= NB; i++) { const x = -.8 + 1.8 * i / NB, h = Math.sqrt(Math.max(0, 1 - Math.pow((x + .1) / .9, 2))); base.push([x, .22 * h, 1], [x, -.17 * h, 1]); }
@@ -195,11 +198,11 @@ export function creerEvenements({ scene, camera, melange, texHalo, pr = 1 }) {
     const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.renderOrder = 1; scene.add(pts);
     let x = cx, t = 0; const vie = 52;
     ajouter('baleine', vie, (dt, age) => {
-      x += sens * (320 / vie) * dt; t += dt; m.uniforms.uT.value = t; m.uniforms.uA.value = env(age, vie, 5, 6);
+      x += sens * (2 * Math.abs(cx) / vie) * dt; t += dt; m.uniforms.uT.value = t; m.uniforms.uA.value = env(age, vie, 5, 6);
       const centre = b.pos.clone().addScaledVector(b.avant, D).addScaledVector(b.droite, x).addScaledVector(b.haut, y0 + Math.sin(t * .35) * 5);
       base.forEach(([px, py], i) => {
         const ondul = Math.sin(px * 3.2 - t * 1.9) * .07 * (1 - px) / 2;                       // le corps ondule, la queue davantage
-        const wx = sens * px * LONG * .5, wy = (py + ondul) * LONG * .5;
+        const wx = sens * px * L2 * .5, wy = (py + ondul) * L2 * .5;
         pos[i * 3] = centre.x + b.droite.x * wx + b.haut.x * wy; pos[i * 3 + 1] = centre.y + b.droite.y * wx + b.haut.y * wy; pos[i * 3 + 2] = centre.z + b.droite.z * wx + b.haut.z * wy;
       });
       g.attributes.position.needsUpdate = true;
@@ -209,11 +212,12 @@ export function creerEvenements({ scene, camera, melange, texHalo, pr = 1 }) {
   // ── Satellite : un point qui clignote et traverse en ligne droite ──
   function satellite() {
     const b = repere(camera), sens = Math.random() < .5 ? -1 : 1, D = rnd(140, 200);
-    const p = b.pos.clone().addScaledVector(b.avant, D).addScaledVector(b.droite, -sens * 120).addScaledVector(b.haut, rnd(-5, 70));
-    const vit = b.droite.clone().multiplyScalar(sens * 14).addScaledVector(b.haut, rnd(-2, 3));
+    const [demi, demiL] = visible(camera, D);
+    const p = b.pos.clone().addScaledVector(b.avant, D).addScaledVector(b.droite, -sens * demiL * 1.1).addScaledVector(b.haut, demi * rnd(-.05, .4));
+    const vit = b.droite.clone().multiplyScalar(sens * demiL * 2.2 / 11).addScaledVector(b.haut, rnd(-1, 1.5));
     const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute([p.x, p.y, p.z], 3));
     const m = mat({ uniforms: { uT: { value: 0 }, uA: { value: 0 }, uPR: { value: pr }, uCol: { value: blanc() } },
-      vertexShader: `uniform float uPR; void main(){ gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); gl_PointSize = 5.*uPR; }`,
+      vertexShader: `uniform float uPR; void main(){ gl_Position = projectionMatrix*modelViewMatrix*vec4(position,1.); gl_PointSize = 7.*uPR; }`,
       fragmentShader: `uniform float uT; uniform float uA; uniform vec3 uCol; void main(){ float d = length(gl_PointCoord - .5); if (d > .5) discard;
         float blink = smoothstep(.55, .75, sin(uT*3.8)*.5 + .5)*.8 + .2; gl_FragColor = vec4(uCol*1.3, smoothstep(.5, 0., d)*uA*blink); }` });
     const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.renderOrder = 1; scene.add(pts);
@@ -307,7 +311,10 @@ export function creerEvenements({ scene, camera, melange, texHalo, pr = 1 }) {
 
   return {
     lune, tout, creerLucioles,
-    declencher(nom, arg) { const f = tout[nom]; if (f) f(arg); return !!f; },
+    declencher(nom, arg) {                         // v22 : jamais deux fois la même en même temps, et le tirage au hasard qui suivait un allumage est annulé
+      const f = tout[nom]; if (!f) return false; if (actifs.some(a => a.nom === nom)) return true;
+      f(arg); promis.delete(nom); if (plan[nom]) attente[nom] = rnd(...plan[nom]); return true;
+    },
     actifs: () => actifs.map(a => a.nom),
     regler(clair, encre) {
       tint.clair = clair; tint.encre.set(encre);

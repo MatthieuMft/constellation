@@ -101,8 +101,8 @@ export function creerPoussiere(scene, pr, N = 900) {
         vec3 p = position + vec3(sin(uT*.06 + aP*6.28), cos(uT*.045 + aP*9.), sin(uT*.05 + aP*4.)) * 3.5 * uAmp;
         p.x = mod(p.x + uDerive*(.7 + .6*aP) + 60., 120.) - 60.;                 // le voile traverse lentement le ciel, et revient par l'autre bord
         vec4 mv = modelViewMatrix*vec4(p,1.); gl_Position = projectionMatrix*mv;
-        gl_PointSize = aS*uPR*(34./max(1., -mv.z)); vA = (.1 + .9*(.5 + .5*sin(uT*.6 + aP*30.))) * uAlpha * smoothstep(60., 46., abs(p.x)); }`,
-    fragmentShader: `uniform vec3 uCol; varying float vA; void main(){ float d = length(gl_PointCoord - .5); if (d > .5) discard; gl_FragColor = vec4(uCol, vA*(1. - d*2.)*.55); }`,
+        gl_PointSize = aS*uPR*(58./max(1., -mv.z)); vA = (.1 + .9*(.5 + .5*sin(uT*.6 + aP*30.))) * uAlpha * smoothstep(60., 46., abs(p.x)); }`,
+    fragmentShader: `uniform vec3 uCol; varying float vA; void main(){ float d = length(gl_PointCoord - .5); if (d > .5) discard; gl_FragColor = vec4(uCol, vA*(1. - d*2.)*.95); }`,
   });
   const pts = new THREE.Points(g, material); pts.frustumCulled = false; pts.renderOrder = 2; scene.add(pts);
   let alpha = .7, pres = 0, tPrec = null;

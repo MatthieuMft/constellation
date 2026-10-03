@@ -16,7 +16,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1072221"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1077853"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -104,7 +104,7 @@
     <label class="ligne-date">Jour <input type="date" id="ecrire-date" aria-label="Jour de l’entrée"></label>
     <div id="humeurs" role="radiogroup" aria-label="Humeur du jour"></div>
     <input id="note-titre" type="text" maxlength="80" placeholder="Titre (facultatif)" aria-label="Titre de la note" hidden>
-    <div class="bloc-outils"><button type="button" id="bloc-plus" aria-haspopup="menu" aria-expanded="false" title="Ajouter un bloc">+ Ajouter</button><span class="bloc-astuce">ou tapez / en début de ligne</span>
+    <div class="bloc-outils"><button type="button" id="bloc-plus" aria-haspopup="menu" aria-expanded="false" title="Ajouter un bloc">+ Ajouter</button><span class="bloc-astuce">ou tapez / au début d’une ligne</span>
       <div id="bloc-menu" class="bloc-menu" role="menu" hidden>
         <p class="bm-tete">Texte</p>
         <button type="button" role="menuitem" data-bloc="1"><b class="bm-i">H1</b>Titre 1</button>
@@ -120,7 +120,8 @@
         <button type="button" role="menuitem" data-bloc="video"><b class="bm-i"><svg viewBox="0 0 20 20"><rect x="2.5" y="5" width="11" height="10"/><path d="M13.5 9l4-2.5v7l-4-2.5"/></svg></b>Vidéo</button>
         <button type="button" role="menuitem" data-bloc="fichier"><b class="bm-i"><svg viewBox="0 0 20 20"><path d="M5 2.5h7l3 3v12H5z M12 2.5v3h3"/></svg></b>Fichier</button>
       </div></div>
-    <textarea id="texte" rows="5" maxlength="4000" placeholder="Écrivez. Ce texte ne quitte jamais cet appareil."></textarea>
+    <textarea id="texte" hidden rows="5" maxlength="4000" placeholder="Écrivez. Ce texte ne quitte jamais cet appareil."></textarea>
+    <div id="editeur" class="editeur" aria-label="Texte de l’entrée"></div>
     <div id="zone-media">
       <div class="rang-media" hidden><button type="button" id="choisir-media" class="ajout-media">+ Photo ou vidéo</button></div>
       <input id="fichiers-media" type="file" accept="image/*,video/*" multiple hidden>
@@ -200,6 +201,7 @@
   <button id="btn-palette" aria-label="Menu" title="Menu">⋯</button>
 </footer>
 <button id="repere" hidden aria-label="Aller à aujourd’hui"><i></i><span>aujourd’hui</span></button>
+<div id="joystick" role="img" aria-label="Se déplacer dans le ciel" title="Se déplacer"><i></i></div>
 <div id="zoom" role="group" aria-label="Zoom dans le temps">
   <button id="zoom-aujourdhui" aria-label="Aller à aujourd’hui" title="Aujourd’hui">◎</button>
   <button id="zoom-plus" aria-label="Plonger d’un niveau" title="Plonger (zoom avant)">+</button>
