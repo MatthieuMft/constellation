@@ -337,7 +337,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     vel.multiplyScalar(k);
   }
 
-  function personnaliser(patch, discret = false) { sauve.perso = Object.assign({}, perso(), patch); persoC = null; sauver(sauve); if (montree && !discret) { joie = Math.max(joie, 2); particules.burst(corps.position, coul, 14, .9, true); } return perso(); }
+  function personnaliser(patch, discret = false) { sauve.perso = Object.assign({}, perso(), patch); persoC = null; sauver(sauve); if (montree && !discret) particules.burst(corps.position, coul, 14, .9, true); return perso(); }   // v20 : plus de sourire forcé, on voit le changement tel quel
   function fete(texte, { couleur = null } = {}) { joie = 5; bond = 0; surprise = 1; if (montree) particules.burst(pos, couleur || coul, 40, 1.8, true); dire(texte, { priorite: true, duree: 5200 }); }
 
   return {

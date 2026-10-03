@@ -3,7 +3,7 @@
 //
 // API : const perso = monterPerso({ zone, corps, creature, nommer, objets })
 //         → { ouvrir(cle?), fermer(), rendre(), ouvert(), rect() }   ouvrir('couleur-yeux') fait défiler jusqu'à ce réglage et le fait briller
-//   creature : { perso(), personnaliser(patch) } ; nommer() : ouvrir « Changer de nom »
+//   creature : { perso(), personnaliser(patch), apercu(canvas) } ; nommer() : ouvrir « Changer de nom »
 //   objets = { basculer(cle), boutique(cle?) }
 //     basculer : allume / éteint un interrupteur acheté (etoiles.basculer + ce qui en dépend, côté main.js) ;
 //                ceux de la lueur (ailes, bras, pieds, étincelles) sont ensuite recopiés ici dans creature.personnaliser.
@@ -21,6 +21,10 @@ const DEFAUTS = { forme: t('Ronde'), texture: t('Lisse'), expression: t('Douce')
 const YEUX = [[t('Petits'), .85], [t('Normaux'), 1], [t('Grands'), 1.25]];
 
 export function monterPerso({ zone, corps, creature, nommer, objets }) {
+  // v20 : comme la boutique, la lueur fixe en haut, redessinée à chaque changement (plein écran sur téléphone)
+  const apercu = el('canvas', { width: '480', height: '480', 'aria-hidden': 'true' });
+  corps.before(el('div', { class: 'bq-apercu' }, apercu)); zone.classList.add('plein');
+  const majApercu = () => { if (creature.apercu) creature.apercu(apercu); };
   function pastilles(valeur, surChoix, { suit = false, defaut = false } = {}) {
     const ligne = el('div', { class: 'pastilles' });
     if (suit) ligne.append(el('button', { class: 'pastille suit', 'aria-pressed': valeur == null, title: t('Suit mon humeur'), 'aria-label': t('Couleur : suit mon humeur'), onclick: () => surChoix(null) }));
@@ -51,7 +55,7 @@ export function monterPerso({ zone, corps, creature, nommer, objets }) {
     const bascules = cles => { const l = cles.filter(a).map(k => bascule(art(k))); return l.length ? el('div', { class: 'choix' }, l) : null; };
     const taille = () => {
       const pct = v => ((v - .8) / .55 * 100) + '%', i = el('input', { type: 'range', min: '0.8', max: '1.35', step: '0.05', value: String(P.taille), 'aria-label': t('Taille'),
-        oninput: e => { creature.personnaliser({ taille: +e.target.value }); e.target.style.setProperty('--v', pct(+e.target.value)); } });
+        oninput: e => { creature.personnaliser({ taille: +e.target.value }); majApercu(); e.target.style.setProperty('--v', pct(+e.target.value)); } });
       i.style.setProperty('--v', pct(P.taille)); return i;
     };
 
@@ -72,6 +76,7 @@ export function monterPerso({ zone, corps, creature, nommer, objets }) {
     ajoute('membres', bascules(['membres-ailes', 'membres-bras', 'membres-pieds']));
     ajoute('magie', a('taille-lueur') && bloc('taille-lueur', art('taille-lueur').nom, taille()), a('etincelles') && bloc('etincelles', null, bascules(['etincelles'])));
 
+    majApercu();
     const reste = E.restants('lueur');
     corps.replaceChildren(
       ...(sections.length ? sections : [el('p', { class: 'reg-note' }, t('Tu n’as encore rien débloqué.'))]),

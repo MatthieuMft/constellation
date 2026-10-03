@@ -401,9 +401,11 @@ export function monterBoutique(zone, ctx) {
   const onglets = [...zone.querySelectorAll('[data-onglet]')];
   const mot = el('p', { class: 'bq-mot', role: 'status', 'aria-live': 'polite' }); zone.append(mot);
   // aperçu (v19) : en haut, la lueur telle qu'elle est, qui ne bouge pas et change à chaque article touché (onglet « Ta lueur »)
+  // v20 : onglet « Ton ciel » : un aperçu en direct du ciel (téléphone seulement : sur PC, le ciel est visible à côté)
   const apercu = el('canvas', { width: '480', height: '480', 'aria-hidden': 'true' }), boiteApercu = el('div', { class: 'bq-apercu' }, apercu);
-  corps.before(boiteApercu);
-  const majApercu = () => { const on = onglet === 'lueur' && !!ctx.apercu; boiteApercu.hidden = !on; zone.classList.toggle('bq-lueur', on); if (on) ctx.apercu(apercu); };
+  const ciel = el('canvas', { width: '720', height: '440', 'aria-hidden': 'true' }), boiteCiel = el('div', { class: 'bq-apercu apercu-ciel' }, ciel);
+  corps.before(boiteApercu, boiteCiel); if (ctx.apercuCiel) ctx.apercuCiel(ciel);
+  const majApercu = () => { const on = onglet === 'lueur' && !!ctx.apercu; boiteApercu.hidden = !on; boiteCiel.hidden = on || !ctx.apercuCiel; zone.classList.add('plein'); if (on) ctx.apercu(apercu); };
   let onglet = 'lueur', minuteur = 0;
   const toiles = {};                                   // une vignette n'est dessinée qu'une fois
   const toile = a => toiles[a.cle] || (toiles[a.cle] = (() => { const c = el('canvas', { width: '160', height: '160', 'aria-hidden': 'true' }), v3 = ctx.vignette3D && LUEUR3D[a.cle];

@@ -471,7 +471,7 @@ function boucle() {
   poussiere.update(t, R.animation, controls.target, camera.position.distanceTo(controls.target), etoiles.actif('poussiere') ? 1 : 0);
   lactee.material.uniforms.uA.value += ((etoiles.actif('lactee') ? 1 : 0) - lactee.material.uniforms.uA.value) * Math.min(1, dt * .5); lactee.visible = lactee.material.uniforms.uA.value > .01;
   fonduEtiq = intro.actif ? 0 : Math.min(1, fonduEtiq + dt * .8); monde.fonduEtiquettes(fonduEtiq * fonduEtiq);
-  monde.update();
+  monde.update(niveau);
   majNiveau(now);
   fonduVolume = Math.min(1, fonduVolume + dt * 1.6); volume.gain(Re.brume * fonduVolume);
 
@@ -515,6 +515,7 @@ function boucle() {
   creature.rendreVignettes(renderer);                  // vignettes 3D de la boutique en attente (dans un coin de l'écran, recouvert juste après)
   composer.render();
   renderer.autoClear = false; renderer.clearDepth(); renderer.render(sceneUI, camera); renderer.autoClear = true;   // la mascotte : nette, jamais floutée ; profondeur vidée (la passe de sortie la laisse à 0), elle s'occulte elle-même
+  copierCiel();
   requestAnimationFrame(boucle);
 }
 
@@ -1320,6 +1321,16 @@ function apresIntro() {
 }
 
 // ───────────── Ma lueur, mon ciel : ce qui a été débloqué ─────────────
+// aperçus du ciel (v20) : sur téléphone, les panneaux du ciel couvrent l'écran ; on y recopie le ciel en direct, juste après son rendu
+const apercusCiel = [], petitEcran = matchMedia('(max-width: 720px)');
+function copierCiel() {
+  if (!petitEcran.matches) return; const src = renderer.domElement;
+  for (const c of apercusCiel) {
+    if (!c.offsetParent) continue;
+    const sw = Math.min(src.width, src.height * c.width / c.height * .8), sh = sw * c.height / c.width;
+    c.getContext('2d').drawImage(src, (src.width - sw) / 2, (src.height - sh) / 2, sw, sh, 0, 0, c.width, c.height);
+  }
+}
 const persoUI = monterPerso({ zone: $('perso'), corps: $('perso-corps'), creature, nommer: () => ouvrirNommer(),
   objets: { basculer: cle => { etoiles.basculer(cle); appliquerObjets(); }, boutique: cle => { fermerPerso(); ouvrirBoutique(cle); } } });
 function fermerPanneaux() { $('reglages').hidden = true; $('analyse').hidden = true; boutique.fermer(); if (persoUI.ouvert()) fermerPerso(); cielUI.fermer(); }
@@ -1327,6 +1338,7 @@ function ouvrirPerso(cle) { fermerPanneaux(); persoUI.ouvrir(cle); document.body
 function fermerPerso() { persoUI.fermer(); document.body.classList.remove('ecriture'); }
 $('perso-fermer').addEventListener('click', fermerPerso);
 const cielUI = monterCielPerso({ zone: $('perso-ciel'), corps: $('ciel-corps'), ctx: {
+  apercuCiel: c => apercusCiel.push(c),
   lire: () => R, maj: majReglage, themes: THEMES, moods: MOODS, couleur: cm,
   remplacer: r => { const av = Re.theme; R = { ...DEFAUT, ...r }; sauverReglages(R); majEffectifs(); Re.theme !== av ? appliquerTheme() : (recolorer(), appliquerCurseurs()); },
   basculer: cle => { etoiles.basculer(cle); appliquerObjets(); },
@@ -1351,8 +1363,9 @@ function appliquerObjets() {
 function ouvrirBoutique(cle, onglet) { const a = cle && etoiles.article(cle); fermerPanneaux(); boutique.ouvrir(a ? a.cat : (onglet || 'lueur'), cle); }
 const boutique = monterBoutique($('boutique'), {
   surChange: () => appliquerObjets(),
-  vignette3D: (toile, o) => creature.vignette(toile, o),
-  apercu: toile => creature.apercu(toile),                  // l'aperçu fixe en haut : la lueur telle qu'elle est   // vignettes de la lueur : la vraie lueur 3D portant l'article
+  vignette3D: (toile, o) => creature.vignette(toile, o),   // vignettes de la lueur : la vraie lueur 3D portant l'article
+  apercu: toile => creature.apercu(toile),                 // l'aperçu fixe en haut : la lueur telle qu'elle est
+  apercuCiel: c => apercusCiel.push(c),                    // onglet « Ton ciel » (téléphone) : le ciel en direct
   equipe: a => etoiles.porte(a, creature.perso(), R) || (a.type === 'interrupteur' && etoiles.actif(a.cle)),
   equiper: (a, oui) => {
     if (a.type === 'interrupteur') { if (etoiles.actif(a.cle) !== !!oui) etoiles.basculer(a.cle); }
@@ -1412,4 +1425,4 @@ function choisirLangue() {
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
 window.__constellation = { etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde,
-  niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta };
+  niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };

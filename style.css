@@ -682,3 +682,13 @@ body.barre-on #ecrire .p-corps { padding-bottom: 60px; }
   #boutique.bq-lueur .p-grip { display: none; }
   .bq-apercu canvas { height: min(34dvh, 280px); width: min(34dvh, 280px); }
 }
+
+/* v20 : même logique partout. Boutique, « Personnaliser ma lueur », « Personnaliser mon ciel » : aperçu fixe en haut,
+   plein écran sur téléphone ; l'aperçu du ciel (copie en direct) n'existe que sur téléphone (sur PC, le ciel est à côté) */
+#perso .bq-apercu, #perso-ciel .bq-apercu { margin: 0; }
+.apercu-ciel canvas { width: 100%; height: auto; aspect-ratio: 720 / 440; max-height: 34dvh; object-fit: cover; }
+@media (min-width: 721px) { .apercu-ciel { display: none !important; } }
+@media (max-width: 720px) {
+  #boutique.plein, #perso.plein, #perso-ciel.plein { top: 0; left: 0; right: 0; bottom: 0; transform: none; width: auto; max-height: none; height: 100dvh; border-width: 0; padding-top: env(safe-area-inset-top, 0px); }
+  #boutique.plein .p-grip, #perso.plein .p-grip, #perso-ciel.plein .p-grip { display: none; }
+}

@@ -96,12 +96,16 @@ export function creerMonde({ scene, camera, controls, melange, pr }) {
   }
 
   let fonduEtiq = 1;                                   // 0 pendant l'entrée animée : les dates ne clignotent pas en traversant les niveaux
-  function update() {
+  // v20 : une seule sorte de date à la fois, celle du niveau regardé (jour : aucune ; semaine : les semaines ; mois : les mois ; année : les années)
+  const TYPE_ETIQ = { jour: null, semaine: 'semaine', mois: 'mois', annee: 'annee', annees: 'annee' }, porte = { semaine: 0, mois: 0, annee: 0 };
+  function update(niveau = 'semaine') {
+    const voulu = TYPE_ETIQ[niveau] ?? null;
+    for (const k in porte) porte[k] += ((k === voulu ? 1 : 0) - porte[k]) * .12;
     const cam = camera.position, claire = theme.clair ? .6 : 1;
     for (const liste of [noeuds.annees, noeuds.mois, noeuds.semaines]) for (const n of liste) {
       const d = cam.distanceTo(n.centre), r = n.rayon, [a, b] = PLAGES[n.type];        // chaque nébuleuse n'apparaît qu'au niveau où elle a du sens
       n.sprite.material.opacity = lisse(r * a[0], r * a[1], d) * (1 - lisse(r * b[0], r * b[1], d)) * (n.n ? .26 : .06 * brumeVides) * claire * (n.courante ? 1.5 : 1);
-      if (n.label) n.label.material.opacity = vuesEtiquettes ? fonduEtiq * lisse(r * a[0], r * a[1], d) * (1 - lisse(r * b[0], r * b[1], d)) * (n.n ? .9 : .5) : 0;
+      if (n.label) n.label.material.opacity = vuesEtiquettes ? fonduEtiq * porte[n.type] * lisse(r * .8, r * 1.6, d) * (1 - lisse(r * b[0], r * b[1], d)) * (n.n ? .9 : .5) : 0;
     }
   }
 

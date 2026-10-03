@@ -27,6 +27,8 @@ const MATIERE = [['brume', 'brume', t('Brume'), 0, 2.5], ['scintillement', 'scin
 const LUMIERE = [['lueur', t('Lueur'), 0, 1.6], ['flou', t('Profondeur de champ'), 0, 1], ['cinema', t('Cinéma'), 0, 1]];
 
 export function monterCielPerso({ zone, corps, ctx }) {
+  // v20 : sur téléphone, plein écran avec le ciel en direct en haut (ctx.apercuCiel recopie l'image du ciel dans ce canvas)
+  if (ctx.apercuCiel) { const c = el('canvas', { width: '720', height: '440', 'aria-hidden': 'true' }); corps.before(el('div', { class: 'bq-apercu apercu-ciel' }, c)); ctx.apercuCiel(c); zone.classList.add('plein'); }
   const section = (titre, cle, ...contenu) => el('section', { class: 'reg-section', 'data-groupe': cle }, el('h2', {}, titre), ...contenu);
 
   function rendre() {
