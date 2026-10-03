@@ -239,7 +239,7 @@ function creerVisuel(e) {
 // ───────────── Le monde du temps ─────────────
 const monde = creerMonde({ scene, camera, controls, melange, pr: renderer.getPixelRatio() });
 const posDuJour = cle => monde.posJour(dateDeCle(cle));
-const figures = creerFigures({ scene, camera, melange, posJour: posDuJour });   // v46 : la constellation de la semaine
+const figures = creerFigures({ scene, camera, melange, texHalo, en: EN, centreSemaine: cs => { const [y, m, w] = cs.split('-'); return monde.centreSemaine(+y, +m - 1, +w.slice(1)); } });   // v47 : une vraie constellation par semaine
 const marques = creerMarques({ scene, camera, controls, melange, posJour: posDuJour, repere: $('repere'), surRepere: () => volerAujourdhui() });
 let niveau = 'semaine', foyer = {}, cleNiveau = '', dernierFoyer = 0, ignorerJour = null, fonduVolume = 0;
 
@@ -270,7 +270,7 @@ function reconstruireMonde() {
   serieInfo = rythme.series(jours.map(j => j.id), aujourdhui());
   marques.reconstruire({ chaines: pousse('constellation') ? serieInfo.chaines.filter(c => c.length > 1) : [], dates: dates.occurrences(mesDates, y0, y1), jour: aujourdhui() });
   marques.regler(T().clair, melange());
-  figures.reconstruire({ jours: jours.filter(j => !j.sample).map(j => j.id), clair: T().clair, encre: T().ui.ink });
+  figures.reconstruire({ jours: jours.filter(j => !j.sample).map(j => ({ cle: j.id, couleur: couleurPour(j).couleur })), clair: T().clair, encre: T().ui.ink });
 }
 
 // ───────────── Données → scène ─────────────
@@ -1276,7 +1276,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v46'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v47'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1432,7 +1432,7 @@ function ouvrirNommerFigure(cleS) {
   const d0 = dateDeCle(f.jours[0]), d1 = dateDeCle(f.jours.at(-1)), fmt = d => d.toLocaleDateString(LOC, { day: 'numeric', month: 'long' });
   boite.innerHTML = `<p class="lab"></p><p class="sous"></p><div class="rang"><input type="text" maxlength="40"><button type="button" class="ok"></button></div><button type="button" class="lien annuler"></button>`;
   boite.querySelector('.lab').textContent = f.nom ? t('Renommer ta constellation') : t('Ta semaine forme une constellation');
-  boite.querySelector('.sous').textContent = t('{n} étoiles, du {a} au {b}. Quel nom lui donnes-tu ?', { n: f.jours.length, a: fmt(d0), b: fmt(d1) });
+  boite.querySelector('.sous').textContent = t('C’est {vrai} : {n} étoiles allumées, du {a} au {b}. Quel nom lui donnes-tu ?', { vrai: f.vraiNom, n: f.jours.length, a: fmt(d0), b: fmt(d1) });
   const champ = boite.querySelector('input'); champ.value = f.nom; champ.placeholder = t('ex. La semaine des retrouvailles');
   boite.querySelector('.ok').textContent = t('Nommer');
   boite.querySelector('.annuler').textContent = t('Plus tard');

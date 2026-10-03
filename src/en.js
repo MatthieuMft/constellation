@@ -829,6 +829,7 @@ export const EN = {
 "Renommer la constellation de la semaine": "Rename this week’s constellation",
 "Nommer la constellation de la semaine": "Name this week’s constellation",
 "constellation semaine figure nom": "constellation week figure name",
+"C’est {vrai} : {n} étoiles allumées, du {a} au {b}. Quel nom lui donnes-tu ?": "It’s {vrai}: {n} stars lit, from {a} to {b}. What will you call it?",
 };
 
 export const EN_HTML = {
