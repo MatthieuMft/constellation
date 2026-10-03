@@ -101,11 +101,14 @@ export function creerMonde({ scene, camera, controls, melange, pr }) {
   function update(niveau = 'semaine') {
     const voulu = TYPE_ETIQ[niveau] ?? null;
     for (const k in porte) porte[k] += ((k === voulu ? 1 : 0) - porte[k]) * .12;
-    const cam = camera.position, claire = theme.clair ? .6 : 1;
+    const cam = camera.position, claire = theme.clair ? .6 : 1, f = noeuds.annees.length ? foyer() : {};
+    // v31 : seulement les dates de l'endroit regardé (au niveau semaine, les semaines du mois regardé ; au niveau mois, les mois de l'année regardée)
+    const dansFoyer = n => n.type === 'semaine' ? !f.mois || n.cleMois === f.mois.cle : n.type === 'mois' ? !f.annee || n.y === f.annee.y : true;
     for (const liste of [noeuds.annees, noeuds.mois, noeuds.semaines]) for (const n of liste) {
+      n.foyer = (n.foyer ?? 1) + ((dansFoyer(n) ? 1 : 0) - (n.foyer ?? 1)) * .12;
       const d = cam.distanceTo(n.centre), r = n.rayon, [a, b] = PLAGES[n.type];        // chaque nébuleuse n'apparaît qu'au niveau où elle a du sens
       n.sprite.material.opacity = lisse(r * a[0], r * a[1], d) * (1 - lisse(r * b[0], r * b[1], d)) * (n.n ? .26 : .06 * brumeVides) * claire * (n.courante ? 1.5 : 1);
-      if (n.label) n.label.material.opacity = vuesEtiquettes ? fonduEtiq * porte[n.type] * lisse(r * .8, r * 1.6, d) * (1 - lisse(r * b[0], r * b[1], d)) * (n.n ? .9 : .5) : 0;
+      if (n.label) n.label.material.opacity = vuesEtiquettes ? fonduEtiq * porte[n.type] * n.foyer * lisse(r * .8, r * 1.6, d) * (1 - lisse(r * b[0], r * b[1], d)) * (n.n ? .9 : .5) : 0;
     }
   }
 
