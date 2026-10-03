@@ -36,7 +36,8 @@ import { monterCielPerso } from './ciel-ui.js';
 import { creerDecor } from './decor.js';
 import * as PL from './planetes.js';
 import { verrou } from './verrou.js';
-import { creerFigures, lendemain, dernierJour } from './figures.js';
+import { creerFigures, lendemain, dernierJour, constellationDe } from './figures.js';
+import { PICTOS } from './pictos.js';
 import { son } from './son.js';
 import { monterActivites, ACTIVITES, nomActivite } from './activites.js';
 import { creerVoyage } from './voyage.js';
@@ -53,6 +54,7 @@ const aujourdhui = () => cleJour(new Date());
 
 // ───────────── Réglages / thème ─────────────
 let R = chargerReglages();
+document.body.classList.toggle('joy-on', !!R.joystick);   // v52 : le joystick n'est plus là par défaut (Réglages › Mouvement)
 if (!THEMES[R.theme]) R.theme = 'nuit';
 // v11 : ce qui était déjà personnalisé avant que tout s'achète est offert une fois ; le rendu n'utilise que ce qui est acheté (Re)
 { let P0 = {}; try { P0 = (JSON.parse(localStorage.getItem('constellation.creature.v1')) || {}).perso || {}; } catch (e) {} etoiles.migrer({ reglages: R, perso: P0 }); }
@@ -1110,7 +1112,7 @@ function appliquerCurseurs() {
 }
 function majReglage(patch) {
   const avant = Re.theme;
-  R = { ...R, ...patch }; sauverReglages(R); majEffectifs();
+  R = { ...R, ...patch }; sauverReglages(R); majEffectifs(); document.body.classList.toggle('joy-on', !!R.joystick);
   const theme = Re.theme !== avant;
   if (theme) appliquerTheme(); else { if ('humeurs' in patch) recolorer(); appliquerCurseurs(); }
 }
@@ -1132,18 +1134,18 @@ const rendreReglages = monterReglages($('reglages'), {
       [t('Exporter le journal'), () => $('exporter').click()], [t('Importer un journal'), () => $('importer').click()],
       ...(items.some(e => e.sample) ? [[t('Effacer les entrées d’exemple'), () => $('exemples').click()]] : []),
       [t('Tout effacer et recommencer'), toutEffacer, 'danger'],
-    ]],
+    ], 'donnees', t('Sauvegarde, export, import')],
     [t('Son'), [
       [t('Ambiance') + DP + t(son.conf().nappe ? 'oui' : 'non'), () => { son.regler({ nappe: !son.conf().nappe }); rendreReglages(); }],
       [t('Sons des étoiles') + DP + t(son.conf().effets ? 'oui' : 'non'), () => { son.regler({ effets: !son.conf().effets }); if (son.conf().effets) son.naissance(); rendreReglages(); }],
-    ]],
+    ], 'son', t('Sons des étoiles') + DP + t(son.conf().effets ? 'oui' : 'non') + ' · ' + t('Ambiance').toLowerCase() + DP + t(son.conf().nappe ? 'oui' : 'non')],
     [t('Verrou'), verrou.actif()
       ? [[t('Changer le code'), async () => { await verrou.choisir(); rendreReglages(); }], [t('Retirer le verrou'), () => { verrou.retirer(); statutTemporaire(t('Le verrou est retiré.')); rendreReglages(); }]]
-      : [[t('Ajouter un code'), async () => { if (await verrou.choisir()) statutTemporaire(t('Le code sera demandé à chaque ouverture.'), 5000); rendreReglages(); }]]],
+      : [[t('Ajouter un code'), async () => { if (await verrou.choisir()) statutTemporaire(t('Le code sera demandé à chaque ouverture.'), 5000); rendreReglages(); }]], 'verrou', verrou.actif() ? t('Code à 4 chiffres') : t('Aucun code')],
     [t('Aide'), [
       [t('Comment voyager dans le ciel'), () => { $('reglages').hidden = true; ouvrirAide(); }],
       ...(dejaInstallee() ? [] : [[t('Ajouter à l’écran d’accueil'), () => { $('reglages').hidden = true; proposerInstall(); }]]),
-    ]],
+    ], 'aide', t('Comment voyager dans le ciel')],
   ],
   lire: () => R, maj: majReglage, themes: THEMES, moods: MOODS, couleur: cm,
   remplacer: r => { const av = Re.theme; R = { ...DEFAUT, ...r }; sauverReglages(R); majEffectifs(); const th = Re.theme !== av; th ? appliquerTheme() : (recolorer(), appliquerCurseurs()); },
@@ -1267,21 +1269,35 @@ const palette = monterPalette($('palette'), {
 $('btn-palette').addEventListener('click', () => $('menu').hidden ? ouvrirMenu() : fermerMenu());
 
 // ───────────── Menu « ⋯ » : trois lignes, chacune dit ce qu'elle fait ─────────────
+// v52 : le menu rangé par usage (étude du 3 oct.) : ta semaine en tête, puis ta lueur, ton ciel, la boutique, le suivi, les réglages.
+// Chaque ligne a son pictogramme (pictos.js). La poussière ✦ n'apparaît que sur la Boutique.
+function derniereFinie() { return figures.finies().at(-1) || null; }
 function lignesMenu() {
   return [
-    { titre: t('Personnalisation'), sous: t('La boutique et ta lueur'), d: '✦ ' + etoiles.solde(), items: () => [
-      { nom: t('Boutique'), sous: t('Des objets pour ta lueur et ton ciel'), d: '✦ ' + etoiles.solde(), action: () => ouvrirBoutique() },
-      { nom: t('Personnaliser ma lueur'), sous: t('Ce que tu as débloqué dans la boutique'), action: () => ouvrirPerso() },
-      { nom: t('Personnaliser mon ciel'), sous: t('Ambiance, astres et animations débloqués'), action: () => ouvrirCielPerso() },
-      { nom: t('Raconte-moi un souvenir'), sous: t('Elle va relire une ancienne pensée'), action: () => { if (!creature.souvenirMaintenant()) statutTemporaire(t('Pas encore de souvenir à portée de ciel.')); } },
-      { nom: t('Renommer'), sous: creature.nom() || null, action: ouvrirNommer },
+    { semaine: true, titre: t('Ma semaine'), items: () => {
+      const l = [{ ic: 'carnet', nom: t('Carnet de voyage'), sous: (() => { const e = voyage.etat(), V = voyage.voyageCourant(); return e ? t('{titre} · étape {n} sur 7', { titre: V.titre, n: e.etape }) : t('Il commence au prochain jour écrit'); })(), action: () => ouvrirCarnet() }];
+      const s = derniereFinie(), f = s && figures.figure(s);
+      if (f) l.push({ ic: 'nom', nom: f.nom ? t('Renommer ta dernière constellation') : t('Nommer ta dernière constellation'), sous: f.nom || f.vraiNom, action: () => ouvrirNommerFigure(s) });
+      if (s) l.push({ ic: 'bilan', nom: t('Bilan de ta dernière semaine'), sous: figures.vraiNom(s), action: () => ouvrirBilan(s) });
+      return l;
+    } },
+    { ic: 'lueur', titre: t('Ma lueur'), sous: t('Personnaliser, renommer, un souvenir'), items: () => [
+      { ic: 'lueur', nom: t('Personnaliser ma lueur'), sous: t('Ce que tu as débloqué dans la boutique'), action: () => ouvrirPerso() },
+      { ic: 'nom', nom: t('Renommer'), sous: creature.nom() || null, action: ouvrirNommer },
+      { ic: 'souvenir', nom: t('Raconte-moi un souvenir'), sous: t('Elle va relire une ancienne pensée'), action: () => { if (!creature.souvenirMaintenant()) statutTemporaire(t('Pas encore de souvenir à portée de ciel.')); } },
     ] },
-    { titre: t('Suivi'), sous: t('Tes humeurs sur 30 jours et le résumé du mois'), action: () => ouvrirAnalyse('meteo') },
-    { titre: t('Réglages'), sous: t('Rappel du soir, langue, sauvegarde, aide'), action: () => ouvrirReglages() },
+    { ic: 'ciel', titre: t('Mon ciel'), sous: t('Ambiance, astres, animations'), items: () => [
+      { ic: 'ciel', nom: t('Personnaliser mon ciel'), sous: t('Ambiance, astres et animations débloqués'), action: () => ouvrirCielPerso() },
+      { ic: 'noms', nom: t(noms ? 'Masquer les noms des mois et des années' : 'Afficher les noms des mois et des années'), action: () => $('btn-noms').click() },
+    ] },
+    { ic: 'boutique', titre: t('Boutique'), sous: t('Des objets pour ta lueur et ton ciel'), d: '✦ ' + etoiles.solde(), action: () => ouvrirBoutique() },
+    { ic: 'suivi', titre: t('Suivi'), sous: t('Tes humeurs sur 30 jours et le résumé du mois'), action: () => ouvrirAnalyse('meteo') },
+    { ic: 'reglages', titre: t('Réglages'), sous: t('Rappel, son, verrou, tes données'), action: () => ouvrirReglages() },
   ];
 }
-function ligneMenu({ nom, sous, d, chev }, action) {
+function ligneMenu({ nom, sous, d, chev, ic }, action) {
   const b = document.createElement('button'); b.type = 'button'; b.className = 'm-ligne';
+  if (ic && PICTOS[ic]) { const i = document.createElement('span'); i.className = 'm-ic'; i.innerHTML = PICTOS[ic]; b.append(i); }
   const tx = document.createElement('span'); tx.className = 'm-t'; tx.textContent = nom;
   if (sous) { const s = document.createElement('small'); s.textContent = sous; tx.append(s); }
   b.append(tx);
@@ -1289,12 +1305,28 @@ function ligneMenu({ nom, sous, d, chev }, action) {
   if (chev) { const e = document.createElement('span'); e.className = 'm-chev'; e.textContent = '›'; b.append(e); }
   b.addEventListener('click', action); return b;
 }
+// la carte « Cette semaine » : la constellation qui se dessine, une pastille par jour
+function carteSemaine(action) {
+  const s = figures.semaineDe(aujourdhui()), C = constellationDe(s), jds = cle => (dateDeCle(cle).getDay() + 6) % 7;
+  const tous = []; for (let d = dateDeCle(dernierJour(s)); figures.semaineDe(cleJour(d)) === s; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)) tous.unshift(cleJour(d));
+  const couleurs = new Map(jours.filter(j => !j.sample && figures.semaineDe(j.id) === s).map(j => [jds(j.id), '#' + couleurPour(j).couleur.getHexString()]));
+  const W = 92, H = 56, P = C.e.map(([x, y]) => [x * W, (1 - y) * H]);
+  let svg = ''; for (const [a, b2] of C.t) { const on = couleurs.has(a) && couleurs.has(b2); svg += `<line x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b2][0]}" y2="${P[b2][1]}" stroke="${on ? 'rgba(255,240,210,.85)' : 'rgba(201,211,255,.35)'}" stroke-width="1" stroke-dasharray="${on ? '' : '3 4'}"/>`; }
+  P.forEach(([x, y], i) => { const c = couleurs.get(i); svg += c ? `<circle cx="${x}" cy="${y}" r="7" fill="${c}" opacity=".2"/><circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>` : `<circle cx="${x}" cy="${y}" r="1.6" fill="rgba(201,211,255,.55)"/>`; });
+  const n = tous.filter(c => couleurs.has(jds(c))).length, e = voyage.etat();
+  const b = document.createElement('button'); b.type = 'button'; b.className = 'm-semaine';
+  b.innerHTML = `<svg viewBox="-6 -6 104 68" aria-hidden="true">${svg}</svg><span class="m-t"><span class="m-lab"></span><span class="m-nom"></span><small></small><span class="m-points">${tous.map(c => { const k = couleurs.get(jds(c)); return `<i${k ? ` style="background:${k};border-color:transparent"` : ''}></i>`; }).join('')}</span></span><span class="m-chev">›</span>`;
+  b.querySelector('.m-lab').textContent = t('Cette semaine');
+  b.querySelector('.m-nom').textContent = EN ? C.en : C.nom;
+  b.querySelector('small').textContent = tn(n, '{n} jour écrit sur {m}', '{n} jours écrits sur {m}', { m: tous.length }) + (e && e.etape < 7 ? ' · ' + t('voyage : étape {n} sur 7', { n: e.etape }) : '');
+  b.addEventListener('click', action); return b;
+}
 function rendreMenu(groupe = null) {
   const L = $('menu-liste'); L.replaceChildren(); L.scrollTop = 0;
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
-  if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v51'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+  if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v52'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
