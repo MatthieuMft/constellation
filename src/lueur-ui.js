@@ -64,13 +64,13 @@ export function monterPerso({ zone, corps, creature, nommer, objets }) {
     // v38 : mêmes rubriques que la boutique (Forme, Matière, Expressions, Accessoires, Habits, Membres, Effets, Finitions)
     ajoute('forme', rangee('forme'));
     ajoute('matiere', rangee('texture'), a('couleur-lueur') && bloc('couleur-lueur', art('couleur-lueur').nom, pastilles(P.couleur, c => maj({ couleur: c }), { suit: true })));
-    ajoute('expression', a('expression-rieuse') || a('expression-reveuse') || a('expression-malicieuse') || a('expression-etonnee') ? rangee('expression') : null);
+    ajoute('expression', rangee('expression'));
     const nAcc = ajoute('accessoire', rangee('acc')), nHabit = ajoute('habit', rangee('habit'));
     // la couleur de l'accessoire vaut aussi pour l'habit : seulement si l'un des deux est porté
     if (a('couleur-accessoire') && (nAcc || nHabit) && (P.acc || P.habit))
       sections[sections.length - 1].append(bloc('couleur-accessoire', art('couleur-accessoire').nom, pastilles(P.accCouleur, c => maj({ accCouleur: c || '#ffd98a' }))));
     ajoute('membres', bascules(['membres-ailes', 'membres-bras', 'membres-pieds']));
-    ajoute('effets', a('etincelles') && bloc('etincelles', null, bascules(['etincelles'])));
+    ajoute('effets', bascules(['orbite', 'traine', 'poudre', 'etincelles']));
     ajoute('finitions',
       a('couleur-yeux') && bloc('couleur-yeux', art('couleur-yeux').nom, pastilles(P.yeuxCouleur, c => maj({ yeuxCouleur: c }), { defaut: true })),
       a('taille-yeux') && bloc('taille-yeux', art('taille-yeux').nom, el('div', { class: 'choix' }, YEUX.map(([n, v]) => el('button', { 'aria-pressed': Math.abs(P.yeux - v) < .05, onclick: () => maj({ yeux: v }) }, n)))),

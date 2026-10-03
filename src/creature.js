@@ -34,7 +34,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   let sauve = charger();
   if (!sauve.nee) { sauve.nee = Date.now(); sauve.caresses = 0; sauve.stade = 0; sauve.visible = true; }
   let montree = false, apparition = 0, clair = false;
-  const PERSO0 = { couleur: null, acc: 0, accCouleur: '#ffd98a', yeux: 1, taille: 1, etincelles: false,
+  const PERSO0 = { couleur: null, acc: 0, accCouleur: '#ffd98a', yeux: 1, taille: 1, etincelles: false, orbite: false, traine: false, poudre: false,   // v39 : effets
     forme: 'rond', texture: 'lisse', expression: 'douce', yeuxCouleur: null, habit: 0, ailes: false, bras: false, pieds: false };
   let persoC = null;                                                     // le perso effectif, recalculé seulement quand il change (aucune allocation par image)
   const persoI = () => persoC || (persoC = Object.assign({}, PERSO0, sauve.perso || {})), perso = () => Object.assign({}, persoI());
@@ -56,7 +56,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     return (renderer, toile, o) => {
       S = Math.min(o.S || 160, renderer.domElement.width, renderer.domElement.height); const k = S / 160;   // jamais plus grand que l'écran (sinon l'image est coupée)
       const P = Object.assign({}, PERSO0, o.perso), ie = EXPRESSIONS.indexOf(P.expression), az = o.az ?? -.45, el = o.el ?? .12;
-      ev.perso = P; ev.couleur.set(P.couleur || '#ffd98a'); ev.expr.set(+(ie === 1), +(ie === 2), +(ie === 3), +(ie === 4)); ev.yeuxEtoiles = o.etoiles ? 1 : 0; ev.regard.x = az * .7; ev.cligne = o.cligne || 0; ev.calme = o.calme || 0; ev.sommeil = o.sommeil || 0; ev.joie = o.joie || 0;   // v38 : états du visage (tests de compatibilité)
+      ev.perso = P; ev.couleur.set(P.couleur || '#ffd98a'); ev.expr.set(+(ie === 1), +(ie === 2), +(ie === 3), +(ie === 4)); ev.yeuxEtoiles = o.etoiles ? 1 : 0; ev.regard.x = az * .7; ev.cligne = o.cligne || 0; ev.calme = o.calme || 0; ev.sommeil = o.sommeil || 0; ev.joie = o.joie || 0; ev.eclat = 0; ev.grands = 0;
+      if (P.expression === 'emerveillee') ev.eclat = 1; else if (P.expression === 'curieuse') { ev.grands = .55; ev.eclat = .35; } else if (P.expression === 'ensommeillee') { ev.calme = Math.max(ev.calme, .4); ev.expr.y = .55; }   // v39 ; v38 : états du visage (tests de compatibilité)
       l.maj(1, 2.2, ev); l.maj(1, 2.2, ev);                              // dt = 1 : les articles sont là d'un coup (présence 1)
       const e = l.encombrement(), R = o.R || Math.min(33, 118 / (e.haut + e.bas), 60 / e.cote), cx = o.cx ?? 80, cy = o.cy ?? 80 + (e.haut - e.bas) * R / 2;
       const d = 80 / R / Math.tan(cam.fov * Math.PI / 360);               // le corps (rayon 1) fait R px sur 160
@@ -295,6 +296,11 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     if (peur > 0) { wide = 1; brow = .9; sad = .3; joy = 0; spark = 0; }
     if (surprise > 0) wide = Math.max(wide, .7);
     if (tournis > 0) { wide = Math.max(wide, .5); brow = .5; joy = 0; }
+    // v39 : expressions faites avec les traits existants (donc compatibles avec tout : clignement, sommeil, accessoires)
+    const repos0 = dort || imi || expr || peur > 0 || surprise > 0 || joie > 0 || calin ? 0 : 1 - sad;
+    if (P.expression === 'emerveillee') spark = Math.max(spark, repos0);
+    else if (P.expression === 'curieuse') { wide = Math.max(wide, .55 * repos0); spark = Math.max(spark, .35 * repos0); }
+    else if (P.expression === 'ensommeillee') relax = Math.max(relax, .4 * repos0);
     const V = vue, k6 = Math.min(1, dt * 6), k12 = Math.min(1, dt * 12);   // v25 : les traits du visage passent vite d'une expression à l'autre (plus de visages superposés en transparence)
     V.joie += (joy - V.joie) * k12; V.triste += (sad - V.triste) * Math.min(1, dt * 3); V.sourcils += (brow - V.sourcils) * k6;
     V.eclat += (spark - V.eclat) * k6; V.calme += (relax - V.calme) * k6; V.grands += (wide - V.grands) * Math.min(1, dt * 9);
@@ -302,7 +308,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     V.cligne = blink; V.app = apparition; V.clair = clair ? 1 : 0; V.yeuxEtoiles = yeuxEt; V.perso = P;
     // l'expression choisie, seulement au repos : sommeil, peur, joie, mots, humeur imitée passent devant
     const ie = EXPRESSIONS.indexOf(P.expression), repos = dort || imi || expr || peur > 0 || surprise > 0 || joie > 0 || calin ? 0 : 1 - sad;
-    exprV.x += ((ie === 1 ? repos : 0) - exprV.x) * k12; exprV.y += ((ie === 2 ? repos : 0) - exprV.y) * k12; exprV.z += ((ie === 3 ? repos : 0) - exprV.z) * k12; exprV.w += ((baille > .3 ? 1 : ie === 4 ? repos : 0) - exprV.w) * k12;   // bâillement : bouche ronde
+    exprV.x += ((ie === 1 ? repos : 0) - exprV.x) * k12; exprV.y += ((ie === 2 ? repos : P.expression === 'ensommeillee' ? .55 * repos : 0) - exprV.y) * k12; exprV.z += ((ie === 3 ? repos : 0) - exprV.z) * k12; exprV.w += ((baille > .3 ? 1 : ie === 4 ? repos : 0) - exprV.w) * k12;   // bâillement : bouche ronde
     const vit = vel.length(); V.battement = Math.sin(t * (dort ? .8 : 7 + vit * .6)) * (dort ? .2 : 1);
 
     // forme : étirement dans le sens du mouvement, respiration, penchée dans les virages
@@ -340,6 +346,10 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     if (!dort && vit > 4 && Math.random() < dt * 14) particules.burst(corps.position, coul, 1, .12);
     if (dort) { zT -= dt; if (zT <= 0) { zT = rnd(1.8, 3); particules.burst(_p.copy(corps.position).addScaledVector(_u, 2.2).addScaledVector(_r, 1.2), blanc, 1, .1); } }
     if (calin && Math.random() < dt * 5) particules.burst(corps.position, rose, 1, .45);
+    // v39 : effets — petites étoiles en orbite, traînée de comète, poudre d'étoiles qui tombe doucement
+    if (P.orbite && !dort && Math.random() < dt * 9) { const a = t * 2.4 + Math.random() * .4; particules.burst(_p.copy(corps.position).addScaledVector(_r, Math.cos(a) * 2.6).addScaledVector(_u, Math.sin(a) * .7 + .3).addScaledVector(_f, Math.sin(a) * 1.2), Math.random() < .6 ? blanc : coul, 1, .05); }
+    if (P.traine && !dort && Math.random() < dt * (vit > 1 ? 30 : 8)) particules.burst(_p.copy(corps.position).addScaledVector(vel, vit > .5 ? -.18 / Math.max(vit, 1) * 6 : 0).addScaledVector(_u, rnd(-.6, .6)).addScaledVector(_r, rnd(-.6, .6)), Math.random() < .5 ? coul : blanc, 1, .15);
+    if (P.poudre && !dort && Math.random() < dt * 6) particules.burst(_p.copy(corps.position).addScaledVector(_u, -rnd(1.6, 2.6)).addScaledVector(_r, rnd(-1.4, 1.4)), Math.random() < .7 ? new THREE.Color(1, .86, .5) : blanc, 1, .08);
     if (P.etincelles && !dort && Math.random() < dt * 7) particules.burst(_p.copy(corps.position).addScaledVector(_r, rnd(-2.5, 2.5)).addScaledVector(_u, rnd(-2.5, 2.5)), Math.random() < .5 ? coul : blanc, 1, .25);
 
     // bulle : au-dessus de la tête, jamais hors de l'écran

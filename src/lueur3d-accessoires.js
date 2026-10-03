@@ -1,4 +1,4 @@
-// Lueur 3D — accessoires : 1 anneau, 2 antenne, 3 lunettes, 4 couronne d'étoiles, 5 chapeau de magicien (couleur : U.uAccCol = accCouleur).
+// Lueur 3D — accessoires : 1 anneau, 2 antenne, 3 lunettes, 4 couronne d'étoiles, 5 chapeau de magicien, 6 anneaux de planète, 7 petite lune, 8 satellite (couleur : U.uAccCol = accCouleur).
 // N'importe rien (pas même three : tout arrive par ctx) ; lueur3d.js l'importe et crée chaque accessoire UNE fois, au chargement, invisible.
 //
 // ═══ CONTRAT (recopié de lueur3d.js, qui fait foi ; lisez son en-tête pour le détail de ctx, U, GLSL, ORDRE) ═══
@@ -305,5 +305,50 @@ export const ACCESSOIRES = {
       maj(dt, t, etat, presence) { const e = lisse(presence); pres.value = e; objet.scale.setScalar(k0 * (.7 + .3 * e)); mat.depthWrite = e > .97;
         const tl = ctx.U.uTilt.value; mat.uniforms.uFlex.value.set(Math.sin(t * 1.25) * .035 - tl * .25, Math.sin(t * .9 + 1) * .025, .42, 1);   // la pointe traîne
         objet.rotation.z = .1 + Math.sin(t * 1.2) * .025; objet.rotation.x = .06; } };
+  } },
+  // 6 — anneaux de planète (v39) : deux anneaux plats et inclinés autour d'elle, comme Saturne (la moitié arrière passe derrière la tête)
+  6: { nom: 'saturne', creer(ctx) {
+    const { THREE } = ctx, pres = { value: 0 }, enc = { haut: 1.1 }, objet = new THREE.Group(); objet.name = 'acc-saturne';
+    const anneau = (r, ep, eclat) => { const m = new THREE.Mesh(new THREE.TorusGeometry(r, ep, 8, 128).rotateX(Math.PI / 2).scale(1, .16, 1), matObjet(ctx, { pres, eclat, blanc: .25, lisere: .5, douceur: .5, motif: 2, spec: .25 })); objet.add(m); return m; };
+    const A = anneau(1.3, .07, 1.02), B = anneau(1.52, .042, .92);
+    const coque = new THREE.Mesh(new THREE.TorusGeometry(1.45, .2, 8, 128).rotateX(Math.PI / 2).scale(1, .2, 1), matLueur(ctx, { pres, coque: 1, force: .22, blanc: .25 }));
+    objet.add(coque); ctx.preparer(objet); const mats = [A.material, B.material];
+    let k0 = 1;
+    return { objet, encombrement: enc,
+      placer(ctx) { const R = ctx.forme.reperes, w = Math.max(Math.abs(R.droite.x), Math.abs(R.gauche.x), 1); k0 = w; objet.position.set(0, R.droite.y * .3, 0);
+        enc.haut = Math.max(R.sommet.y, 1.6 * k0 * Math.sin(.42) + .1); enc.cote = 1.68 * k0; },
+      maj(dt, t, etat, presence) { const e = lisse(presence); pres.value = e; objet.scale.setScalar(k0 * (.8 + .2 * e)); profondeur(mats, e);
+        objet.rotation.set(.32 + Math.sin(t * .6) * .03, t * .12, -.38 + Math.sin(t * .8 + 1) * .03); } };
+  } },
+
+  // 7 — petite lune (v39) : une lune ronde qui tourne lentement autour d'elle (elle passe derrière, puis revient devant), avec son halo
+  7: { nom: 'lune', creer(ctx) {
+    const { THREE } = ctx, pres = { value: 0 }, enc = { haut: 1.3 }, objet = new THREE.Group(), orbite = new THREE.Group(); objet.name = 'acc-lune'; objet.add(orbite);
+    const lune = new THREE.Mesh(new THREE.SphereGeometry(.2, 28, 18), matObjet(ctx, { pres, eclat: 1.05, blanc: .35, lisere: .6, douceur: .2, prof: .25, spec: .35 }));
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), matLueur(ctx, { pres, taille: .42, force: .4, rayons: 0, blanc: .5 }));
+    const astre = new THREE.Group(); astre.add(lune, halo); orbite.add(astre); ctx.preparer(objet);
+    let r0 = 1.45;
+    return { objet, encombrement: enc,
+      placer(ctx) { const R = ctx.forme.reperes; r0 = Math.max(Math.abs(R.droite.x), Math.abs(R.gauche.x), 1) + .45; objet.position.set(0, .25, 0); enc.haut = .25 + r0 * Math.sin(.35) + .25; enc.cote = r0 + .22; },
+      maj(dt, t, etat, presence) { const e = lisse(presence); pres.value = e; lune.material.depthWrite = e > .97;
+        const a = t * .55 - .5; astre.position.set(Math.sin(a) * r0, Math.sin(a + .6) * .18, Math.cos(a) * r0); astre.scale.setScalar(.6 + .4 * e);
+        orbite.rotation.z = -.35; } };
+  } },
+
+  // 8 — satellite (v39) : un petit satellite (corps, deux panneaux, une antenne) qui fait le tour d'elle ; un feu qui clignote
+  8: { nom: 'satellite', creer(ctx) {
+    const { THREE } = ctx, pres = { value: 0 }, feu = { value: 0 }, enc = { haut: 1.4 }, objet = new THREE.Group(), orbite = new THREE.Group(), sat = new THREE.Group(); objet.name = 'acc-satellite';
+    const mC = matObjet(ctx, { pres, eclat: 1, blanc: .2, lisere: .5, douceur: .2, prof: .3, spec: .5 }), mP = matObjet(ctx, { pres, eclat: .9, blanc: .1, lisere: .6, douceur: .3, prof: .55, spec: .8 });
+    const corpsS = new THREE.Mesh(new THREE.BoxGeometry(.13, .13, .19), mC);
+    const p1 = new THREE.Mesh(new THREE.BoxGeometry(.3, .012, .13), mP), p2 = p1.clone(); p1.position.x = .23; p2.position.x = -.23;
+    const tige = new THREE.Mesh(new THREE.CylinderGeometry(.008, .008, .12, 6), mC); tige.position.y = .12;
+    const lampe = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), matLueur(ctx, { pres: feu, taille: .16, force: .7, rayons: .4, blanc: .7 })); lampe.position.y = .19;
+    sat.add(corpsS, p1, p2, tige, lampe); orbite.add(sat); objet.add(orbite); ctx.preparer(objet); const mats = [mC, mP];
+    let r0 = 1.5;
+    return { objet, encombrement: enc,
+      placer(ctx) { const R = ctx.forme.reperes; r0 = Math.max(Math.abs(R.droite.x), Math.abs(R.gauche.x), 1) + .55; objet.position.set(0, .1, 0); enc.haut = .1 + r0 * Math.sin(.5) + .3; enc.cote = r0 + .3; enc.bas = r0 * Math.sin(.5); },
+      maj(dt, t, etat, presence) { const e = lisse(presence); pres.value = e; profondeur(mats, e);
+        const a = -t * .4 + 2.4; sat.position.set(Math.sin(a) * r0, 0, Math.cos(a) * r0); sat.rotation.set(.3, a + Math.PI / 2, t * .3); sat.scale.setScalar(1.35 * (.7 + .3 * e));
+        orbite.rotation.set(.18, 0, .5); feu.value = e * (Math.sin(t * 4) > .6 ? 1 : .15); } };
   } },
 };

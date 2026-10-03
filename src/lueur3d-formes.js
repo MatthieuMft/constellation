@@ -1,4 +1,4 @@
-// Lueur 3D — silhouettes (rond, chat, fantome, coeur, etoile) et matières (lisse, nacre, givre, paillettes, nebuleuse).
+// Lueur 3D — silhouettes (rond, chat, fantome, coeur, etoile, comete) et matières (lisse, nacre, givre, paillettes, nebuleuse, aurore, cosmos, soleil).
 // Ce fichier ne contient QUE des données : du GLSL (compilé une seule fois avec le corps, choisi par uniforms) et de petites fonctions JS.
 // Il n'importe rien (pas même three : creer(ctx) reçoit ctx.THREE) ; lueur3d.js l'importe et assemble tout au chargement.
 //
@@ -86,6 +86,9 @@ const CO = { lobe: [.49, .22], r: .63, pointe: -.98, rp: .1, k: .12, z: 1.12, ve
 // étoile : cinq branches dodues (capsules qui s'affinent, par révolution), fondues entre elles
 const ET = { r1: .6, r2: .24, h: .92, k: .2, z: .86 };
 
+// comète (v39) : une tête ronde et une chevelure qui file vers l'arrière, en haut à gauche (un cône arrondi fondu dans la tête)
+const CM = { b: [-1.25, .98, -.22], r1: .66, r2: .09, k: .22 };
+
 export const FORMES = {
   // rond : un orbe à peine plus large que haut (comme la v11 et l'étude 7C)
   rond: {
@@ -167,6 +170,18 @@ export const FORMES = {
     js: (x, y, z) => { const zz = z * CO.z;
       const d = smin(cone(x, y, zz, -CO.lobe[0], CO.lobe[1], 0, 0, CO.pointe, 0, CO.r, CO.rp), cone(x, y, zz, CO.lobe[0], CO.lobe[1], 0, 0, CO.pointe, 0, CO.r, CO.rp), CO.k);
       return smin(d, ell(x, y - CO.ventre[0], zz, CO.ventre[1], CO.ventre[2], CO.ventre[3]), .2) / CO.z; },
+  },
+
+  // comète (v39) : la tête ronde de la lueur et sa chevelure de lumière, plus diaphane vers la pointe
+  comete: {
+    id: 5, sd: 'sdComete', bornes: 1.86, visage: { y: 0, echelle: 1 }, deco: 'decoComete',
+    glsl: `
+  float sdComete(vec3 p){ return smin(sdEllipsoide(p, vec3(.96, .93, .93)), sdCone(p, vec3(0.), vec3(${g3(CM.b)}), ${CM.r1}, ${CM.r2}), ${CM.k}); }
+  void decoComete(inout Gaz g){ vec3 ax = normalize(vec3(${g3(CM.b)})); float t = clamp(dot(g.p, ax)/${Math.hypot(...CM.b).toFixed(4)}, 0., 1.), q = smoothstep(.45, 1., t);
+    float w = smoothstep(-.08, .1, sdEllipsoide(g.p, vec3(.96, .93, .93))), Dt = 1. - smoothstep(-.1, .05, g.smin);   // hors de la tête : la chevelure, avec sa propre densité (sinon elle paraît fantôme)
+    formeNette(g, .7); g.E = mix(g.E, max(g.E, pow(Dt, .9)*.8), w); g.A = mix(g.A, max(g.A, pow(Dt, 1.1)*.75*(1. - .35*q)), w);
+    g.c = mix(g.c, mix(g.vif, g.pale, .5), q*.5*w); g.smin -= .05*w; }   // la chevelure : plus pâle et diaphane vers la pointe`,
+    js: (x, y, z) => smin(ell(x, y, z, .96, .93, .93), cone(x, y, z, 0, 0, 0, CM.b[0], CM.b[1], CM.b[2], CM.r1, CM.r2), CM.k),
   },
 
   // étoile : cinq branches dodues fondues entre elles, bombée au centre (le visage, un peu plus petit, comme dans la v11)
@@ -268,5 +283,51 @@ export const MATIERES = {
     vec3 qs = g.p*8. + g.rd*.4; g.brille += vec3(1., .96, .88)*matEclat(qs, .7, 1.6, .12)*.7*smoothstep(.25, .7, g.D)*(1. - .5*uClair);   // petites étoiles dedans
   }`,
     grains: { brume: 1.25, poussiere: 1.15, etincelles: 1, teinte: [1, 1, 1], part: .38, scint: 1.1, taille: 1 },
+  },
+
+  // aurore (v39) : des voiles de lumière qui ondulent lentement de bas en haut, dans la couleur de la lueur (plus pâle sur les crêtes)
+  aurore: {
+    id: 5, fn: 'matAurore',
+    glsl: `
+  void matAurore(inout Gaz g){
+    float pe = matPeau(g), cv = matFace(g);
+    float y = g.p.y*2.4 + sin(g.p.x*2.6 + uT*.5)*.45 + n3(g.p*2.2 + vec3(0., uT*.12, 0.))*.7;
+    float voile = pow(.5 + .5*sin(y*3.1416 - uT*.7), 3.), voile2 = pow(.5 + .5*sin(y*5.1 + 1.3 - uT*.45), 4.);
+    vec3 clair = mix(g.vif, vec3(1.), .45);
+    g.c = mix(g.c, mix(g.vif, clair, voile2), (voile*.5 + voile2*.25)*smoothstep(.05, .4, g.D));
+    g.brille += clair*(voile*.14 + voile2*.1)*(.6 + .4*cv)*pe*(1. - .4*uClair);
+  }`,
+    grains: { brume: 1.1, poussiere: .9, etincelles: 1, teinte: [1, 1, 1], part: 0, scint: .9, taille: 1 },
+  },
+
+  // espace profond (v39) : un petit bout de nuit à l'intérieur, plus sombre, semé de minuscules étoiles ; un liseré de lumière garde la silhouette
+  cosmos: {
+    id: 6, fn: 'matCosmos',
+    glsl: `
+  void matCosmos(inout Gaz g){
+    float pe = matPeau(g), cv = matFace(g), n = n3(g.p*2.1 + vec3(uT*.03, 0., uT*.02));
+    vec3 fond = g.vif*(.42 + .28*n);
+    g.c = mix(g.c, fond, .7*smoothstep(.1, .5, g.D));
+    float e = matEclat(g.p*9. - g.rd*.5, .74, 1.3, .1) + matEclat(g.p*15. + 2.3, .8, 1.9, .08)*.7;
+    g.brille += vec3(1., .97, .92)*e*.95*smoothstep(.2, .6, g.D)*(1. - .5*uClair);
+    g.brille += mix(g.vif, vec3(1.), .4)*pow(1. - cv, 3.)*.28*pe*(1. - .4*uClair);
+  }`,
+    grains: { brume: .7, poussiere: 1.4, etincelles: 1.2, teinte: [1, 1, 1], part: 0, scint: 1.3, taille: .85 },
+  },
+
+  // soleil (v39) : une surface qui bouillonne doucement (grains de lumière qui naissent et s'effacent), un bord plus éclatant
+  soleil: {
+    id: 7, fn: 'matSoleil',
+    glsl: `
+  void matSoleil(inout Gaz g){
+    float pe = matPeau(g), cv = matFace(g);
+    vec3 q = g.pa*5.2; float c1 = n3(q + vec3(0., uT*.22, uT*.1)), c2 = n3(q*2.1 - vec3(uT*.18));
+    float gr = smoothstep(.38, .78, c1*.65 + c2*.35);
+    vec3 chaud = mix(g.vif, vec3(1., .98, .93), .55);
+    g.c = mix(g.c, mix(g.vif*.86, chaud, gr), .55*pe);
+    g.brille += chaud*(gr*.11 + pow(1. - cv, 2.)*.3)*pe*(1. - .4*uClair);
+    g.E *= 1.06;
+  }`,
+    grains: { brume: 1.2, poussiere: .8, etincelles: 1.3, teinte: [1, 1, 1], part: 0, scint: 1, taille: 1.05 },
   },
 };
