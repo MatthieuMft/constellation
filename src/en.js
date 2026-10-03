@@ -785,6 +785,7 @@ export const EN = {
 "Une nouvelle planète": "A new planet",
 "Ton ciel a déjà six planètes.": "Your sky already has six planets.",
 "Nouvelle planète : {nom}": "New planet: {nom}",
+"Ta planète maison grandit.": "Your home planet is growing.",
 "Cadeau : ✦{n} de poussière d’étoiles pour essayer les planètes.": "A gift: ✦{n} stardust to try the planets."
 };
 

@@ -35,6 +35,7 @@ import { monterBoutique } from './boutique.js';
 import { monterCielPerso } from './ciel-ui.js';
 import { creerDecor } from './decor.js';
 import * as PL from './planetes.js';
+import { creerMaison, compterMots } from './maison.js';
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
 
@@ -289,6 +290,7 @@ async function recalculer(annoncer = false) {
     v.cible.copy(posDuJour(e.id));
   });
   majCompte(); cleNiveau = ''; majNiveau(performance.now(), true);
+  reglerMaison();
 }
 
 function majCompte() {
@@ -422,6 +424,8 @@ const evenements = creerEvenements({ scene, camera, melange, texHalo, pr: render
 const lucioles = evenements.creerLucioles(() => visuelsVisibles);
 const decor = creerDecor({ scene, camera, renderer });
 PL.migrer();
+const maison = creerMaison({ scene });          // v43 : ta planète maison, au milieu des semaines, qui grandit avec tes mots
+function reglerMaison() { const d = new Date(); maison.regler({ mots: compterMots(items), centre: monde.centreMois(d.getFullYear(), d.getMonth()), clair: T().clair }); }
 if (etoiles.cadeauRecu) setTimeout(() => toast(t('Cadeau : ✦{n} de poussière d’étoiles pour essayer les planètes.', { n: etoiles.cadeauRecu }), 5200), 2500);                                        // v40 : les anciennes planètes achetées deviennent de vraies planètes (une seule fois)
 let nbPlanetes = 0;
 function reglerPlanetes(direct = false) { const v = PL.visibles(); nbPlanetes = v.length; decor.regler({ planetes: v, clair: T().clair, direct }); }
@@ -529,7 +533,7 @@ function boucle() {
   dof.uniforms.uAper.value = Re.flou * 3; dof.enabled = Re.flou > 0.01 && !mobile;
   particules.update(dt); animerParcours(dt);
   evenements.update(dt, R.animation, T().clair, { cometes: etoiles.actif('cometes'), aurores: etoiles.actif('aurores'), dessins: etoiles.actif('dessins'), baleine: etoiles.actif('baleine'), satellites: etoiles.actif('satellites'), planetes: nbPlanetes > 0, lune: etoiles.actif('lune') });
-  lucioles.maj(dt, R.animation, etoiles.actif('lucioles') ? 1 : 0); decor.update(dt, R.animation); scenes.update(dt);
+  lucioles.maj(dt, R.animation, etoiles.actif('lucioles') ? 1 : 0); decor.update(dt, R.animation); maison.update(dt, R.animation); scenes.update(dt);
   { const h = new Date().getHours(), occupe = palette.ouverte() || ["fiche", "reglages", "analyse", "nommer", "perso", "dateqc", "menu", "boutique"].some(id => !$(id).hidden), ecr = !$("ecrire").hidden, ta = $("texte");
     if (ecr && (ta.value.length === 0 ? now - ouvertureEcriture > 10000 : now - dernierTexte > 12000)) creature.patiente();
     creature.update(dt, t, { W: innerWidth, H: innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, rectMedia: ecr ? $('choisir-media').getBoundingClientRect() : null, basVue: window.visualViewport ? visualViewport.offsetTop + visualViewport.height : innerHeight, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
@@ -950,6 +954,7 @@ async function valider() {
     choisir(jour, { relire: false });                    // on va voir la journée, entrées comprises
     if (gain) setTimeout(() => toast(t('+ ✦{n} poussière d’étoiles', { n: gain })), 1500);
   }
+  if (maison.palierFranchi()) { maison.pulser(); setTimeout(() => toast(t('Ta planète maison grandit.')), gain ? 4300 : 1500); }
   creature.enregistre(!accueil.ecrireEnCours());
   const v = visuels.get(jour); if (v) { v.pulse = 1; setTimeout(() => creature.celebrer(jour), 1800); }
   if (type === 'journal') motsMagiques(texte, 2600);
@@ -1077,7 +1082,7 @@ function appliquerTheme() {
   for (const v of visuels.values()) { for (const s of [v.halo, v.etoile]) { s.material.blending = m; s.material.needsUpdate = true; } }
   meteores.regler(clair, m, t.ui.ink); poussiere.regler(clair, m, clair ? t.ui.ink : t.etoile);
   creature.regler(clair); marques.regler(clair, m); evenements.regler(clair, t.ui.ink); scenes.regler(clair, t.ui.ink); lucioles.m.blending = m; lucioles.m.uniforms.uCol.value.set(clair ? t.ui.ink : "#ffe9a0"); lucioles.m.needsUpdate = true;
-  reglerPlanetes(true);
+  reglerPlanetes(true); maison.regler({ clair });
   recolorer(); appliquerCurseurs();
 }
 function appliquerCurseurs() {
@@ -1261,7 +1266,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v42'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v43'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1538,5 +1543,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, maison, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };
