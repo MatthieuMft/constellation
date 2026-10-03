@@ -119,7 +119,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   // ce que la lueur 3D reçoit à chaque image (objets réutilisés : aucune allocation) ; lacet / tangage : où elle tourne la tête
   const exprV = new THREE.Vector4(), ecraseV = new THREE.Vector2(1, 1), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
   const vue = { couleur: coul, clair: 0, app: 0, joie: 0, triste: 0, sourcils: 0, eclat: 0, calme: 0, grands: 0, sommeil: 0, cligne: 0, regard, expr: exprV, yeuxEtoiles: 0, battement: 0, ecrase: ecraseV, penche: 0, perso: null };
-  let lacet = 0, tangage = 0, yeuxEt = 0;
+  let lacet = 0, tangage = 0, yeuxEt = 0, petite = 1;
   // v25 : elle réagit davantage à ce qu'on fait (doigt, écriture, humeur, ciel qu'on tourne, inactivité)
   let doigt = { x: 0, y: 0, t: -1e9 }, tapes = [], dernierSursaut = 0, hoche = 0, tournis = 0, tourneAcc = 0, azPrec = null, vAz = 0, baille = 0, bailleFait = false;
   const _o = new THREE.Vector3();
@@ -216,7 +216,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       case 'guide': cible.copy(ctx.guide).addScaledVector(_u, 2.2); raideur = 3.2; vmax = 22; break;
       case 'ecrit': {                                                    // elle flotte juste au-dessus de l'éditeur, devant le texte
         const r = ctx.rectEcriture; if (!r) { ndcPoint(0, .2, d * .7, cible); break; }
-        const [nx, ny] = ndcDe(r.left + r.width * (.6 + .08 * Math.sin(etatT * .4)), r.top + (r.top < 40 ? 64 : -56) - sousCorps() * .3);   // v27 : la page couvre l'écran : elle flotte dans la fenêtre sur le ciel, en haut
+        const [nx, ny] = ctx.clavier ? ndcDe(r.right - 84, r.top + 30) : ndcDe(r.left + r.width * (.6 + .08 * Math.sin(etatT * .4)), r.top + (r.top < 40 ? 64 : -56) - sousCorps() * .3);   // v28 : clavier ouvert, elle se pose en petit à côté de la croix   // v27 : la page couvre l'écran : elle flotte dans la fenêtre sur le ciel, en haut
         ndcPoint(nx, ny, d * .62, cible); raideur = 2.8; vmax = 18; break; }
       case 'curieux': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx + .12, ny + .16, d * .9, cible); raideur = 1.5; vmax = 9; break; }
       case 'calin': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx, ny, d * .7, cible); raideur = 4; vmax = 20; break; }
@@ -316,7 +316,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     // taille : bien visible, et à peu près constante à l'écran quand elle s'éloigne ou se rapproche (s = « uSize » de la v11 : le corps fait s/4 de rayon)
     const dc = camera.position.distanceTo(pos), ech = clamp(dc / distRef(), .8, 1.5);
     const taille = ECHELLES[profil.stade] * (1 + evolue * .07 * Math.sin(evolue * 6)) * (.4 + .6 * apparition) * (mobile ? .9 : 1);
-    const s = 12 * taille * P.taille * ech * (distRef() / 52);
+    petite += ((ctx.clavier && etat === 'ecrit' ? .55 : 1) - petite) * Math.min(1, dt * 5);   // v28 : clavier ouvert, elle se fait petite dans l'en-tête
+    const s = 12 * taille * P.taille * ech * (distRef() / 52) * petite;
     const bob = Math.sin(t * 1.7) * .25 * (dort ? .3 : 1), tr = peur > 0 ? .12 : 0;
     corps.position.copy(pos).addScaledVector(_u, bob).add(_a.set((Math.random() - .5) * tr, (Math.random() - .5) * tr, (Math.random() - .5) * tr));
     corps.scale.setScalar(s * .25); corps.visible = true;

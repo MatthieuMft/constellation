@@ -459,6 +459,7 @@ const joy = { x: 0, y: 0 }, _joyD = new THREE.Vector3(), _joyH = new THREE.Vecto
   const fin = e => { if (e.pointerId !== id) return; id = null; poser(0, 0); };
   z.addEventListener('pointerup', fin); z.addEventListener('pointercancel', fin);
 }
+const _fondEcr = new THREE.Color(), _ccEcr = new THREE.Color();
 function boucle() {
   const dt = Math.min(horloge.getDelta(), .05), t = horloge.elapsedTime, now = performance.now();
   if (!document.hidden) regulerResolution(now);
@@ -525,7 +526,7 @@ function boucle() {
   lucioles.maj(dt, R.animation, etoiles.actif('lucioles') ? 1 : 0); decor.update(dt, R.animation); scenes.update(dt);
   { const h = new Date().getHours(), occupe = palette.ouverte() || ["fiche", "reglages", "analyse", "nommer", "perso", "dateqc", "menu", "boutique"].some(id => !$(id).hidden), ecr = !$("ecrire").hidden, ta = $("texte");
     if (ecr && (ta.value.length === 0 ? now - ouvertureEcriture > 10000 : now - dernierTexte > 12000)) creature.patiente();
-    creature.update(dt, t, { W: innerWidth, H: innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, caret: (ta.selectionStart % 50) / 50,
+    creature.update(dt, t, { W: innerWidth, H: innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
       selection: selection && visuelsVisibles.get(selection) ? visuelsVisibles.get(selection).groupe.position : null,
       guide: parcours && parcours.courbe ? parcours.courbe.getPoint(Math.min(1, parcours.t + .07)) : null,
       curseur: pointeur, curseurActif: now - pointeur.t < 12000 && !intro.actif, curseurImmobile: (now - pointeur.t) / 1000, inactivite: (now - dernierGeste) / 1000,
@@ -536,7 +537,8 @@ function boucle() {
   // scène complète, puis flou de champ et lueur
   finition.uniforms.uTime.value = t; volume.rendre(t);
   creature.rendreVignettes(renderer);                  // vignettes 3D de la boutique en attente (dans un coin de l'écran, recouvert juste après)
-  composer.render();
+  if ($('ecrire').hidden) composer.render();
+  else { renderer.getClearColor(_ccEcr); const ca = renderer.getClearAlpha(); renderer.setRenderTarget(null); renderer.setClearColor(_fondEcr.set(T().ui.bg), 1); renderer.clear(); renderer.setClearColor(_ccEcr, ca); }   // v28 : pendant l'écriture, le ciel s'efface : un fond uni, seule la lueur reste
   renderer.autoClear = false; renderer.clearDepth(); renderer.render(sceneUI, camera); renderer.autoClear = true;   // la mascotte : nette, jamais floutée ; profondeur vidée (la passe de sortie la laisse à 0), elle s'occulte elle-même
   copierCiel();
   requestAnimationFrame(boucle);

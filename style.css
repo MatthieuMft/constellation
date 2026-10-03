@@ -839,3 +839,16 @@ body.ecriture #bulle { z-index: 7; }
 }
 #ecrire .p-corps > * { flex-shrink: 0; }
 @media (min-width: 721px) { body.barre-on #ecrire { bottom: 48px; max-height: none; } }
+
+/* v28 : écrire sans le ciel (la 3D s'efface, fond uni), humeurs plus hautes ; clavier ouvert, tout pour le texte :
+   en-tête de 56 px avec la lueur à côté de la croix, plus d'humeurs, de date ni de pied (« Cristalliser » revient clavier fermé) */
+#ecrire .p-tete { background: none; }
+#humeurs button { padding: 10px 13px; font-size: 11px; }
+#humeurs label.libre { padding: 5px 8px 5px 12px; font-size: 11px; }
+#humeurs label.libre input { width: 20px; height: 20px; }
+@media (max-width: 720px) {
+  body.barre-on #ecrire { bottom: calc(var(--clavier, 0px) + 48px); }
+  body.barre-on #ecrire .p-tete { height: calc(56px + env(safe-area-inset-top, 0px)); padding-top: calc(4px + env(safe-area-inset-top, 0px)); }
+  body.barre-on #ecrire #humeurs, body.barre-on #ecrire .p-pied, body.barre-on #ecrire #zone-media, body.barre-on #ecrire #note-titre:placeholder-shown { display: none; }
+  body.barre-on #ecrire .p-corps { padding-top: 0; }
+}
