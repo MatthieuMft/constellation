@@ -80,7 +80,6 @@
 
 <!-- l'intérieur d'une journée : en-tête fixe (date, jour précédent/suivant, humeur), corps qui défile, barre d'ajout fixe -->
 <aside id="fiche" class="feuille" hidden aria-label="Journée">
-  <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete">
     <button id="f-prec" class="nav-jour" aria-label="Jour précédent">‹</button>
     <div class="f-titre"><small id="f-semaine"></small><strong id="f-jour"></strong></div>
@@ -96,7 +95,6 @@
 
 <!-- écrire : le journal du jour (une photo ou une vidéo peut s'y glisser) -->
 <section id="ecrire" class="feuille" hidden aria-label="Nouvelle entrée">
-  <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete">
     <strong id="ecrire-titre" class="p-titre">Journal</strong><span class="espace"></span>
     <button id="ecrire-fermer" class="fermer" type="button" aria-label="Fermer (le brouillon est gardé)" title="Fermer">×</button>
@@ -153,14 +151,12 @@
 
 <!-- ma lueur : couleur, accessoire, yeux… -->
 <section id="perso" class="feuille" hidden aria-label="Personnaliser la lueur">
-  <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete"><strong class="p-titre">Personnaliser ma lueur</strong><span class="espace"></span><button id="perso-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
   <div class="p-corps" id="perso-corps"></div>
 </section>
 
 <!-- mon ciel : ambiances, matière, lumière, astres, animations, looks… (ce qui est débloqué) -->
 <section id="perso-ciel" class="feuille" hidden aria-label="Personnaliser mon ciel">
-  <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete"><strong class="p-titre">Personnaliser mon ciel</strong><span class="espace"></span><button id="ciel-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
   <div class="p-corps" id="ciel-corps"></div>
 </section>
@@ -192,12 +188,10 @@
 </div>
 
 <section id="reglages" class="feuille" hidden aria-label="Réglages">
-  <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete"><strong class="p-titre">Réglages</strong><span class="espace"></span><button id="reg-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
   <div class="p-corps" id="reg-corps"></div>
 </section>
 <section id="analyse" class="feuille" hidden aria-label="Suivi">
-  <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete"><strong class="p-titre">Suivi</strong><span class="espace"></span><button id="ana-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
   <div class="p-sous" id="ana-onglets"></div>
   <div class="p-corps" id="ana-corps"></div>
@@ -224,7 +218,6 @@
 
 <!-- « ⋯ » : le menu, quatre lignes -->
 <section id="menu" class="feuille" hidden aria-label="Menu">
-  <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete"><button id="menu-retour" class="m-retour" type="button" hidden>‹ Menu</button><strong id="menu-titre" class="p-titre">Menu</strong><span class="espace"></span><button id="menu-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
   <div class="m-recherche" id="menu-zone-recherche"><input id="menu-champ" type="search" placeholder="Chercher une commande ou une pensée" autocomplete="off" aria-label="Chercher une commande ou une pensée"></div>
   <div class="p-corps m-liste" id="menu-liste"></div>
@@ -232,7 +225,6 @@
 
 <!-- boutique (✦) -->
 <section id="boutique" class="feuille" hidden aria-label="Boutique">
-  <div class="p-grip" aria-hidden="true"></div>
   <div class="p-tete">
     <strong class="p-titre">Boutique</strong>
     <span class="espace"></span><span id="bq-solde" class="bq-solde"></span>

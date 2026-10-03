@@ -1019,3 +1019,6 @@ body.joy-on #joystick { display: grid; right: 24px; bottom: calc(84px + var(--sa
 .reg-retour:hover { background: none; color: var(--ink); }
 #reglages.dedans .p-titre { text-align: center; flex: 1; }
 .reg-danger { margin-top: 30px; padding-top: 6px; border-top: 1px solid rgba(255,138,122,.3); }
+
+/* v53 : plus de poignée grise en haut des panneaux (elle ne servait à rien, Matthieu) */
+.p-grip, .feuille:not(.tiroir) .p-grip { display: none !important; }
