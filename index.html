@@ -16,7 +16,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1089801"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1091490"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -100,7 +100,7 @@
     <button id="ecrire-fermer" class="fermer" type="button" aria-label="Fermer (le brouillon est gardé)" title="Fermer">×</button>
   </div>
   <div class="p-corps">
-    <p class="lab" id="titre-ecrire">Qu’est-ce qui traverse ?</p>
+    <p class="lab" id="titre-ecrire" hidden></p>
     <label class="ligne-date">Jour <input type="date" id="ecrire-date" aria-label="Jour de l’entrée"></label>
     <div id="humeurs" role="radiogroup" aria-label="Humeur du jour"></div>
     <input id="note-titre" type="text" maxlength="80" placeholder="Titre (facultatif)" aria-label="Titre de la note" hidden>
@@ -123,7 +123,7 @@
     <textarea id="texte" hidden rows="5" maxlength="4000" placeholder="Écrivez. Ce texte ne quitte jamais cet appareil."></textarea>
     <div id="editeur" class="editeur" aria-label="Texte de l’entrée"></div>
     <div id="zone-media">
-      <div class="rang-media"><button type="button" id="choisir-media" class="ajout-media">+ Ajouter un média</button></div>
+      <div class="rang-media"><button id="dicter" type="button" aria-pressed="false" title="Dicter à la voix" class="ajout-media">Dicter</button><button type="button" id="choisir-media" class="ajout-media">+ Ajouter un média</button></div>
       <input id="fichiers-media" type="file" accept="image/*,video/*" multiple hidden>
       <input id="fichiers-autres" type="file" multiple hidden>
       <div id="vignettes-ecrire"></div>
@@ -133,7 +133,6 @@
   </div>
   <div class="p-pied rang">
     <span id="nbc">0</span>
-    <button id="dicter" type="button" aria-pressed="false" title="Dicter à la voix">Dicter</button>
     <span class="espace"></span>
     <button id="annuler">Annuler</button>
     <button id="valider" class="plein">Enregistrer</button>

@@ -881,3 +881,5 @@ section#reglages { position: fixed; top: 0; bottom: 0; left: 0; right: auto; wid
 #ecrire .p-tete, #ecrire .p-corps, #ecrire .p-pied { background: transparent; }
 #ecrire .p-tete { height: auto; align-items: center; padding: calc(4px + env(safe-area-inset-top, 0px)) 8px 4px 18px; }
 @media (max-width: 720px) { body.barre-on #ecrire .p-tete { height: auto; padding-top: calc(2px + env(safe-area-inset-top, 0px)); } }
+/* v33 : Dicter à gauche de « Ajouter un média » ; actif = plein */
+#ecrire #dicter.ajout-media[aria-pressed=true] { background: var(--ink); color: var(--inv); border-style: solid; }

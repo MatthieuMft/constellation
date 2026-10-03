@@ -216,7 +216,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       case 'guide': cible.copy(ctx.guide).addScaledVector(_u, 2.2); raideur = 3.2; vmax = 22; break;
       case 'ecrit': {                                                    // elle flotte juste au-dessus de l'éditeur, devant le texte
         const r = ctx.rectEcriture; if (!r) { ndcPoint(0, .2, d * .7, cible); break; }
-        const [nx, ny] = ndcDe(r.right - 52 + Math.sin(etatT * .5) * 6, r.bottom - (ctx.clavier ? 46 : 120) + Math.sin(etatT * .8) * 4);   // v32 : calée en petit en bas à droite de la page (on écrit en haut à gauche), elle regarde le texte   // v27 : la page couvre l'écran : elle flotte dans la fenêtre sur le ciel, en haut
+        const m = ctx.rectMedia, yMedia = m && m.height ? m.top + m.height / 2 : r.bottom - 120, yClavier = Math.min(r.bottom, ctx.basVue || r.bottom) - 74;   // v33 : à hauteur de « Ajouter un média » ; clavier ouvert, elle suit le bas visible de l'écran (et redescend en douceur quand le clavier tombe)
+        const [nx, ny] = ndcDe(r.right - 46 + Math.sin(etatT * .5) * 6, (ctx.clavier ? yClavier : yMedia) + Math.sin(etatT * .8) * 4);   // v32 : calée en petit en bas à droite de la page (on écrit en haut à gauche), elle regarde le texte   // v27 : la page couvre l'écran : elle flotte dans la fenêtre sur le ciel, en haut
         ndcPoint(nx, ny, d * .62, cible); raideur = 2.8; vmax = 18; break; }
       case 'curieux': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx + .12, ny + .16, d * .9, cible); raideur = 1.5; vmax = 9; break; }
       case 'calin': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx, ny, d * .7, cible); raideur = 4; vmax = 20; break; }
@@ -392,7 +393,17 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     visible: () => sauve.visible !== false, basculer() { sauve.visible = !(sauve.visible !== false); sauver(sauve); return sauve.visible; },
     // la lueur est-elle sous le pointeur ? (cercle autour du corps, en pixels)
     touche(x, y) { if (!montree || !sauve.visible) return false; const r = Math.max(34, ecranPos.rpx * 1.25); return (x - ecranPos.x) ** 2 + (y - ecranPos.y) ** 2 < r * r; },
-    caresse() { joie = 3.4; bond = 0; sauve.caresses = (sauve.caresses || 0) + 1; sauver(sauve); surprise = 0; particules.burst(corps.position, rose, 12, .7); dire(choix(['Hihi.', 'Encore !', 'Mmh…', 'Oh, ça chatouille !', '♥']), { priorite: true, duree: 2200 }); },
+    caresse() {
+      sauve.caresses = (sauve.caresses || 0) + 1; sauver(sauve); bond = 0; particules.burst(corps.position, rose, 12, .7);
+      if (etat === 'ecrit') {   // v33 : touchée pendant qu'on écrit, elle réagit de plusieurs façons
+        const r = Math.random();
+        if (r < .3) { surprise = 1.2; vel.addScaledVector(_u, 5); dire(choix(['Oh !', 'Hé, je lisais !', 'Tu m’as surprise !']), { priorite: true, duree: 2000 }); }
+        else if (r < .55) { etire = 1.4; dire(choix(['Mmh… continue.', 'Je suis là.', 'Prends ton temps.']), { priorite: true, duree: 2200 }); }
+        else { joie = 3.4; surprise = 0; dire(choix(['Hihi.', 'Ça chatouille !', '♥', 'J’aime bien te lire.']), { priorite: true, duree: 2200 }); }
+        return;
+      }
+      joie = 3.4; surprise = 0; dire(choix(['Hihi.', 'Encore !', 'Mmh…', 'Oh, ça chatouille !', '♥']), { priorite: true, duree: 2200 });
+    },
     calin(actif) { calin = actif; if (!actif && etat === 'calin') { joie = 4; particules.burst(corps.position, rose, 26, 1.3, true); dire('Merci.', { priorite: true, duree: 2200 }); } },
     appeler() { forceCible = { point: new THREE.Vector3().copy(controls.target), jusqu: performance.now() + 4000 }; joie = 2; dire('Me voilà !', { priorite: true, duree: 2200 }); },
     reagir(nom) {
@@ -429,7 +440,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       if (tapes.length >= 3 && now - dernierSursaut > 4000 && montree && etat !== 'dort') { dernierSursaut = now; tapes = []; base(); vel.addScaledVector(_u, 9); surprise = 1.6; dire(choix(['Oh !', 'Hé !', 'Doucement !', 'Tu m’as fait peur !']), { priorite: true, duree: 1600 }); }
     },
     // une pensée vient d'être enregistrée : un bond de joie tout de suite
-    enregistre() { joie = Math.max(joie, 4); bond = 0; etire = 1.4; base(); vel.addScaledVector(_u, 7); if (montree) particules.burst(corps.position, coul, 22, 1.2, true); },
+    enregistre(parle = true) { joie = Math.max(joie, 4); bond = 0; etire = 1.4; base(); vel.addScaledVector(_u, 7); if (montree) particules.burst(corps.position, coul, 22, 1.2, true);
+      if (parle) dire(choix(['Ah, d’accord !', 'Ah oui, je vois…', 'Merci de me l’avoir confié.', 'Je garde ça précieusement.', 'Oh ! Quelle journée.']), { priorite: true, duree: 2600 }); },   // v33 : elle réagit à la note qu'on vient de finir
 
     finEcriture() { mimique = { mood: null, couleur: null }; },
     regler(c) { clair = c; },

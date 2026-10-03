@@ -526,7 +526,7 @@ function boucle() {
   lucioles.maj(dt, R.animation, etoiles.actif('lucioles') ? 1 : 0); decor.update(dt, R.animation); scenes.update(dt);
   { const h = new Date().getHours(), occupe = palette.ouverte() || ["fiche", "reglages", "analyse", "nommer", "perso", "dateqc", "menu", "boutique"].some(id => !$(id).hidden), ecr = !$("ecrire").hidden, ta = $("texte");
     if (ecr && (ta.value.length === 0 ? now - ouvertureEcriture > 10000 : now - dernierTexte > 12000)) creature.patiente();
-    creature.update(dt, t, { W: innerWidth, H: innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
+    creature.update(dt, t, { W: innerWidth, H: innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, rectMedia: ecr ? $('choisir-media').getBoundingClientRect() : null, basVue: window.visualViewport ? visualViewport.offsetTop + visualViewport.height : innerHeight, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
       selection: selection && visuelsVisibles.get(selection) ? visuelsVisibles.get(selection).groupe.position : null,
       guide: parcours && parcours.courbe ? parcours.courbe.getPoint(Math.min(1, parcours.t + .07)) : null,
       curseur: pointeur, curseurActif: now - pointeur.t < 12000 && !intro.actif, curseurImmobile: (now - pointeur.t) / 1000, inactivite: (now - dernierGeste) / 1000,
@@ -763,11 +763,11 @@ choisirHumeur('calme', null);
 // une ancienne entrée garde ses champs : titre pour une note, légende pour un média, pas d'humeur hors journal
 function configurer(type) {
   $('humeurs').hidden = type !== 'journal'; $('note-titre').hidden = type !== 'note';
-  $('zone-media').hidden = type !== 'journal';
+  $('choisir-media').hidden = $('vignettes-ecrire').hidden = type !== 'journal';   // v33 : Dicter vit dans ce rang, il reste pour tous les types
   $('texte').placeholder = type === 'media' ? t('Une légende (facultatif)') : t('Écrivez. Ce texte ne quitte jamais cet appareil.');
   $('texte').rows = type === 'media' ? 2 : type === 'tache' ? 2 : 5;
   $('ecrire-titre').textContent = edition ? t('Modifier') : t('Journal');
-  $('titre-ecrire').textContent = edition ? '' : t('Qu’est-ce qui traverse ?'); $('titre-ecrire').hidden = !!edition;
+  $('titre-ecrire').textContent = ''; $('titre-ecrire').hidden = true;   // v33 : la question est retirée (Matthieu : de la place pour écrire)
   if (type === 'journal') creature.imiter(humeur, couleurLibre || cm(humeur)); else creature.finEcriture();
   majSugg();
 }
@@ -905,6 +905,8 @@ async function stockerFichiers() {
   for (const f of fichiersEnAttente) { try { l.push(await media.stocker(f)); } catch (err) { statutTemporaire((f.name || t('Fichier')) + DP + err.message, 5000); } }
   $('statut').textContent = ''; return l;
 }
+// v33 : pendant l'écriture, la page couvre le ciel : on peut quand même toucher la créature
+$('ecrire').addEventListener('pointerdown', e => { if (creature.touche(e.clientX, e.clientY)) { e.preventDefault(); creature.caresse(); } });
 async function valider() {
   const jour = $('ecrire-date').value || aujourdhui(), texte = $('texte').value.trim(), type = typeEdite();
   const manque = m => { $('interim').textContent = m; $('texte').focus(); $('ecrire').animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(0)' }], { duration: 220 }); };
@@ -939,7 +941,7 @@ async function valider() {
     choisir(jour, { relire: false });                    // on va voir la journée, entrées comprises
     if (gain) setTimeout(() => toast(t('+ ✦{n} poussière d’étoiles', { n: gain })), 1500);
   }
-  creature.enregistre();
+  creature.enregistre(!accueil.ecrireEnCours());
   const v = visuels.get(jour); if (v) { v.pulse = 1; setTimeout(() => creature.celebrer(jour), 1800); }
   if (type === 'journal') motsMagiques(texte, 2600);
 }
@@ -952,7 +954,7 @@ let reco = null, dictee = false;
 const bDicter = $('dicter');
 const bMicro = document.querySelector('[data-barre="dicter"]');
 new MutationObserver(() => { bMicro.setAttribute('aria-pressed', bDicter.getAttribute('aria-pressed')); bMicro.hidden = bDicter.hidden; }).observe(bDicter, { attributes: true });
-if (!SR) { bDicter.hidden = true; bMicro.hidden = true; }
+// v33 : le bouton Dicter reste toujours visible ; si le navigateur ne sait pas dicter, on explique comment faire avec le micro du clavier
 function arreterDictee() {
   dictee = false; bDicter.setAttribute('aria-pressed', 'false'); bDicter.textContent = t('Dicter'); $('interim').textContent = '';
   if (reco) { try { reco.stop(); } catch (e) {} reco = null; }
@@ -963,6 +965,7 @@ function ajouterTexte(t) {
   ta.dispatchEvent(new InputEvent('input', { inputType: 'insertText', bubbles: true }));
 }
 bDicter.addEventListener('click', () => {
+  if (!SR) { $('interim').textContent = t('Ce navigateur ne sait pas dicter : touche le micro de ton clavier, ou ouvre Constellation dans Chrome.'); $('editeur').focus(); return; }
   if (dictee) return arreterDictee();
   let ok = false; try { ok = localStorage.getItem('constellation.dictee') === '1'; } catch (e) {}
   if (!ok) {
