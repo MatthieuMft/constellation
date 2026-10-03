@@ -883,3 +883,15 @@ section#reglages { position: fixed; top: 0; bottom: 0; left: 0; right: auto; wid
 @media (max-width: 720px) { body.barre-on #ecrire .p-tete { height: auto; padding-top: calc(2px + env(safe-area-inset-top, 0px)); } }
 /* v33 : Dicter à gauche de « Ajouter un média » ; actif = plein */
 #ecrire #dicter.ajout-media[aria-pressed=true] { background: var(--ink); color: var(--inv); border-style: solid; }
+/* v34 : le bouton + reste toujours là en bas, même quand l'interface se repose (Matthieu : sinon on ne sait plus quoi faire) */
+body.calme:not(.accueil):not(.intro) footer > #nouveau { opacity: 1; pointer-events: auto; }
+.ac-astuce b { color: var(--ink); font-weight: 500; }
+/* v34 : choix de la langue dans la première carte du tutoriel */
+.ac-langue { display: flex; gap: 0; margin: 4px 0 12px; }
+.ac-langue button { flex: 1; padding: 8px 10px; font: 11px var(--mono); color: var(--soft); }
+.ac-langue button + button { border-left: none; }
+.ac-langue button.actif { color: var(--ink); border-color: var(--ink); }
+/* v34 : où toucher pour ajouter Constellation à l'écran d'accueil (navigateurs sans ajout en un geste) */
+.install-astuce { position: fixed; left: 16px; right: 16px; bottom: calc(84px + env(safe-area-inset-bottom, 0px)); z-index: 60; max-width: 420px; margin: 0 auto; padding: 16px 18px; background: var(--panel-s, var(--bg)); border: 1px solid var(--ink); color: var(--soft); font-size: 14px; line-height: 1.5; }
+.install-astuce b { color: var(--ink); font-weight: 500; }
+.install-astuce button { margin-top: 12px; width: 100%; }

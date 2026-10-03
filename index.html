@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#05060f">
 <meta name="description" content="Un journal en forme de ciel : une étoile par jour, des nébuleuses pour les mois et les années.">
 <link rel="manifest" href="manifest.webmanifest">
+<script>/* v34 : on attrape l’invitation à installer dès le début (elle peut arriver avant que le site ait fini de charger) */addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__invitInstall=e;});</script>
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Constellation</title>
 <link rel="icon" href="data:,">
@@ -16,7 +17,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1091490"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1094270"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>

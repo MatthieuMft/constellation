@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { dejaInstallee, astuceInstall } from './installer.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -1103,7 +1104,7 @@ const rendreReglages = monterReglages($('reglages'), {
     ]],
     [t('Aide'), [
       [t('Comment voyager dans le ciel'), () => { $('reglages').hidden = true; ouvrirAide(); }],
-      ...(invitationInstall ? [[t('Installer l’application'), () => $('installer').click()]] : []),
+      ...(dejaInstallee() ? [] : [[t('Ajouter à l’écran d’accueil'), () => { $('reglages').hidden = true; proposerInstall(); }]]),
     ]],
   ],
   lire: () => R, maj: majReglage, themes: THEMES, moods: MOODS, couleur: cm,
@@ -1210,7 +1211,7 @@ const palette = monterPalette($('palette'), {
     if (!$('btn-sauvegarde').hidden) l.push({ nom: t('Sauvegarde automatique'), mots: t('dossier copie backup'), etat: $('btn-sauvegarde').textContent.replace(t('Sauvegarde') + DP, ''), action: clic('btn-sauvegarde') });
     l.push({ nom: t('Exporter le journal'), mots: t('telecharger json'), action: clic('exporter') }, { nom: t('Importer un journal'), mots: t('fichier json'), action: () => $('importer').click() });
     if (items.some(e => e.sample)) l.push({ nom: t('Effacer les entrées d’exemple'), mots: t('exemples demo fictives'), action: clic('exemples') });
-    if (invitationInstall) l.push({ nom: t('Installer l’application'), action: clic('installer') });
+    if (!dejaInstallee()) l.push({ nom: t('Ajouter à l’écran d’accueil'), mots: t('installer application appli raccourci'), action: proposerInstall });
     l.push({ nom: EN ? 'Language: Français' : 'Langue : English', mots: 'langue language english anglais francais french', action: () => changerLangue(EN ? 'fr' : 'en') });
     l.push({ nom: t('Raconte-moi un souvenir'), mots: t('souvenir ancienne pensee rappel creature lueur'), action: () => { if (!creature.souvenirMaintenant()) statutTemporaire(t('Pas encore de souvenir à portée de ciel.')); } },
       { nom: t('Appeler {nom}', { nom: creature.nom() || t('la petite lueur') }), mots: t('creature lueur venir'), action: () => creature.appeler() },
@@ -1302,7 +1303,15 @@ surSauvegarde(donnees => sauv.planifier(donnees, (ok, err) => { if (err) { statu
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { majBoutonSauvegarde(); rappels.rattraper(); } });
 
 // ───────────── Application installable (PWA) ─────────────
-let invitationInstall = null;
+// v34 : un geste quand le navigateur le permet ; sinon on montre où toucher dans CE navigateur (Brave, Samsung…)
+async function proposerInstall() {
+  if (invitationInstall) { invitationInstall.prompt(); await invitationInstall.userChoice.catch(() => null); invitationInstall = null; $('installer').hidden = true; return; }
+  const d = document.createElement('div'); d.className = 'install-astuce';
+  d.innerHTML = `<p>${astuceInstall()}</p><button type="button" class="plein">${t('Compris')}</button>`;
+  d.querySelector('button').onclick = () => d.remove(); document.body.append(d);
+}
+let invitationInstall = window.__invitInstall || null;   // v34 : attrapée tôt dans index.html
+if (invitationInstall) $('installer').hidden = false;
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); invitationInstall = e; $('installer').hidden = false; });
 addEventListener('appinstalled', () => { invitationInstall = null; $('installer').hidden = true; statutTemporaire(t('Constellation est installée.')); });
 $('installer').addEventListener('click', async () => { if (!invitationInstall) return; invitationInstall.prompt(); await invitationInstall.userChoice; invitationInstall = null; $('installer').hidden = true; });
@@ -1353,7 +1362,7 @@ const accueil = monterAccueil({
   montrerLueur: () => creature.montrer(), nom: () => creature.nom(), renommer: n => creature.renommer(n),
   ouvrirBoutique: () => ouvrirBoutique(null, 'lueur'), toast, fini: () => { creature.celebrer(null); },
   activerRappel: heure => rappels.activer(true, heure, creature.nom()),
-  peutInstaller: () => !!invitationInstall,
+  peutInstaller: () => !!invitationInstall, astuceInstall,
   installer: async () => { if (!invitationInstall) return false; invitationInstall.prompt(); const r = await invitationInstall.userChoice.catch(() => null); invitationInstall = null; $('installer').hidden = true; return !!r && r.outcome === 'accepted'; },   // v29 : même invitation que le bouton « Installer » (plus bas)
 });
 function apresIntro() {
