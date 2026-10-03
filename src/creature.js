@@ -441,6 +441,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       if (m) { const mot = norm(m[1]); const r = LEXIQUE.find(x => x.re.test(mot)); if (r) { fx = { expr: r.expr, jusqu: performance.now() + 2800 }; if (bullesEcriture < 4 && dire(choix(r.dit), { duree: 2800 })) bullesEcriture++; } }
       if (texte.length > 240 && !longDit) { longDit = true; dire('Tu as beaucoup à dire…', { duree: 3000 }); }
     },
+    allerVers(point, duree = 6500, surArrivee = null) { forceCible = { point: point.clone(), jusqu: performance.now() + duree, surArrivee }; },   // v49 : l'étape du voyage
     guider(txt) { dire(txt, { priorite: true, duree: 9000 }); },   // v36 : le tutoriel lui fait expliquer la première note
     patiente() { if (!patienceDite) { patienceDite = true; dire('Prends ton temps.', { duree: 3200 }); } },
     imiter(mood, couleur, duree = 0) {

@@ -962,3 +962,10 @@ body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: 
 .act-liens li.plus b { color: #9fe3b0; } .act-liens li.moins b { color: #f2a08f; }
 :root[data-clair] .act-liens li.plus b { color: #2f7a45; } :root[data-clair] .act-liens li.moins b { color: #a2442f; }
 .act-i { display: inline-flex; color: var(--ink); }
+
+/* v49 (essai) : carnet de voyage de la lueur (même boîte que « nommer la constellation ») */
+.carnet .carnet-etapes { list-style: none; counter-reset: e; padding: 0; margin: 0 0 14px; max-height: 42vh; overflow-y: auto; }
+.carnet .carnet-etapes li { counter-increment: e; display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 8px 0; border-top: 1px solid var(--line); line-height: 1.4; }
+.carnet .carnet-etapes li::before { content: counter(e, decimal-leading-zero); font-family: var(--mono, monospace); font-size: 10px; color: var(--soft); padding-top: 3px; }
+.carnet .carnet-etapes li.fait { cursor: pointer; } .carnet .carnet-etapes li.attente { color: var(--soft); font-style: italic; } .carnet .carnet-etapes li.cache { color: var(--line); }
+.carnet .rang { align-items: center; }

@@ -851,6 +851,22 @@ export const EN = {
 "Les jours avec « {a} », ton ciel est plus dégagé que d’habitude.": "On days with “{a}”, your sky is clearer than usual.",
 "Pas encore de lien net : continue de cocher tes activités.": "No clear link yet: keep ticking your activities.",
 "Activités du jour": "Today’s activities",
+"Je t’ai rapporté : {o} ! Il est rangé dans « {ou} ».": "I brought you back: {o}! It’s stored in “{ou}”.",
+"Voyage {n} · {titre}": "Journey {n} · {titre}",
+"Voyage terminé : {o} rapporté. Le prochain commence au prochain jour écrit.": "Journey complete: {o} brought back. The next one starts on your next written day.",
+"Étape {n} sur 7 · encore {r} jour(s) écrit(s), puis : {o}.": "Step {n} of 7 · {r} more written day(s), then: {o}.",
+"Je t’attends ici. Écris un jour de plus pour continuer.": "I’m waiting here. Write one more day to go on.",
+"Revoir l’étape": "Replay this step",
+"Simuler un jour écrit (essai)": "Simulate a written day (test)",
+"Je rêve de partir en voyage… Touche-moi pour voir mon carnet.": "I dream of going on a journey… Tap me to see my travel log.",
+"Carnet de voyage": "Travel log",
+"voyage aventure lueur etape": "journey adventure glow step",
+"Ta semaine est devenue {vrai} ! Tu lui donnes un nom ?": "Your week became {vrai}! Will you name it?",
+"Ta semaine est devenue {vrai} !": "Your week became {vrai}!",
+"Simuler la fin de semaine (essai)": "Simulate the end of the week (test)",
+"constellation semaine recompense": "constellation week reward",
+"Renommer ta dernière constellation": "Rename your latest constellation",
+"Nommer ta dernière constellation": "Name your latest constellation",
 };
 
 export const EN_HTML = {

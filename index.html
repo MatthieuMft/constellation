@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="fr">
 <head>
+<script>/* v49 : lecteurs de fichiers sans console complète */ try { window.console = window.console || {}; ['log','info','warn','error','debug'].forEach(function (k) { if (typeof console[k] !== 'function') console[k] = function () {}; }); } catch (e) {}</script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="theme-color" content="#05060f">
@@ -17,7 +18,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1152794"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1164967"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>

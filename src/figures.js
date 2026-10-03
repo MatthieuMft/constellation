@@ -17,7 +17,17 @@
 //   figures.nommer(cleSemaine, nom) · figures.centre(cleSemaine) -> Vector3 | null
 import * as THREE from 'three';
 
-const CLE = 'constellation.figures.v1', MIN = 3, TAILLE = 11;
+const CLE = 'constellation.figures.v1', MIN = 3;
+// v49 : la constellation se dessine SUR la semaine, à la place du chemin pointillé de la lueur. Ses 7 points sont posés
+// dans un plan face à la vue d'arrivée (vueInitiale dans main.js), puis décalés en profondeur : vus de face ils dessinent
+// la constellation, en tournant on voit qu'ils sont dispersés dans l'espace.
+const VUE = new THREE.Vector3(.15, .55, .82).normalize(), DROITE = new THREE.Vector3().crossVectors(VUE.clone().negate(), new THREE.Vector3(0, 1, 0)).normalize(), HAUT = new THREE.Vector3().crossVectors(DROITE, VUE.clone().negate()).normalize();
+const FORME = 17, PROFONDEUR = [0, 2.6, -2.2, 1.4, -3, 3.2, -1.2];
+export function pointsSemaine(cleS, centre) {
+  return constellationDe(cleS).e.map(([x, y], i) => centre.clone().addScaledVector(DROITE, (x - .5) * FORME).addScaledVector(HAUT, (y - .5) * FORME + 2.5).addScaledVector(VUE, PROFONDEUR[i]));
+}
+export const ordreChemin = cleS => constellationDe(cleS).ordre || [0, 1, 2, 3, 4, 5, 6];
+export const lendemain = cle => { const [y, m, d] = cle.split('-').map(Number); return cleJ(new Date(y, m - 1, d + 1)); };
 const lisse = (a, b, x) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
 const lire = () => { try { const o = JSON.parse(localStorage.getItem(CLE)); return o && o.noms ? o : { noms: {} }; } catch (e) { return { noms: {} }; } };
 
@@ -40,6 +50,18 @@ export const CONSTELLATIONS = [
     t: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]] },
 ];
 
+// v49 : la constellation est la récompense de fin de semaine. Une semaine est finie quand son dernier jour est passé,
+// ou le dimanche à partir de 18 h (pour la voir naître le soir même).
+const cleJ = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+export function dernierJour(cleS) {
+  const [y, m, sw] = cleS.split('-'), w = +sw.slice(1), n = new Date(+y, +m, 0).getDate(); let der = null;
+  for (let d = 1; d <= n; d++) { const k = `${y}-${m}-${String(d).padStart(2, '0')}`; if (semaineDe(k) === cleS) der = k; }
+  return der;
+}
+export function finie(cleS, maintenant = new Date()) {
+  const auj = cleJ(maintenant), der = dernierJour(cleS); if (!der) return false;
+  return der < auj || (der === auj && maintenant.getDay() === 0 && maintenant.getHours() >= 18);
+}
 export function semaineDe(cle) {
   const [y, m, d] = cle.split('-').map(Number), w = Math.floor((d - 1 + ((new Date(y, m - 1, 1).getDay() + 6) % 7)) / 7);
   return `${y}-${String(m).padStart(2, '0')}-s${w}`;
@@ -60,7 +82,7 @@ function texteSprite(txt, hauteur, encre, clair, italique = true) {
 
 export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, en = false }) {
   const racine = new THREE.Group(); scene.add(racine);
-  let objets = [], parSemaine = new Map(), memo = { jours: [], clair: false, encre: '#f1ece4' };
+  let objets = [], parSemaine = new Map(), memo = { jours: [], clair: false, encre: '#f1ece4' }; const forcees = new Set(), anims = new Map();   // essai : fins de semaine simulées
   const pale = new THREE.Color(), _q = new THREE.Quaternion();
 
   function liberer(o) { o.traverse(x => { if (x.geometry) x.geometry.dispose(); if (x.material) { if (x.material.map && x.material.map !== texHalo) x.material.map.dispose(); x.material.dispose(); } }); }
@@ -72,43 +94,64 @@ export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, e
     for (const j of jours) { const s = semaineDe(j.cle); if (!parSemaine.has(s)) parSemaine.set(s, []); parSemaine.get(s).push(j); }
     const { noms } = lire();
     for (const [s, liste] of parSemaine) {
-      const C = constellationDe(s), allume = new Map(liste.map(j => [jourDeSemaine(j.cle), j.couleur])), g = new THREE.Group();
-      const c = centreSemaine(s); g.position.copy(c).add(new THREE.Vector3(0, TAILLE * .5 + 2.4, 0)); racine.add(g);   // au-dessus de l'anneau : elle surplombe la semaine sans cacher sa date
-      const P = C.e.map(([x, y]) => new THREE.Vector3((x - .5) * TAILLE, (y - .5) * TAILLE, 0));
+      if (!forcees.has(s) && !finie(s)) continue;                               // pendant la semaine : rien, juste tes étoiles
+      const C = constellationDe(s), allume = new Map(liste.map(j => [jourDeSemaine(j.cle), j.couleur])), g = new THREE.Group(); racine.add(g);
+      const c = centreSemaine(s), P = pointsSemaine(s, c);
       // traits : pâles partout, lumineux entre deux étoiles allumées
       const faibles = [], forts = [];
-      for (const [a, b] of C.t) (allume.has(a) && allume.has(b) ? forts : faibles).push(P[a].x, P[a].y, 0, P[b].x, P[b].y, 0);
+      for (const [a, b] of C.t) (allume.has(a) && allume.has(b) ? forts : faibles).push(P[a].x, P[a].y, P[a].z, P[b].x, P[b].y, P[b].z);
       const traits = (pos, op) => { if (!pos.length) return null; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-        const l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: pale, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: melange() })); l.userData.op = op; l.renderOrder = 2; l.frustumCulled = false; g.add(l); return l; };
-      traits(faibles, clair ? .3 : .26); traits(forts, clair ? .8 : .78);
+        const l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: pale, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: melange() })); l.userData = { op, trait: true }; l.renderOrder = 2; l.frustumCulled = false; g.add(l); return l; };
+      traits(faibles, clair ? .3 : .26); traits(forts, clair ? .85 : .8);
       // étoiles : petites et pâles, ou allumées à la couleur du jour
       C.e.forEach(([, , eclat], i) => {
         const on = allume.has(i), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: on ? new THREE.Color(allume.get(i)).lerp(new THREE.Color('#ffffff'), .35) : pale, transparent: true, depthTest: false, depthWrite: false, blending: melange(), opacity: 0, fog: false }));
-        sp.position.copy(P[i]); sp.scale.setScalar((on ? 2.3 : .95) * (.7 + .5 * eclat)); sp.userData = { op: on ? 1 : (clair ? .55 : .5), on, ph: i * 1.7 }; sp.renderOrder = 3; g.add(sp);
+        const taille = (on ? 2.6 : 1.1) * (.7 + .5 * eclat);
+        sp.position.copy(P[i]); sp.scale.setScalar(taille); sp.userData = { op: on ? 1 : (clair ? .55 : .5), on, ph: i * 1.7, i, taille }; sp.renderOrder = 3; g.add(sp);
       });
-      // noms : le tien (s'il existe), et le vrai nom en petit
-      const vrai = texteSprite(en ? C.en : C.nom, noms[s] ? .62 : .8, encre, clair, false); vrai.position.set(0, TAILLE * .5 + (noms[s] ? .9 : 1.2), 0); vrai.userData.op = .55; g.add(vrai);
-      if (noms[s]) { const n = texteSprite(noms[s], 1.3, encre, clair); n.position.set(0, TAILLE * .5 + 1.9, 0); n.userData.op = .92; g.add(n); }
-      objets.push({ cle: s, g, c: g.position.clone(), n: liste.length });
+      // noms au-dessus : le tien (s'il existe), et le vrai nom en petit
+      const haut = c.clone().addScaledVector(HAUT, FORME * .5 + 4.5);
+      const vrai = texteSprite(en ? C.en : C.nom, noms[s] ? 1.1 : 1.4, encre, clair, false); vrai.position.copy(haut); vrai.userData = { op: .6, texte: true }; g.add(vrai);
+      if (noms[s]) { const n = texteSprite(noms[s], 2.2, encre, clair); n.position.copy(haut).addScaledVector(HAUT, 1.9); n.userData = { op: .92, texte: true }; g.add(n); }
+      objets.push({ cle: s, g, c: c.clone(), cs: c.clone(), n: liste.length, anim: anims.get(s) || null });
     }
   }
+  // v49 : l'animation de fin de semaine : les étoiles s'allument une à une (un tintement chacune), puis paf, toute la constellation
+  const PAS = .42;
   function update(t) {
-    _q.copy(camera.quaternion);
     for (const o of objets) {
-      const d = camera.position.distanceTo(o.c), vis = (1 - lisse(70, 170, d)) * (o.n ? 1 : 0);
+      const d = camera.position.distanceTo(o.cs), vis = (1 - lisse(150, 260, d)) * (o.n ? 1 : 0);
       o.g.visible = vis > .01; if (!o.g.visible) continue;
-      o.g.quaternion.copy(_q);                                                   // toujours face à toi
+      const A = o.anim; if (A && A.t0 == null) A.t0 = t + .2;
+      const ta = A ? t - A.t0 : 99, paf = 7 * PAS + .35;
+      if (A) {
+        for (let i = 0; i < 7; i++) if (ta >= i * PAS && !A.vus.has(i)) { A.vus.add(i); A.surEtoile && A.surEtoile(i); }
+        if (ta >= paf && !A.paf) { A.paf = true; A.surPaf && A.surPaf(); }
+        if (ta > paf + 3) { o.anim = null; anims.delete(o.cle); }
+      }
       for (const x of o.g.children) {
-        const k = x.userData.on ? .85 + .15 * Math.sin(t * 1.6 + x.userData.ph) : (x.userData.ph != null ? .8 + .2 * Math.sin(t * .7 + x.userData.ph) : 1);
-        x.material.opacity = vis * x.userData.op * k;
+        const u = x.userData; let k = u.on ? .85 + .15 * Math.sin(t * 1.6 + u.ph) : (u.ph != null ? .8 + .2 * Math.sin(t * .7 + u.ph) : 1);
+        if (u.i != null) {                                                         // une étoile : naît à son tour, avec un petit éclat
+          const ti = ta - u.i * PAS, f = ta >= paf ? Math.max(0, 1 - (ta - paf) / .6) : 0;
+          k *= lisse(0, .15, ti); x.scale.setScalar(u.taille * (1 + 1.3 * Math.max(0, 1 - ti / .5) * (ti >= 0 ? 1 : 0) + .8 * f));
+        }
+        if (u.trait) k *= ta >= paf ? Math.min(1.6, lisse(paf, paf + .18, ta) * (1 + .8 * Math.max(0, 1 - (ta - paf) / .8))) : 0;
+        if (u.texte) k *= lisse(paf + .5, paf + 1.5, ta);
+        x.material.opacity = Math.min(1, vis * u.op * k);
       }
     }
   }
+  function animer(s, rappels = {}) { anims.set(s, { t0: null, vus: new Set(), paf: false, ...rappels }); const o = objets.find(x => x.cle === s); if (o) o.anim = anims.get(s); }
   return {
-    reconstruire, update, semaineDe, _objets: () => objets,
-    figure(s) { const l = parSemaine.get(s); if (!l || l.length < MIN) return null; const C = constellationDe(s);
+    reconstruire, update, semaineDe, animer, _objets: () => objets,
+    estFinie: s => forcees.has(s) || finie(s),
+    finies: () => [...parSemaine.keys()].filter(s => forcees.has(s) || finie(s)).sort(),
+    forcer(s) { forcees.add(s); reconstruire(); },
+    vraiNom: s => { const C = constellationDe(s); return en ? C.en : C.nom; },
+    annoncee(s, oui) { const o = lire(); o.vues = o.vues || []; if (oui === undefined) return o.vues.includes(s); if (!o.vues.includes(s)) o.vues.push(s); try { localStorage.setItem(CLE, JSON.stringify(o)); } catch (e) {} },
+    figure(s) { const l = parSemaine.get(s); if (!l || l.length < MIN || !(forcees.has(s) || finie(s))) return null; const C = constellationDe(s);
       return { cle: s, jours: l.map(j => j.cle).sort(), nom: lire().noms[s] || '', vraiNom: en ? C.en : C.nom }; },
     nommer(s, nom) { const o = lire(); nom = (nom || '').trim().slice(0, 40); if (nom) o.noms[s] = nom; else delete o.noms[s]; try { localStorage.setItem(CLE, JSON.stringify(o)); } catch (e) {} reconstruire(); },
-    centre(s) { const o = objets.find(x => x.cle === s); return o ? o.c.clone() : null; },
+    centre(s) { const o = objets.find(x => x.cle === s); return o ? o.cs.clone() : null; },
   };
 }
