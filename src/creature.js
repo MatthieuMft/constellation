@@ -216,7 +216,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       case 'guide': cible.copy(ctx.guide).addScaledVector(_u, 2.2); raideur = 3.2; vmax = 22; break;
       case 'ecrit': {                                                    // elle flotte juste au-dessus de l'éditeur, devant le texte
         const r = ctx.rectEcriture; if (!r) { ndcPoint(0, .2, d * .7, cible); break; }
-        const [nx, ny] = ctx.clavier ? ndcDe(r.right - 84, r.top + 30) : ndcDe(r.left + r.width * (.6 + .08 * Math.sin(etatT * .4)), r.top + (r.top < 40 ? 64 : -56) - sousCorps() * .3);   // v28 : clavier ouvert, elle se pose en petit à côté de la croix   // v27 : la page couvre l'écran : elle flotte dans la fenêtre sur le ciel, en haut
+        const [nx, ny] = ndcDe(r.right - 52 + Math.sin(etatT * .5) * 6, r.bottom - (ctx.clavier ? 46 : 120) + Math.sin(etatT * .8) * 4);   // v32 : calée en petit en bas à droite de la page (on écrit en haut à gauche), elle regarde le texte   // v27 : la page couvre l'écran : elle flotte dans la fenêtre sur le ciel, en haut
         ndcPoint(nx, ny, d * .62, cible); raideur = 2.8; vmax = 18; break; }
       case 'curieux': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx + .12, ny + .16, d * .9, cible); raideur = 1.5; vmax = 9; break; }
       case 'calin': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx, ny, d * .7, cible); raideur = 4; vmax = 20; break; }
@@ -316,7 +316,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     // taille : bien visible, et à peu près constante à l'écran quand elle s'éloigne ou se rapproche (s = « uSize » de la v11 : le corps fait s/4 de rayon)
     const dc = camera.position.distanceTo(pos), ech = clamp(dc / distRef(), .8, 1.5);
     const taille = ECHELLES[profil.stade] * (1 + evolue * .07 * Math.sin(evolue * 6)) * (.4 + .6 * apparition) * (mobile ? .9 : 1);
-    petite += ((ctx.clavier && etat === 'ecrit' ? .55 : 1) - petite) * Math.min(1, dt * 5);   // v28 : clavier ouvert, elle se fait petite dans l'en-tête
+    petite += ((etat === 'ecrit' ? .5 : 1) - petite) * Math.min(1, dt * 5);   // v28 : clavier ouvert, elle se fait petite dans l'en-tête
     const s = 12 * taille * P.taille * ech * (distRef() / 52) * petite;
     const bob = Math.sin(t * 1.7) * .25 * (dort ? .3 : 1), tr = peur > 0 ? .12 : 0;
     corps.position.copy(pos).addScaledVector(_u, bob).add(_a.set((Math.random() - .5) * tr, (Math.random() - .5) * tr, (Math.random() - .5) * tr));

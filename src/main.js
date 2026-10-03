@@ -845,12 +845,25 @@ function placerBarre() {
 function montrerBarre(on) { $('barre-clavier').hidden = !on; document.body.classList.toggle('barre-on', on); if (on) placerBarre(); else fermerBlocs(); }
 $('editeur').addEventListener('focus', () => montrerBarre(true));           // v27 : la barre des blocs aussi sur PC (le bouton « + Ajouter » a disparu)
 $('editeur').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('editeur') && $('bloc-menu').hidden) montrerBarre(false); }, 150));
-if (window.visualViewport) { visualViewport.addEventListener('resize', placerBarre); visualViewport.addEventListener('scroll', placerBarre); }
+// v32 : sur téléphone, le clavier peut se fermer sans que le texte perde le focus (bouton retour d'Android) : on suit la hauteur
+// de l'écran. Clavier fermé → la barre s'en va et « Cristalliser » revient ; clavier rouvert → la barre revient.
+let hautMax = 0, largeurVue0 = 0;
+function suivreClavier() {
+  placerBarre(); if (!tactile.matches) return;
+  const vv = window.visualViewport, h = vv ? vv.height : innerHeight;
+  if (innerWidth !== largeurVue0) { largeurVue0 = innerWidth; hautMax = 0; }
+  hautMax = Math.max(hautMax, innerHeight, h);
+  const ouvert = h < hautMax * .8;
+  if (document.activeElement === $('editeur') && $('bloc-menu').hidden) montrerBarre(ouvert);
+}
+if (window.visualViewport) { visualViewport.addEventListener('resize', suivreClavier); visualViewport.addEventListener('scroll', placerBarre); } else addEventListener('resize', suivreClavier);
+suivreClavier();
 barre.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });   // garder le clavier ouvert
 barre.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.barre === 'menu') { $('bloc-menu').hidden ? ouvrirBlocs() : fermerBlocs(); return; }
-  if (b.dataset.barre === 'dicter') { $('dicter').click(); return; }       // v26 : la dictée aussi dans la barre du clavier
+  if (b.dataset.barre === 'dicter') { $('dicter').click(); return; }
+  if (b.dataset.barre === 'valider') { $('editeur').blur(); montrerBarre(false); $('valider').click(); return; }   // v32 : cristalliser depuis la barre, clavier ouvert       // v26 : la dictée aussi dans la barre du clavier
   if (b.dataset.barre === 'fermer') { fermerBlocs(); $('texte').blur(); montrerBarre(false); return; }
   poserBloc(b.dataset.bloc);
 });

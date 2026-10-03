@@ -872,3 +872,12 @@ section#reglages { position: fixed; top: 0; bottom: 0; left: 0; right: auto; wid
   section#reglages { inset: 0; width: auto; max-height: none; border: 0; padding: env(safe-area-inset-top, 0px) 0 0; animation: feuilleBas .35s var(--ease); }
   #reglages .p-grip { display: none; }
 }
+/* v32 : en-tête clavier ouvert un peu plus haut (la lueur n'y est plus coupée), bouton ✓ Cristalliser dans la barre */
+@media (max-width: 720px) { body.barre-on #ecrire .p-tete { height: calc(76px + env(safe-area-inset-top, 0px)); } }
+.barre-clavier .bc-valider { position: sticky; right: 48px; background: var(--ink); color: var(--inv); }
+.barre-clavier .bc-valider svg { stroke: var(--inv); }
+/* v32 : le ciel n'est plus dessiné pendant l'écriture (fond uni) : la page devient transparente, et la lueur, petite, se cale
+   en bas à droite derrière le texte (on écrit en haut à gauche). Plus besoin de bande en haut : en-tête normal. */
+#ecrire .p-tete, #ecrire .p-corps, #ecrire .p-pied { background: transparent; }
+#ecrire .p-tete { height: auto; align-items: center; padding: calc(4px + env(safe-area-inset-top, 0px)) 8px 4px 18px; }
+@media (max-width: 720px) { body.barre-on #ecrire .p-tete { height: auto; padding-top: calc(2px + env(safe-area-inset-top, 0px)); } }
