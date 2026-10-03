@@ -848,6 +848,7 @@ barre.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.p
 barre.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   if (b.dataset.barre === 'menu') { $('bloc-menu').hidden ? ouvrirBlocs() : fermerBlocs(); return; }
+  if (b.dataset.barre === 'dicter') { $('dicter').click(); return; }       // v26 : la dictée aussi dans la barre du clavier
   if (b.dataset.barre === 'fermer') { fermerBlocs(); $('texte').blur(); montrerBarre(false); return; }
   poserBloc(b.dataset.bloc);
 });
@@ -934,7 +935,9 @@ $('valider').addEventListener('click', valider);
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 let reco = null, dictee = false;
 const bDicter = $('dicter');
-if (!SR) bDicter.hidden = true;
+const bMicro = document.querySelector('[data-barre="dicter"]');
+new MutationObserver(() => { bMicro.setAttribute('aria-pressed', bDicter.getAttribute('aria-pressed')); bMicro.hidden = bDicter.hidden; }).observe(bDicter, { attributes: true });
+if (!SR) { bDicter.hidden = true; bMicro.hidden = true; }
 function arreterDictee() {
   dictee = false; bDicter.setAttribute('aria-pressed', 'false'); bDicter.textContent = t('Dicter'); $('interim').textContent = '';
   if (reco) { try { reco.stop(); } catch (e) {} reco = null; }
@@ -1144,6 +1147,7 @@ $('par-stop').addEventListener('click', arreterParcours);
 const rendreAnalyse = monterAnalyse($('analyse'), {
   entries: () => joursHumeur, couleur: k => cm(k), encre: () => T().ui.ink,
   survoler: (ids, titre) => { $('analyse').hidden = true; parcourir(ids, titre); },
+  ouvrirJour: cle => choisir(cle), ecrire: () => ouvrirEcrire(),
 });
 $('btn-analyse').addEventListener('click', () => { const z = $('analyse'); z.hidden = !z.hidden; if (!z.hidden) { $('reglages').hidden = true; rendreAnalyse(); } });
 $('btn-reglages').addEventListener('click', () => { if (!$('reglages').hidden) $('analyse').hidden = true; });
@@ -1459,5 +1463,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde,
+window.__constellation = { ouvrirAnalyse: o => ouvrirAnalyse(o), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };

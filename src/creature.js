@@ -286,7 +286,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const dort = etat === 'dort', seul = profil.seul, imi = mimique.mood, expr = fx.expr;
     let joy = joie > 0 ? 1 : 0, sad = clamp(seul * .9 + (profil.valence < -.4 ? .3 : 0), 0, 1), brow = 0, spark = 0, relax = 0, wide = 0;
     if (!joy && profil.valence > .5 && !seul) joy = .4;
-    if (imi === 'joie') joy = Math.max(joy, 1); else if (imi === 'calme') { relax = 1; joy = Math.max(joy, .35); }
+    if (imi === 'joie') joy = Math.max(joy, 1); else if (imi === 'calme') joy = Math.max(joy, .5);        // v26 : calme, les yeux restent ouverts (ils se fermaient pendant toute l'écriture)
     else if (imi === 'elan') { spark = 1; joy = Math.max(joy, .5); }
     else if (imi === 'melancolie') { sad = Math.max(sad, .85); joy = 0; brow = .6; }
     else if (imi === 'tempete') { sad = Math.max(sad, .35); brow = -.7; joy = 0; wide = .4; }

@@ -248,7 +248,7 @@ const VISAGE_F = `uniform float uApp, uJoy, uSad, uBrow, uSpark, uRelax, uWide, 
     vec3 encre = vec3(.024, .011, .05);                                                 // ≈ #2b1c3f : les traits (bouche, sourcils, yeux fermés)
     vec3 vif = uColor/max(max(uColor.r, uColor.g), max(uColor.b, 1e-3));
     vec2 reg = uLook*.04;
-    float wide = max(uWide, uExpr.w*.85), mo = max(uWide, uExpr.w);                    // étonnée : grands yeux ronds, petite bouche ronde
+    float wide = max(uWide, uExpr.w*.85), mo = smoothstep(.42, .58, max(uWide, uExpr.w));   // v26 : la bouche est ronde OU souriante, jamais les deux à moitié (le point pâle au milieu du sourire)                    // étonnée : grands yeux ronds, petite bouche ronde
     float ouv = max(.3, 1. - uBlink)*(1. - uSleep)*(1. - uRelax*.75);
     // v25 : le clignement ferme l'œil d'un trait net (comme endormi) au lieu d'écraser l'œil en une ligne pâle avec ses reflets par-dessus
     float fb = smoothstep(.6, .66, uBlink), sansReflet = 1. - smoothstep(.1, .3, uBlink);   // bascule franche : jamais deux yeux à moitié transparents l'un sur l'autre

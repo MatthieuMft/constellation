@@ -16,7 +16,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1081359"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1084569"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -190,7 +190,12 @@
 </div>
 
 <aside id="reglages" class="feuille tiroir" hidden aria-label="Réglages"></aside>
-<aside id="analyse" class="feuille tiroir" hidden aria-label="Analyses"></aside>
+<section id="analyse" class="feuille" hidden aria-label="Suivi">
+  <div class="p-grip" aria-hidden="true"></div>
+  <div class="p-tete"><strong class="p-titre">Suivi</strong><span class="espace"></span><button id="ana-fermer" class="fermer" type="button" aria-label="Fermer">×</button></div>
+  <div class="p-sous" id="ana-onglets"></div>
+  <div class="p-corps" id="ana-corps"></div>
+</section>
 <div id="parcours" hidden><span id="par-titre"></span><span id="par-etape"></span><button id="par-stop">Arrêter</button></div>
 <div id="bulle" hidden role="status"><span></span></div>
 <div id="vol" aria-hidden="true"></div>
@@ -267,6 +272,7 @@
 
 <div id="barre-clavier" class="barre-clavier" role="toolbar" aria-label="Mise en forme" hidden>
   <button type="button" data-barre="menu" aria-label="Ajouter un bloc"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14"/></svg></button>
+  <button type="button" data-barre="dicter" class="bc-micro" aria-label="Dicter à la voix" aria-pressed="false"><svg viewBox="0 0 20 20"><rect x="7.5" y="2.5" width="5" height="9"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v3"/></svg></button>
   <button type="button" data-bloc="1" aria-label="Titre 1">H1</button>
   <button type="button" data-bloc="2" aria-label="Titre 2">H2</button>
   <button type="button" data-bloc="3" aria-label="Titre 3">H3</button>
