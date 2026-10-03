@@ -38,7 +38,7 @@ import * as PL from './planetes.js';
 import { verrou } from './verrou.js';
 import { creerFigures, lendemain, dernierJour } from './figures.js';
 import { son } from './son.js';
-import { monterActivites } from './activites.js';
+import { monterActivites, ACTIVITES, nomActivite } from './activites.js';
 import { creerVoyage } from './voyage.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
@@ -1294,7 +1294,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v50'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v51'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1525,10 +1525,49 @@ function proposerFigure(forcer = false) {
     surEtoile: () => son.tinte(),
     surPaf: () => { son.fete(); particules.burst(c, new THREE.Color('#fff3d6'), 70, 4); },
   }), 1800);
-  setTimeout(() => creature.dire(f && !f.nom ? t('Ta semaine est devenue {vrai} ! Tu lui donnes un nom ?', { vrai }) : t('Ta semaine est devenue {vrai} !', { vrai }), { priorite: true, duree: 9000, clic: f && !f.nom ? () => ouvrirNommerFigure(s) : null }), 5600);
-  // puis la lueur passe à la semaine d'après (le premier jour qui suit le dernier jour de celle-ci)
-  setTimeout(() => { const n = centreDeSemaine(figures.semaineDe(lendemain(dernierJour(s)))); creature.allerVers(n, 6000); voler(n, DIST.semaine * 1.25, FACE); }, 15000);
+  setTimeout(() => creature.dire(t('Ta semaine est devenue {vrai} !', { vrai }), { priorite: true, duree: 5000 }), 5600);
+  setTimeout(() => ouvrirBilan(s), 8200);                                    // v50 : puis le bilan de la semaine
   return true;
+}
+// la lueur passe à la semaine d'après (le premier jour qui suit le dernier jour de celle-ci)
+function allerSemaineSuivante(s) { const n = centreDeSemaine(figures.semaineDe(lendemain(dernierJour(s)))); creature.allerVers(n, 6000); voler(n, DIST.semaine * 1.25, FACE); }
+
+// ───────────── v50 : le bilan du dimanche ─────────────
+// Juste après la naissance de la constellation : jours écrits (une pastille par jour, à la couleur de son humeur), mots,
+// humeur la plus présente, activités les plus cochées. Rien n'est enregistré : tout est recalculé depuis le journal.
+function bilanSemaine(s) {
+  const jrs = []; for (let d = dateDeCle(dernierJour(s)); figures.semaineDe(cleJour(d)) === s; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)) jrs.unshift(cleJour(d));
+  const ecrits = new Set(joursEcrits()), humeurs = {}, acts = {}; let mots = 0;
+  const parJour = jrs.map(cle => {
+    const h = ecrits.has(cle) ? humeurDuJour(cle, items, meta) : null; if (h) humeurs[h.mood] = (humeurs[h.mood] || 0) + 1;
+    for (const a of (meta[cle] && meta[cle].activites) || []) acts[a] = (acts[a] || 0) + 1;
+    for (const i of items) if (i.jour === cle && !i.sample) mots += ((i.titre || '') + ' ' + (i.texte || '')).replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+    return { cle, ecrit: ecrits.has(cle), couleur: h ? (h.color || cm(h.mood)) : null };
+  });
+  const humeur = Object.entries(humeurs).sort((a, b) => b[1] - a[1])[0];
+  return { jrs: parJour, n: parJour.filter(j => j.ecrit).length, mots, humeur: humeur ? humeur[0] : null, activites: Object.entries(acts).sort((a, b) => b[1] - a[1]).slice(0, 3) };
+}
+function ouvrirBilan(s) {
+  document.querySelector('.boite-figure')?.remove();
+  const B = bilanSemaine(s), f = figures.figure(s), fmt = c => dateDeCle(c).toLocaleDateString(LOC, { day: 'numeric', month: 'long' });
+  const boite = document.createElement('div'); boite.className = 'boite-figure bilan'; boite.setAttribute('role', 'dialog');
+  const h = document.createElement('p'); h.className = 'lab'; h.textContent = t('Ta semaine · {vrai}', { vrai: f && f.nom ? f.nom : figures.vraiNom(s) });
+  const sous = document.createElement('p'); sous.className = 'sous'; sous.textContent = t('Du {a} au {b}', { a: fmt(B.jrs[0].cle), b: fmt(B.jrs.at(-1).cle) });
+  const pastilles = document.createElement('div'); pastilles.className = 'bilan-jours';
+  for (const j of B.jrs) { const p = document.createElement('span'); p.title = libelleJour(dateDeCle(j.cle)); if (j.ecrit) { p.className = 'on'; p.style.background = j.couleur || 'var(--ink)'; } pastilles.append(p); }
+  const ligne = (txt, el) => { const l = document.createElement('p'); l.className = 'bilan-ligne'; if (el) l.append(el); l.append(document.createTextNode(txt)); return l; };
+  const lignes = [ligne(tn(B.n, '{n} jour écrit sur {m}', '{n} jours écrits sur {m}', { m: B.jrs.length })), ligne(tn(B.mots, '{n} mot écrit', '{n} mots écrits'))];
+  if (B.humeur) { const d = document.createElement('span'); d.className = 'bilan-point'; d.style.background = cm(B.humeur); lignes.push(ligne(t('Humeur la plus présente : {h}', { h: MOODS[B.humeur].label }), d)); }
+  if (B.activites.length) {
+    const l = document.createElement('p'); l.className = 'bilan-ligne bilan-acts';
+    for (const [k, n] of B.activites) { const a = ACTIVITES.find(x => x.k === k); if (!a) continue; const e = document.createElement('span'); e.innerHTML = a.i; e.append(document.createTextNode(nomActivite(k) + (n > 1 ? ' ×' + n : ''))); l.append(e); }
+    lignes.push(l);
+  }
+  const rang = document.createElement('div'); rang.className = 'rang';
+  const fermer = () => { boite.remove(); allerSemaineSuivante(s); };
+  if (f && !f.nom) { const nom = document.createElement('button'); nom.type = 'button'; nom.textContent = t('Lui donner un nom'); nom.addEventListener('click', () => { boite.remove(); ouvrirNommerFigure(s); }); rang.append(nom); }
+  const ok = document.createElement('button'); ok.type = 'button'; ok.className = f && !f.nom ? 'lien' : ''; ok.textContent = t('Semaine suivante'); ok.addEventListener('click', fermer); rang.append(ok);
+  boite.append(h, sous, pastilles, ...lignes, rang); document.body.append(boite);
 }
 // pour les tests (non affiché) : la semaine en cours se termine tout de suite
 function simulerFinSemaine() { const s = figures.semaineDe(aujourdhui()); figures.forcer(s); figures.annoncee(s, false); proposerFigure(true); }

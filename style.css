@@ -969,3 +969,12 @@ body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: 
 .carnet .carnet-etapes li::before { content: counter(e, decimal-leading-zero); font-family: var(--mono, monospace); font-size: 10px; color: var(--soft); padding-top: 3px; }
 .carnet .carnet-etapes li.fait { cursor: pointer; } .carnet .carnet-etapes li.attente { color: var(--soft); font-style: italic; } .carnet .carnet-etapes li.cache { color: var(--line); }
 .carnet .rang { align-items: center; }
+/* v50 : le bilan du dimanche */
+.bilan-jours { display: flex; gap: 8px; margin: 0 0 14px; }
+.bilan-jours span { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line); }
+.bilan-jours span.on { border-color: transparent; box-shadow: 0 0 10px currentColor; }
+.bilan-ligne { margin: 0 0 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.bilan-point { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.bilan-acts span { display: inline-flex; align-items: center; gap: 5px; color: var(--soft); margin-right: 8px; }
+.bilan-acts svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.bilan .rang { margin-top: 14px; }
