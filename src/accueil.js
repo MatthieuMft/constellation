@@ -13,11 +13,15 @@ const ETAPES = ['bienvenue', 'lueur', 'ecrire', 'etoile', 'poussiere', 'rappel',
 export function monterAccueil(ctx) {
   const $ = id => document.getElementById(id);
   const zone = $('accueil'), carteEl = $('ac-carte'), points = $('ac-points'), bulle = $('ac-bulle'), passer = $('ac-passer');
-  let etape = -1, actif = false;
+  let etape = -1, actif = false, guide = 0, guideMin = null;   // v36 : guide de la première note (0 rien, 1 humeur, 2 texte, 3 cristalliser)
+  function guiderNote(n) { if (n <= guide) return; guide = n; document.body.classList.remove('ac-g1', 'ac-g2', 'ac-g3'); if (n < 4) document.body.classList.add('ac-g' + n);
+    if (n === 1) ctx.guider(t('D’abord, touche l’émotion qui colle à ta journée.'));
+    if (n === 2) ctx.guider(t('Maintenant, écris quelques mots sur ta journée.'));
+    if (n === 3) ctx.guider(t('Quand tu as fini, touche Cristalliser.')); }
 
   function carte(html) {
     carteEl.classList.add('cache');
-    setTimeout(() => { carteEl.innerHTML = html; carteEl.classList.toggle('cache', !html); const i = carteEl.querySelector('input'); if (i) i.focus({ preventScroll: true }); }, 260);
+    setTimeout(() => { carteEl.innerHTML = html; carteEl.classList.toggle('cache', !html); /* v36 : plus de clavier qui s'ouvre tout seul */ }, 260);
   }
   const echap = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function montrerBulle(txt) { if (!txt) { bulle.hidden = true; return; } bulle.textContent = txt; bulle.hidden = false; }
@@ -28,8 +32,8 @@ export function monterAccueil(ctx) {
     passer.hidden = e === 'fin'; montrerBulle(null);
     document.body.classList.toggle('ac-ecrire', e === 'ecrire'); document.body.classList.toggle('ac-fin', e === 'fin');
     if (e === 'bienvenue') carte(`<h2>${t('Bienvenue dans ton univers.')}</h2><p>${t('Pour l’instant, il est vide. C’est à toi de le construire, une pensée à la fois.')}</p><div class="ac-langue" role="group" aria-label="Langue · Language"><button type="button" data-langue="fr"${LANGUE === 'fr' ? ' class="actif"' : ''}>Français</button><button type="button" data-langue="en"${LANGUE === 'en' ? ' class="actif"' : ''}>English</button></div><div class="ligne"><button class="plein" data-a="suivant">${t('Commencer')}</button></div>`);
-    if (e === 'lueur') { ctx.montrerLueur();
-      carte(`<h2>${t('Voici ta lueur.')}</h2><p>${t('Elle t’accompagne et grandit avec toi. Comment veux-tu l’appeler ?')}</p><input id="ac-nom" maxlength="18" autocomplete="off" placeholder="${t('Un prénom')}" value="${echap(ctx.nom())}" aria-label="${t('Un prénom')}"><div class="ligne"><button class="plein" data-a="nommer">${t('Continuer')}</button><button data-a="suivant">${t('Je choisirai plus tard')}</button></div>`); }
+    // v36 : on voit d'abord la lueur arriver, puis la carte
+    if (e === 'lueur') { ctx.montrerLueur(); carte(''); setTimeout(() => { if (ETAPES[etape] === 'lueur') carte(`<h2>${t('Voici ta lueur.')}</h2><p>${t('Elle t’accompagne et grandit avec toi. Comment veux-tu l’appeler ?')}</p><input id="ac-nom" maxlength="18" autocomplete="off" placeholder="${t('Un prénom')}" value="${echap(ctx.nom())}" aria-label="${t('Un prénom')}"><div class="ligne"><button class="plein" data-a="nommer">${t('Continuer')}</button><button data-a="suivant">${t('Je choisirai plus tard')}</button></div>`); }, 1700); }
     if (e === 'ecrire') { carte(''); setTimeout(() => montrerBulle(t('Touche + pour écrire ta journée. Tu peux y glisser une photo.')), 400); }
     if (e === 'etoile') carte(`<h2>${t('Ta première étoile.')}</h2><p>${t('Chaque jour où tu écris en allume une nouvelle. Sa couleur, c’est ton humeur.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>`);
     if (e === 'poussiere') carte(`<h2>${t('Ta poussière d’étoiles.')}</h2><p>${t('Tu en gagnes chaque jour où tu écris. Elle sert à personnaliser ta lueur et ton ciel, dans la boutique.')}</p><div class="ligne"><button class="plein" data-a="boutique">${t('Ouvrir la boutique')}</button></div>`);
@@ -43,7 +47,7 @@ export function monterAccueil(ctx) {
     if (e === 'fin') carte(`<h2>${t('Ton univers commence ici.')}</h2><p>${t('Reviens demain pour une nouvelle étoile. La boutique, tes réglages et la langue sont dans ⋯.')}</p><div class="ligne"><button class="plein" data-a="finir">${t('C’est parti')}</button></div>`);
   }
   function terminer() {
-    actif = false; marquerVu(); zone.hidden = true; montrerBulle(null);
+    actif = false; marquerVu(); zone.hidden = true; montrerBulle(null); document.body.classList.remove('ac-g1', 'ac-g2', 'ac-g3');
     document.body.classList.remove('accueil', 'ac-ecrire', 'ac-fin'); ctx.fini();
   }
 
@@ -72,10 +76,13 @@ export function monterAccueil(ctx) {
     allerA(nom) { if (!actif) this.demarrer(); aller(ETAPES.indexOf(nom)); },   // pour les tests
     ecrireEnCours: () => actif && ETAPES[etape] === 'ecrire',
     demarrer() { actif = true; zone.hidden = false; document.body.classList.add('accueil'); aller(0); },
-    surPlus() { if (actif && ETAPES[etape] === 'ecrire') montrerBulle(null); },
-    surEcrireFerme() { if (actif && ETAPES[etape] === 'ecrire') setTimeout(() => { if (actif && ETAPES[etape] === 'ecrire' && $('ecrire').hidden) montrerBulle(t('Touche + pour écrire ta journée. Tu peux y glisser une photo.')); }, 600); },
+    surPlus() { if (actif && ETAPES[etape] === 'ecrire') { montrerBulle(null); guide = 0; setTimeout(() => guiderNote(1), 700); } },
+    surHumeurNote() { if (actif && ETAPES[etape] === 'ecrire' && guide >= 1) setTimeout(() => guiderNote(2), 500); },
+    surTexteNote(n) { if (!actif || ETAPES[etape] !== 'ecrire' || !guide) return; if (n > 0 && guide < 2) guiderNote(2);
+      clearTimeout(guideMin); if (n >= 3) guideMin = setTimeout(() => guiderNote(3), 1800); },
+    surEcrireFerme() { document.body.classList.remove('ac-g1', 'ac-g2', 'ac-g3'); if (guide < 4) guide = 0; if (actif && ETAPES[etape] === 'ecrire') setTimeout(() => { if (actif && ETAPES[etape] === 'ecrire' && $('ecrire').hidden) montrerBulle(t('Touche + pour écrire ta journée. Tu peux y glisser une photo.')); }, 600); },
     // la première entrée est gardée : l'étoile naît, puis on la présente
-    surEntree(gain) { if (!actif || ETAPES[etape] !== 'ecrire') return; montrerBulle(null);
+    surEntree(gain) { if (!actif || ETAPES[etape] !== 'ecrire') return; montrerBulle(null); guide = 4; document.body.classList.remove('ac-g1', 'ac-g2', 'ac-g3');
       setTimeout(() => { if (gain) ctx.toast(t('+ ✦{n} poussière d’étoiles', { n: gain })); }, 1200); setTimeout(() => aller(ETAPES.indexOf('etoile')), 2400); },
     surAchat() { if (actif && ETAPES[etape] === 'poussiere') setTimeout(() => { document.getElementById('boutique').hidden = true; }, 1400); },
   };

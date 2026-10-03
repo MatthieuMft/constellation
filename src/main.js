@@ -711,6 +711,7 @@ canvas.addEventListener('pointermove', e => {
   else if (s && s.type === 'etoile') { const j = jours.find(x => x.id === s.id); txt = libelleJour(new Date(j.date)) + ' · ' + tn(j.n, '{n} entrée', '{n} entrées') + (j.mood ? ' · ' + (j.color ? t('couleur libre') : MOODS[j.mood].label) : '') + (j.sample ? ' · ' + t('exemple') : ''); }
   else if (s && s.type === 'vide') txt = libelleJour(s.date) + ' · ' + t('journée vide, cliquez pour écrire');
   else if (s && s.type === 'noeud') txt = s.noeud.libelle + ' · ' + (s.noeud.nbJours ? tn(s.noeud.nbJours, '{n} jour écrit', '{n} jours écrits') : t('rien d’écrit'));
+  if (e.pointerType !== 'mouse') txt = null;   // v36 : au doigt, pas d'infobulle (elle restait bloquée à l'écran)
   if (txt) { tip.hidden = false; tip.textContent = txt; tip.style.left = e.clientX + 'px'; tip.style.top = e.clientY + 'px'; } else tip.hidden = true;
 });
 
@@ -752,6 +753,8 @@ function plusProche(hex) {
   return meilleur;
 }
 const typeEdite = () => edition ? edition.type : 'journal';
+// v36 : tutoriel, première note guidée (humeur, puis texte, puis Cristalliser)
+document.getElementById('humeurs').addEventListener('click', e => { if (e.target.closest('button')) accueil.surHumeurNote(); });
 function choisirHumeur(k, couleur) {
   humeur = k; couleurLibre = couleur;
   boiteHumeurs.querySelectorAll('button').forEach(b => b.setAttribute('aria-checked', !couleur && b.dataset.k === k));
@@ -1120,7 +1123,7 @@ $('btn-reglages').addEventListener('click', () => { const z = $('reglages'); z.h
 // poussière de lumière à chaque lettre écrite
 const _ray = new THREE.Raycaster();
 $('texte').addEventListener('input', ev => {
-  dernierTexte = performance.now(); creature.taper(ev.target.value, ev.target.selectionStart);       // la mascotte lit ce qu'on écrit
+  dernierTexte = performance.now(); creature.taper(ev.target.value, ev.target.selectionStart); accueil.surTexteNote(ev.target.value.trim().length);       // la mascotte lit ce qu'on écrit
   if (!/^insert/.test(ev.inputType || '')) return;
   const r = $('editeur').getBoundingClientRect();
   const x = r.left + r.width * (0.15 + 0.7 * ((ev.target.value.length * 37) % 100) / 100), y = r.top + 6;
@@ -1359,7 +1362,7 @@ function fermerAide() { $('aide').hidden = true; try { localStorage.setItem('con
 $('aide-ok').addEventListener('click', fermerAide);
 // Premier lancement (rien d'écrit, accueil jamais vu) : l'accueil raconté. Sinon la lueur apparaît quand la caméra est arrivée.
 const accueil = monterAccueil({
-  montrerLueur: () => creature.montrer(), nom: () => creature.nom(), renommer: n => creature.renommer(n),
+  montrerLueur: () => creature.montrer(), guider: txt => creature.guider(txt), nom: () => creature.nom(), renommer: n => creature.renommer(n),
   ouvrirBoutique: () => ouvrirBoutique(null, 'lueur'), toast, fini: () => { creature.celebrer(null); },
   activerRappel: heure => rappels.activer(true, heure, creature.nom()),
   peutInstaller: () => !!invitationInstall, astuceInstall,

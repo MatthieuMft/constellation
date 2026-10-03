@@ -902,3 +902,10 @@ body.calme:not(.accueil):not(.intro) footer > #nouveau { opacity: 1; pointer-eve
 .ac-carte h2, .ac-carte p { text-shadow: none; }
 .ac-carte p { color: color-mix(in srgb, var(--ink) 78%, transparent); }
 .ac-carte p:last-of-type { margin-bottom: 16px; }
+/* v36 : pendant l'écriture, les petites barres du tutoriel et « Passer » ne cachent plus le mot Journal */
+body.ecriture .ac-points, body.ecriture #ac-passer { display: none; }
+/* v36 : première note guidée : l'élément à toucher pulse doucement */
+@keyframes guide { 0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ink) 0%, transparent); } 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ink) 35%, transparent); } }
+body.ac-g1 #ecrire #humeurs button { animation: guide 1.6s ease-in-out infinite; }
+body.ac-g2 #ecrire #editeur { outline: 1px dashed color-mix(in srgb, var(--ink) 40%, transparent); outline-offset: 6px; }
+body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: guide 1.4s ease-in-out infinite; }
