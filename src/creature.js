@@ -369,9 +369,11 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const now = Date.now(), cand = liste.map(e => { const p = posEtoile(e.id); return p ? { e, s: proj(p) } : null; }).filter(c => c && c.s.vu && c.s.x > 90 && c.s.x < innerWidth - 90 && c.s.y > 110 && c.s.y < innerHeight - 200);
     if (!cand.length) { prochainSouvenir = 20; return; }
     cand.forEach(c => { c.p = (1 + Math.min(120, (now - (c.e.touched || c.e.date)) / 86400000)) * rnd(.5, 1.5); });
-    const { e } = cand.sort((a, b) => b.p - a.p)[0];
+    demarrerSouvenir(cand.sort((a, b) => b.p - a.p)[0].e);
+  }
+  function demarrerSouvenir(e, quandImpose = null) {   // v45 : quandImpose (« Il y a un an, ce jour-là ») pour l'anniversaire d'une étoile
     souvenir = { id: e.id, fin: performance.now() + 11000, arrive() {
-      const jours = Math.round((Date.now() - e.date) / 86400000), quand = jours <= 0 ? t('aujourd’hui') : jours === 1 ? t('hier') : t('il y a {n} jours', { n: jours });
+      const jours = Math.round((Date.now() - e.date) / 86400000), quand = quandImpose || (jours <= 0 ? t('aujourd’hui') : jours === 1 ? t('hier') : t('il y a {n} jours', { n: jours }));
       const brut = e.text.replace(/^ *(-{3,}|—+) *$/gm, '').replace(/^(#{1,4}|[-•*]|\d+\.|>) +/gm, '').replace(/\s+/g, ' ').trim(), court = brut.length > 78 ? brut.slice(0, 76).replace(/\s+\S*$/, '') + '…' : brut;
       fx = { expr: { joie: 'joie', melancolie: 'triste', tempete: 'wow', elan: 'leve', calme: null }[e.mood] || null, jusqu: performance.now() + 5000 };
       dire((EN ? '“' + court + '”' : '« ' + court + ' »') + ' · ' + quand, { duree: 7500, priorite: true, clic: () => ouvrirPensee(e.id) });
@@ -397,6 +399,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     lueur, prechauffer: (renderer, cam) => lueur.prechauffer(renderer, cam), vignette, rendreVignettes,
     apercu,   // la lueur telle qu'elle est maintenant (aperçus de la boutique et de « Personnaliser ma lueur »), qu'on fait tourner au doigt
     update, majProfil, dire, souvenirMaintenant() { souvenir = null; prochainSouvenir = rnd(70, 130); lancerSouvenir(); return !!souvenir; },
+    souvenirDe(e, quand) { if (!e || !e.text) return false; prochainSouvenir = rnd(70, 130); demarrerSouvenir(e, quand); return true; },
     montrer() { if (montree) return; montree = true; apparition = 0; majProfil(true); base(); ndcPoint(0, .05, distRef(), pos); vel.set(0, 0, 0);   // elle naît devant toi, où que regarde la caméra
       particules.burst(pos, new THREE.Color(1, .95, .8), 40, 2.6, true); },
     nom: () => sauve.nom || '', renommer(n) { sauve.nom = (n || '').trim().slice(0, 18) || t('Lueur'); sauver(sauve); dire(t('Bonjour ! Moi, c’est {nom}.', { nom: sauve.nom }), { priorite: true, duree: 4500 }); },

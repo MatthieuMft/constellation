@@ -927,3 +927,16 @@ body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: 
 .edition-planete .pl-scene { position: sticky; top: -14px; z-index: 2; }
 .pl-scene .pl-vue { width: min(100%, 230px); margin: 0 auto; border: 0; }
 .m-version { margin: 18px 0 6px; font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); text-align: center; opacity: .7; }
+
+/* v45 : verrou par code — plein écran, sobre, angles droits */
+.verrou { position: fixed; inset: 0; z-index: 9999; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+  padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
+.verrou-titre { font-size: 1.2rem; margin: 0; text-align: center; }
+.verrou-note { color: var(--soft); font-style: italic; min-height: 1.4em; margin: 0; text-align: center; font-size: .95rem; }
+.verrou-points { display: flex; gap: 16px; }
+.verrou-points span { width: 12px; height: 12px; border: 1px solid var(--ink); }
+.verrou-points span.on { background: var(--ink); box-shadow: 0 0 12px rgba(255,255,255,.5); }
+.verrou-pave { display: grid; grid-template-columns: repeat(3, 72px); gap: 10px; }
+.verrou-pave button { height: 64px; font-size: 1.4rem; font-family: var(--serif); background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 0; }
+.verrou-pave button:active { background: rgba(255,255,255,.12); }
+.verrou-bas { min-height: 2em; }

@@ -35,6 +35,7 @@ import { monterBoutique } from './boutique.js';
 import { monterCielPerso } from './ciel-ui.js';
 import { creerDecor } from './decor.js';
 import * as PL from './planetes.js';
+import { verrou } from './verrou.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
@@ -43,6 +44,7 @@ traduirePage();
 
 const $ = id => document.getElementById(id);
 const lisse = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+verrou.fermer();                                   // v45 : le code d'abord, avant que le journal ne s'affiche
 const aujourdhui = () => cleJour(new Date());
 
 // ───────────── Réglages / thème ─────────────
@@ -482,6 +484,7 @@ function boucle() {
     v.lod = 1 - lisse(110, 240, camera.position.distanceTo(g.position));          // de loin, les nébuleuses prennent le relais
     g.visible = v.lod > .01; if (v.lod > .3) visuelsVisibles.set(v.id, v);
     v.pulse = Math.max(0, v.pulse - dt * .6);
+    if (v.id === scintille) v.pulse = Math.max(v.pulse, .28 + .28 * Math.sin(now * .0035));   // v45 : l'étoile anniversaire scintille
     const cible = surbrillance ? (surbrillance.get(v.id) || 0) * 1 + .12 : 1, sel = v.id === selection ? 1.6 : (v.id === survole ? 1.35 : 1);
     v.lueur += (cible * sel - v.lueur) * Math.min(1, dt * 6);
     const charge = v.id === chargeId ? Math.min(1, (now - chargeT0) / 800) : 0;          // maintien du clic : l'étoile gonfle et vibre
@@ -1094,6 +1097,7 @@ function majReglage(patch) {
   if (theme) appliquerTheme(); else { if ('humeurs' in patch) recolorer(); appliquerCurseurs(); }
 }
 // v30 : tout effacer pour recommencer un nouveau parcours (journal, médias, lueur, poussière, réglages ; la langue est gardée)
+verrou.surOubli(() => toutEffacer());               // v45 : code oublié = tout effacer (avec les deux confirmations)
 async function toutEffacer() {
   if (!confirm(t('Tout effacer ? Ton journal, tes photos, ta lueur, ta poussière d’étoiles et tes réglages seront supprimés de cet appareil. Exporte d’abord le journal si tu veux en garder une copie.'))) return;
   if (!confirm(t('Dernière vérification : cette action est définitive. Tout effacer et recommencer ?'))) return;
@@ -1111,6 +1115,9 @@ const rendreReglages = monterReglages($('reglages'), {
       ...(items.some(e => e.sample) ? [[t('Effacer les entrées d’exemple'), () => $('exemples').click()]] : []),
       [t('Tout effacer et recommencer'), toutEffacer, 'danger'],
     ]],
+    [t('Verrou'), verrou.actif()
+      ? [[t('Changer le code'), async () => { await verrou.choisir(); rendreReglages(); }], [t('Retirer le verrou'), () => { verrou.retirer(); statutTemporaire(t('Le verrou est retiré.')); rendreReglages(); }]]
+      : [[t('Ajouter un code'), async () => { if (await verrou.choisir()) statutTemporaire(t('Le code sera demandé à chaque ouverture.'), 5000); rendreReglages(); }]]],
     [t('Aide'), [
       [t('Comment voyager dans le ciel'), () => { $('reglages').hidden = true; ouvrirAide(); }],
       ...(dejaInstallee() ? [] : [[t('Ajouter à l’écran d’accueil'), () => { $('reglages').hidden = true; proposerInstall(); }]]),
@@ -1262,7 +1269,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v44'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v45'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1346,7 +1353,7 @@ function inviteDuSoir(forcer = false) {
   const h = new Date().getHours(), jour = aujourdhui();
   if (!forcer && (h < 19 || items.some(e => e.jour === jour))) return;
   try { if (!forcer && localStorage.getItem('constellation.invite') === jour) return; localStorage.setItem('constellation.invite', jour); } catch (e) {}
-  statutTemporaire(t('Le jour s’éteint… une pensée pour ce soir ?'), 9000); creature.dire(t('Une pensée pour ce soir ?'), { priorite: true, duree: 7000 });
+  statutTemporaire(t('Le jour s’éteint… une pensée pour ce soir ?'), 9000); creature.dire(questionDuSoir(), { priorite: true, duree: 8000 });
   $('nouveau').animate([{ boxShadow: '0 0 0 0 rgba(255,255,255,.7)' }, { boxShadow: '0 0 0 14px rgba(255,255,255,0)' }], { duration: 1600, iterations: 4 });
 }
 rappels.planifier({ ecritAujourdhui: () => items.some(i => i.jour === aujourdhui()), message: messageRappel, invite: () => inviteDuSoir(true) });
@@ -1375,10 +1382,45 @@ const accueil = monterAccueil({
   peutInstaller: () => !!invitationInstall, astuceInstall,
   installer: async () => { if (!invitationInstall) return false; invitationInstall.prompt(); const r = await invitationInstall.userChoice.catch(() => null); invitationInstall = null; $('installer').hidden = true; return !!r && r.outcome === 'accepted'; },   // v29 : même invitation que le bouton « Installer » (plus bas)
 });
+// ───────────── v45 : « Il y a un an » — une ancienne étoile du même jour scintille, et la lueur t'y emmène ─────────────
+function anniversaire(d = new Date()) {
+  const vrais = new Map(jours.filter(j => !j.sample && j.text).map(j => [j.id, j]));
+  for (let n = 1; n <= 10; n++) { const a = new Date(d.getFullYear() - n, d.getMonth(), d.getDate()); if (a.getMonth() === d.getMonth() && vrais.has(cleJour(a)))
+    return { jour: vrais.get(cleJour(a)), quand: n === 1 ? t('Il y a un an, ce jour-là') : t('Il y a {n} ans, ce jour-là', { n }) }; }
+  const m = new Date(d.getFullYear(), d.getMonth() - 1, d.getDate()); if (m.getDate() === d.getDate() && vrais.has(cleJour(m))) return { jour: vrais.get(cleJour(m)), quand: t('Il y a un mois, ce jour-là') };
+  const s = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7); if (vrais.has(cleJour(s))) return { jour: vrais.get(cleJour(s)), quand: t('Il y a une semaine, ce jour-là') };
+  return null;
+}
+let scintille = null;                                  // l'étoile anniversaire du jour : elle pulse doucement (voir boucle)
+function proposerAnniversaire(forcer = false) {
+  const a = anniversaire(); if (!a) return false;
+  scintille = a.jour.id;
+  try { if (!forcer && localStorage.getItem('constellation.anniversaire') === aujourdhui()) return true; localStorage.setItem('constellation.anniversaire', aujourdhui()); } catch (e) {}
+  creature.dire(a.quand + '… ' + t('On y retourne ?'), { priorite: true, duree: 9000, clic: () => allerAnniversaire(a) });
+  return true;
+}
+function allerAnniversaire(a) {
+  voler(posDuJour(a.jour.id), DIST.jour);
+  setTimeout(() => creature.souvenirDe(a.jour, a.quand.toLowerCase()), 2400);
+}
+
+// v45 : la question du soir change selon l'heure, l'humeur de la veille et le temps passé sans écrire
+function questionDuSoir(d = new Date()) {
+  const h = d.getHours(), dernier = jours.filter(j => !j.sample).at(-1), ecart = dernier ? Math.floor((dateDeCle(aujourdhui()) - dernier.date) / 86400000) : 0;
+  const hier = jours.find(j => j.id === cleJour(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)));
+  const pioche = l => l[(d.getDate() + h) % l.length];
+  if (ecart >= 3) return t('Ça fait {n} jours… qu’est-ce qui s’est passé ?', { n: ecart });
+  if (hier && (hier.mood === 'tempete' || hier.mood === 'melancolie')) return pioche([t('Hier était lourd. Et aujourd’hui ?'), t('Qu’est-ce qui t’a fait du bien aujourd’hui ?')]);
+  if (hier && (hier.mood === 'joie' || hier.mood === 'elan')) return pioche([t('Hier brillait. Ça continue ?'), t('Qu’est-ce qui t’a donné de l’élan aujourd’hui ?')]);
+  if (h >= 22 || h < 5) return pioche([t('Avant de dormir : une chose à garder de ta journée ?'), t('Qu’est-ce qui tourne dans ta tête ce soir ?')]);
+  return pioche([t('Une pensée pour ce soir ?'), t('Quel moment de ta journée mérite une étoile ?'), t('Qu’est-ce qui t’a surpris aujourd’hui ?'), t('Une personne à qui tu as pensé aujourd’hui ?'), t('Qu’as-tu appris aujourd’hui ?')]);
+}
+
 function apresIntro() {
   if (!accueilVu() && !joursEcrits().length) { setTimeout(() => accueil.demarrer(), 700); return; }
   marquerAccueil(); creature.montrer();
   setTimeout(() => { const l = datesDuJour(aujourdhui()); if (l.length) creature.fete(t('Aujourd’hui : {titre} !', { titre: l[0].titre })); }, 2500);
+  setTimeout(() => { if ($('ecrire').hidden) proposerAnniversaire(); }, 5000);
   if (new URLSearchParams(location.search).get('ecrire') === '1') setTimeout(() => ouvrirEcrire(), 1200);       // depuis la notification du rappel
 }
 
