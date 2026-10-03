@@ -107,14 +107,20 @@ const finition = creerFinition(mobile); composer.addPass(finition);
 const volume = creerVolume(scene, camera, renderer, mobile);
 composer.addPass(new OutputPass());
 
+// v23 : sur téléphone, la barre d'adresse qui monte et descend changeait la hauteur à chaque image : tout l'univers « vibrait » de haut en bas.
+// Le ciel garde maintenant la plus grande hauteur vue pour cette largeur (il dépasse sous la barre au lieu de s'étirer), et un seul
+// redimensionnement par image au plus.
+let largeurVue = 0, hauteurVue = 0, redimPrevu = false;
 function redim() {
-  const w = innerWidth, h = innerHeight, pr = renderer.getPixelRatio() * echelleDyn;
+  const w = innerWidth; if (w !== largeurVue) { largeurVue = w; hauteurVue = 0; }
+  const h = hauteurVue = Math.max(hauteurVue, innerHeight, window.visualViewport ? Math.round(visualViewport.height) : 0), pr = renderer.getPixelRatio() * echelleDyn;
+  renderer.domElement.style.height = h + 'px';
   renderer.setSize(w, h, false); composer.setPixelRatio(pr); composer.setSize(w, h);
   for (const rt of [composer.renderTarget1, composer.renderTarget2]) if (rt.depthTexture) { rt.depthTexture.image.width = rt.width; rt.depthTexture.image.height = rt.height; rt.depthTexture.needsUpdate = true; }
   dof.uniforms.uRes.value.set(w * pr, h * pr); dof.uniforms.uMax.value = 11 * pr; finition.uniforms.uRes.value.set(w * pr, h * pr); volume.redim(w, h, pr); if (scenesRef) scenesRef.redim(w, h);
   camera.aspect = w / h; camera.updateProjectionMatrix();
 }
-addEventListener("resize", redim); redim();
+addEventListener("resize", () => { if (innerWidth === largeurVue && innerHeight <= hauteurVue) return; if (redimPrevu) return; redimPrevu = true; requestAnimationFrame(() => { redimPrevu = false; redim(); }); }); redim();
 const particules = creerParticules(scene, camera, renderer.getPixelRatio());
 
 // ───────────── Textures procédurales ─────────────
@@ -431,6 +437,7 @@ const ease = t => t < .5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
 const _p = new THREE.Vector3();
 
 let msMoy = 16, msComptes = 0, msDernier = 0;
+let dernierBaisse = 0;
 function regulerResolution(now) {       // moyenne glissante du temps d'image ; trop lent -> on baisse la résolution interne, très fluide -> on la remonte
   if (msDernier) msMoy += (Math.min(now - msDernier, 100) - msMoy) * .08;
   msDernier = now;
@@ -438,8 +445,8 @@ function regulerResolution(now) {       // moyenne glissante du temps d'image ; 
   msComptes = 0;
   const plancher = mobile ? .5 : .65;
   let n = echelleDyn;
-  if (msMoy > 24 && n > plancher) n = Math.max(plancher, n - .15);
-  else if (msMoy < 15 && n < 1) n = Math.min(1, n + .1);
+  if (msMoy > 24 && n > plancher) { n = Math.max(plancher, n - .15); dernierBaisse = now; }
+  else if (msMoy < 12 && n < 1 && now - dernierBaisse > 8000) n = Math.min(1, n + .1);   // v23 : remonter seulement si c'est vraiment fluide, et pas juste après une baisse (sinon va-et-vient)
   if (n !== echelleDyn) { echelleDyn = n; redim(); }
 }
 // joystick virtuel (v22) : un carré en bas à gauche ; on pousse le petit carré du doigt pour se déplacer dans le ciel

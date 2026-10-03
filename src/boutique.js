@@ -276,6 +276,7 @@ const DESSINS = {
   'etincelles': x => { lueurV(x, { cx: 92, cy: 70, R: 28 }); add(x); const r = graine(4);
     for (let i = 0; i < 9; i++) { const k = i / 8, px = 70 - k * 50 + (r() - .5) * 14, py = 92 + k * 46 + (r() - .5) * 14; i % 3 ? point(x, '#ffe9a8', px, py, 3 + r() * 4, .9 - k * .4) : scintille(x, px, py, 7 - k * 3, '#ffe9a8', .95 - k * .4); } },
   // ton ciel
+  'theme-nuit': x => themeV(x, THEMES.nuit),
   'theme-aube': x => themeV(x, THEMES.aube),
   'theme-ocean': x => themeV(x, THEMES.ocean),
   'theme-papier': x => themeV(x, THEMES.papier),

@@ -715,12 +715,13 @@ body.barre-on #ecrire .p-corps { padding-bottom: 60px; }
 /* v22 : en haut, seulement « Constellation » (plus de fil du temps, de compteurs ni de bilan) */
 #fil, #compte, #bilan { display: none !important; }
 /* v22 : joystick virtuel, en bas à gauche, angles droits */
-#joystick { position: fixed; left: 24px; bottom: calc(76px + var(--safe-b)); z-index: 2; width: 84px; height: 84px; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 35%, transparent); backdrop-filter: blur(6px); display: grid; place-items: center; touch-action: none; cursor: grab; transition: opacity 1.4s; }
+#joystick { position: relative; align-self: flex-end; margin-bottom: 12px; width: 84px; height: 84px; border: 1px solid var(--line); background: color-mix(in srgb, var(--bg) 35%, transparent); backdrop-filter: blur(6px); display: grid; place-items: center; touch-action: none; cursor: grab; }   /* v23 : à droite, au-dessus du zoom */
 #joystick i { width: 28px; height: 28px; border: 1px solid color-mix(in srgb, var(--ink) 55%, transparent); background: color-mix(in srgb, var(--ink) 12%, transparent); pointer-events: none; }
 #joystick::before, #joystick::after { content: ""; position: absolute; background: color-mix(in srgb, var(--ink) 14%, transparent); }
 #joystick::before { left: 50%; top: 8px; bottom: 8px; width: 1px; } #joystick::after { top: 50%; left: 8px; right: 8px; height: 1px; }
 body.calme #joystick, body.intro #joystick, body.ecriture #joystick { opacity: 0; pointer-events: none; }
-@media (max-width: 720px) { #joystick { left: 14px; bottom: calc(70px + var(--safe-b)); width: 76px; height: 76px; } }
+@media (max-width: 720px) { #joystick { width: 76px; height: 76px; } }
 /* v22 : allumer un élément du ciel sur téléphone : le panneau descend quelques secondes pour montrer tout le ciel */
 #boutique.plein, #perso-ciel.plein { transition: transform .45s var(--ease); }
 body.voir-ciel #boutique.plein, body.voir-ciel #perso-ciel.plein { transform: translateY(100%); pointer-events: none; }
+#zoom { align-items: flex-end; }

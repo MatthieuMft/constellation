@@ -79,6 +79,7 @@ export const ARTICLES = [
   regl(L, 'magie', 'taille-lueur', t('Taille'), t('Plus petite ou plus grande.'), 20, 'perso', { taille: 1 }),
   inter(L, 'magie', 'etincelles', t('Étincelles'), t('Elle sème de petites étincelles.'), 40, 'etincelles'),
   // ── ton ciel ──
+  choix(C, 'ambiance', 'theme-nuit',   t('Ciel Nuit'),   t('Le ciel de départ, bleu nuit.'),                  0,   'reglage', 'theme', 'nuit'),   // v23 : pour y revenir depuis la boutique
   choix(C, 'ambiance', 'theme-aube',   t('Ciel Aube'),   t('Un ciel rose et violet, comme au petit matin.'), 60,  'reglage', 'theme', 'aube'),
   choix(C, 'ambiance', 'theme-ocean',  t('Ciel Océan'),  t('Un ciel bleu profond, comme sous la mer.'),      80,  'reglage', 'theme', 'ocean'),
   choix(C, 'ambiance', 'theme-papier', t('Ciel Papier'), t('Un ciel clair, comme une page de carnet.'),      100, 'reglage', 'theme', 'papier'),
