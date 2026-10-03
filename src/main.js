@@ -34,6 +34,7 @@ import * as etoiles from './etoiles.js';
 import { monterBoutique } from './boutique.js';
 import { monterCielPerso } from './ciel-ui.js';
 import { creerDecor } from './decor.js';
+import * as PL from './planetes.js';
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
 
@@ -419,7 +420,10 @@ let tremble = { amp: 0, t0: 0, dur: 0 };
 const secousse = (amp, dur) => { tremble = { amp, t0: performance.now(), dur: dur * 1000 }; };
 const evenements = creerEvenements({ scene, camera, melange, texHalo, pr: renderer.getPixelRatio() });
 const lucioles = evenements.creerLucioles(() => visuelsVisibles);
-const decor = creerDecor({ scene, camera });
+const decor = creerDecor({ scene, camera, renderer });
+PL.migrer();                                        // v40 : les anciennes planètes achetées deviennent de vraies planètes (une seule fois)
+let nbPlanetes = 0;
+function reglerPlanetes(direct = false) { const v = PL.visibles(); nbPlanetes = v.length; decor.regler({ planetes: v, clair: T().clair, direct }); }
 const scenes = creerScenes({ scene, camera, particules, meteores, melange, texHalo, evenements, secousse }); scenesRef = scenes; scenes.redim(innerWidth, innerHeight);
 
 // La petite lueur : un esprit de lumière qui vit dans la galaxie, dessiné nettement par-dessus les effets (voir creature.js).
@@ -523,7 +527,7 @@ function boucle() {
   dof.uniforms.uFocus.value += (foc - dof.uniforms.uFocus.value) * Math.min(1, dt * 5);
   dof.uniforms.uAper.value = Re.flou * 3; dof.enabled = Re.flou > 0.01 && !mobile;
   particules.update(dt); animerParcours(dt);
-  evenements.update(dt, R.animation, T().clair, { cometes: etoiles.actif('cometes'), aurores: etoiles.actif('aurores'), dessins: etoiles.actif('dessins'), baleine: etoiles.actif('baleine'), satellites: etoiles.actif('satellites'), planetes: decor.PLANETES.some(etoiles.actif), lune: etoiles.actif('lune') });
+  evenements.update(dt, R.animation, T().clair, { cometes: etoiles.actif('cometes'), aurores: etoiles.actif('aurores'), dessins: etoiles.actif('dessins'), baleine: etoiles.actif('baleine'), satellites: etoiles.actif('satellites'), planetes: nbPlanetes > 0, lune: etoiles.actif('lune') });
   lucioles.maj(dt, R.animation, etoiles.actif('lucioles') ? 1 : 0); decor.update(dt, R.animation); scenes.update(dt);
   { const h = new Date().getHours(), occupe = palette.ouverte() || ["fiche", "reglages", "analyse", "nommer", "perso", "dateqc", "menu", "boutique"].some(id => !$(id).hidden), ecr = !$("ecrire").hidden, ta = $("texte");
     if (ecr && (ta.value.length === 0 ? now - ouvertureEcriture > 10000 : now - dernierTexte > 12000)) creature.patiente();
@@ -537,7 +541,7 @@ function boucle() {
 
   // scène complète, puis flou de champ et lueur
   finition.uniforms.uTime.value = t; volume.rendre(t);
-  creature.rendreVignettes(renderer);                  // vignettes 3D de la boutique en attente (dans un coin de l'écran, recouvert juste après)
+  creature.rendreVignettes(renderer); PL.rendrePhotos(renderer);                  // vignettes 3D de la boutique en attente (dans un coin de l'écran, recouvert juste après)
   if ($('ecrire').hidden) composer.render();
   else { renderer.getClearColor(_ccEcr); const ca = renderer.getClearAlpha(); renderer.setRenderTarget(null); renderer.setClearColor(_fondEcr.set(T().ui.bg), 1); renderer.clear(); renderer.setClearColor(_ccEcr, ca); }   // v28 : pendant l'écriture, le ciel s'efface : un fond uni, seule la lueur reste
   renderer.autoClear = false; renderer.clearDepth(); renderer.render(sceneUI, camera); renderer.autoClear = true;   // la mascotte : nette, jamais floutée ; profondeur vidée (la passe de sortie la laisse à 0), elle s'occulte elle-même
@@ -1072,7 +1076,7 @@ function appliquerTheme() {
   for (const v of visuels.values()) { for (const s of [v.halo, v.etoile]) { s.material.blending = m; s.material.needsUpdate = true; } }
   meteores.regler(clair, m, t.ui.ink); poussiere.regler(clair, m, clair ? t.ui.ink : t.etoile);
   creature.regler(clair); marques.regler(clair, m); evenements.regler(clair, t.ui.ink); scenes.regler(clair, t.ui.ink); lucioles.m.blending = m; lucioles.m.uniforms.uCol.value.set(clair ? t.ui.ink : "#ffe9a0"); lucioles.m.needsUpdate = true;
-  decor.regler({ planetes: decor.PLANETES.filter(etoiles.actif), clair, direct: true });
+  reglerPlanetes(true);
   recolorer(); appliquerCurseurs();
 }
 function appliquerCurseurs() {
@@ -1255,7 +1259,8 @@ function rendreMenu(groupe = null) {
   const L = $('menu-liste'); L.replaceChildren(); L.scrollTop = 0;
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
-  if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); }))); return; }
+  if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v40'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1398,6 +1403,8 @@ const cielUI = monterCielPerso({ zone: $('perso-ciel'), corps: $('ciel-corps'), 
   remplacer: r => { const av = Re.theme; R = { ...DEFAUT, ...r }; sauverReglages(R); majEffectifs(); Re.theme !== av ? appliquerTheme() : (recolorer(), appliquerCurseurs()); },
   basculer: cle => { etoiles.basculer(cle); appliquerObjets(); montrerDansLeCiel(cle); },
   boutique: cle => { cielUI.fermer(); ouvrirBoutique(cle, 'ciel'); },
+  photoPlanete: (c, p) => PL.photo(c, p),
+  surPlanete: (id, montrer) => { reglerPlanetes(); if (montrer) montrerPlanete(id); },
 } });
 function ouvrirCielPerso(cle) { fermerPanneaux(); cielUI.ouvrir(cle); }
 glisserPourFermer($('perso-ciel'), () => cielUI.fermer());
@@ -1408,7 +1415,7 @@ function appliquerObjets() {
   U.uCroix.value = etoiles.actif('croix') ? 1 : 0;
   creature.yeuxEtoiles(etoiles.actif('yeux-etoiles'));
   meteores.dorees(etoiles.actif('filantes-or'), etoiles.actif('filantes') ? .6 : 1);
-  decor.regler({ planetes: decor.PLANETES.filter(etoiles.actif), clair: T().clair });
+  reglerPlanetes();
   // la lueur ne porte que ce qui est acheté (et allumé)
   const P = creature.perso(), E = etoiles.persoEffectif(P), diff = {};
   for (const k of Object.keys(E)) if (JSON.stringify(E[k]) !== JSON.stringify(P[k])) diff[k] = E[k];
@@ -1426,6 +1433,13 @@ const boutique = monterBoutique($('boutique'), {
     if (a.type === 'interrupteur') { if (etoiles.actif(a.cle) !== !!oui) etoiles.basculer(a.cle); }
     else { const p = etoiles.patch(a, oui); a.source === 'reglage' ? majReglage(p) : creature.personnaliser(p); }
     appliquerObjets();
+  },
+  vignettePlanete: (c, cle) => { if (PL.EXEMPLES[cle]) PL.photo(c, PL.EXEMPLES[cle]); },
+  nouvellePlanete: a => {                                  // v40 : une planète de plus ; on la nomme et on la personnalise tout de suite
+    if (PL.liste().length >= PL.MAX) return t('Ton ciel a déjà six planètes.');
+    if (!etoiles.payer(a.prix)) return t('Encore ✦{n} à gagner en écrivant.', { n: a.prix - etoiles.solde() });
+    const p = PL.creer(a.planete); reglerPlanetes(); toast(t('Nouvelle planète : {nom}', { nom: p.nom })); accueil.surAchat();
+    ouvrirCielPerso('planete:' + p.id); montrerPlanete(p.id); return null;
   },
   ouvrirReglage: a => { boutique.fermer(); a.cat === 'lueur' ? ouvrirPerso(a.cle) : ouvrirCielPerso(a.cle); },
   surAchat: cle => {
@@ -1455,7 +1469,6 @@ function montrerDansLeCiel(cle) {
   const a = etoiles.article(cle); if (!a || a.cat !== 'ciel' || a.type !== 'interrupteur' || !etoiles.actif(cle)) return;
   voirLeCiel(); if (selection && petitEcran.matches) fermerFiche();
   const d0 = Math.max(DIST.semaine, camera.position.distanceTo(controls.target));   // jamais collé à une étoile : elle cacherait tout
-  if (decor.PLANETES.includes(cle)) { voler(controls.target.clone(), d0, decale(decor.direction(cle))); setTimeout(() => decor.apparaitre(cle), 900); return; }
   if (cle === 'lactee') {                               // la vue tourne vers la bande, qui traverse l'écran en biais
     const ax = lactee.userData.ax, v = new THREE.Vector3(); camera.getWorldDirection(v); v.addScaledVector(ax, -v.dot(ax)).normalize();
     voler(controls.target.clone(), d0, decale(v)); return;
@@ -1464,6 +1477,13 @@ function montrerDansLeCiel(cle) {
   const ev = { aurores: 'aurore', cometes: 'comete', baleine: 'baleine', dessins: 'dessin', satellites: 'satellite', lune: 'lune' }[cle];
   if (ev) { if (camera.position.distanceTo(controls.target) < d0 - 1) voler(controls.target.clone(), d0); setTimeout(() => evenements.declencher(ev), ev === 'lune' ? 400 : 1300); return; }
   if (cle === 'croix' || cle === 'lucioles') voler(posDuJour(aujourdhui()), DIST.semaine);
+}
+
+// v40 : montrer une planète (nouvelle, ou qu'on remet dans le ciel) : la vue tourne vers elle, elle apparaît
+function montrerPlanete(id) {
+  voirLeCiel(); if (selection && petitEcran.matches) fermerFiche();
+  const d0 = Math.max(DIST.semaine, camera.position.distanceTo(controls.target));
+  voler(controls.target.clone(), d0, decale(decor.direction(id))); setTimeout(() => decor.apparaitre(id), 900);
 }
 
 // v35 : pendant le tutoriel, la lueur se pose au-dessus de la carte (jamais sur le texte)
@@ -1517,5 +1537,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde,
+window.__constellation = { ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };

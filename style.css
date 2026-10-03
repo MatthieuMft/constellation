@@ -914,3 +914,16 @@ body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: 
 .bq-rubriques::-webkit-scrollbar { display: none; }
 .bq-rubriques button { flex: none; padding: 7px 12px; font: 11px var(--mono); color: var(--soft); white-space: nowrap; }
 .bq-rubriques button:hover { color: var(--ink); border-color: var(--ink); }
+
+/* v40 : mes planètes — la personnalisation d'une planète */
+.pl-vue { display: block; width: min(100%, 300px); aspect-ratio: 1; margin: 0 auto 14px; border: 1px solid var(--line); background: #05060f; }
+.pl-retour { margin-bottom: 6px; }
+.pl-palettes { grid-template-columns: repeat(3, 1fr); margin-bottom: 10px; }
+.pl-palettes .tuile { height: 52px; }
+.choix button.verrou { color: var(--soft); border-style: dashed; display: inline-flex; align-items: center; gap: 7px; }
+.choix button.verrou .cadenas { margin-top: 3px; }
+.edition-planete .apercu-ciel { display: none; }
+.pl-scene { margin: 0 -18px 14px; padding: 8px 18px 10px; background: #05060f; border-bottom: 1px solid var(--line); }
+.edition-planete .pl-scene { position: sticky; top: -14px; z-index: 2; }
+.pl-scene .pl-vue { width: min(100%, 230px); margin: 0 auto; border: 0; }
+.m-version { margin: 18px 0 6px; font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); text-align: center; opacity: .7; }

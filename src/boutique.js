@@ -11,6 +11,8 @@
 //     surChange : après tout changement (achat, choix, interrupteur) ; surAchat : juste après un achat (toast, effet).
 //     ouvrirReglage : un article « reglage » à toi a été touché (ouvrir « Personnaliser ma lueur » ou « … mon ciel » sur lui).
 //     apercu(canvas) (facultatif) : dessine la lueur telle qu'elle est maintenant (aperçu fixe en haut de l'onglet « Ta lueur »)
+//     vignettePlanete(canvas, cle) (facultatif, v40) : les articles « Planètes » montrent une vraie planète 3D ;
+//     nouvellePlanete(article) → texte | null (v40) : une planète de plus (paie, la crée et ouvre sa personnalisation ; texte = pourquoi pas)
 //     vignette3D(canvas, o) (facultatif) : les articles de la lueur montrent la vraie lueur 3D qui les porte (creature.vignette, voir LUEUR3D) ;
 //     sans lui, les anciennes vignettes dessinées en 2D.
 import { t } from './langue.js';
@@ -418,7 +420,8 @@ export function monterBoutique(zone, ctx) {
   let onglet = 'lueur', minuteur = 0;
   const toiles = {};                                   // une vignette n'est dessinée qu'une fois
   const toile = a => toiles[a.cle] || (toiles[a.cle] = (() => { const c = el('canvas', { width: '160', height: '160', 'aria-hidden': 'true' }), v3 = ctx.vignette3D && LUEUR3D[a.cle];
-    if (v3) { const x = c.getContext('2d'); x.fillStyle = '#05060f'; x.fillRect(0, 0, 160, 160); [].concat(v3).forEach((o, i) => ctx.vignette3D(c, i ? { mode: 'lighten', ...o } : o)); }   // fond sombre en attendant la 3D
+    if (a.groupe === 'planetes' && ctx.vignettePlanete) { const x = c.getContext('2d'); x.fillStyle = '#05060f'; x.fillRect(0, 0, 160, 160); ctx.vignettePlanete(c, a.cle); }
+    else if (v3) { const x = c.getContext('2d'); x.fillStyle = '#05060f'; x.fillRect(0, 0, 160, 160); [].concat(v3).forEach((o, i) => ctx.vignette3D(c, i ? { mode: 'lighten', ...o } : o)); }   // fond sombre en attendant la 3D
     else vignette(c, a.cle); return c; })());
   const equipe = a => !!(ctx.equipe && ctx.equipe(a));
   const equiper = (a, oui) => { if (ctx.equiper) ctx.equiper(a, oui); };
@@ -429,6 +432,10 @@ export function monterBoutique(zone, ctx) {
     minuteur = setTimeout(() => mot.classList.remove('on'), 2800);
   }
   function toucher(a) {
+    if (a.type === 'nouvelle') {                       // v40 : une planète de plus, autant de fois qu'on veut
+      if (E.solde() < a.prix) { dire(t('Encore ✦{n} à gagner en écrivant.', { n: a.prix - E.solde() })); return; }
+      const non = ctx.nouvellePlanete && ctx.nouvellePlanete(a); if (non) dire(non); else rendre(true); return;
+    }
     if (!E.possede(a.cle)) {
       if (!E.acheter(a.cle)) { dire(t('Encore ✦{n} à gagner en écrivant.', { n: a.prix - E.solde() })); return; }
       if (a.type === 'choix' || a.source === 'perso' && a.type === 'interrupteur') equiper(a, true);
@@ -442,11 +449,12 @@ export function monterBoutique(zone, ctx) {
   function carte(a) {
     const pris = E.possede(a.cle);
     let ligne, cls = 'bq-art', presse = null;
-    if (!pris) { ligne = '✦ ' + a.prix; if (E.solde() < a.prix) cls += ' cher'; }
+    if (a.type === 'nouvelle') { ligne = '+ ✦ ' + a.prix; if (E.solde() < a.prix) cls += ' cher'; }
+    else if (!pris) { ligne = '✦ ' + a.prix; if (E.solde() < a.prix) cls += ' cher'; }
     else if (a.type === 'choix') { presse = equipe(a); ligne = presse ? (a.cat === 'lueur' ? t('Porté') : t('Choisi')) : t('À toi'); cls += ' pris' + (presse ? ' on' : ''); }
     else if (a.type === 'interrupteur') { presse = E.actif(a.cle); ligne = presse ? t('Allumé') : t('Éteint'); cls += ' pris' + (presse ? ' on' : ''); }
     else { ligne = t('Débloqué') + ' ›'; cls += ' pris regle'; }
-    return el('button', { type: 'button', class: cls, 'data-cle': a.cle, 'aria-pressed': presse, 'aria-disabled': !pris && E.solde() < a.prix ? 'true' : null, title: a.sous, onclick: () => toucher(a) },
+    return el('button', { type: 'button', class: cls, 'data-cle': a.cle, 'aria-pressed': presse, 'aria-disabled': (!pris || a.type === 'nouvelle') && E.solde() < a.prix ? 'true' : null, title: a.sous, onclick: () => toucher(a) },
       toile(a), el('span', { class: 'bq-nom' }, a.nom), el('small', { class: 'bq-sous' }, a.sous), el('small', { class: 'bq-prix' }, ligne));
   }
   const section = (titre, liste, ...avant) => el('section', { class: 'reg-section bq-section' }, el('h2', {}, titre), ...avant, el('div', { class: 'bq-grille' }, liste.map(carte)));

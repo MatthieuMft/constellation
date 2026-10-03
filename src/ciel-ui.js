@@ -8,8 +8,11 @@
 //     lire / maj / remplacer : les réglages R de main.js (valeurs enregistrées ; le rendu, lui, passe par etoiles.reglagesEffectifs)
 //     themes : THEMES ; moods : MOODS ; couleur(k) : couleur actuelle d'une humeur
 //     basculer(cle) : allume / éteint un astre ou une animation achetés ; boutique(cle?) : ouvre la boutique (onglet « Ton ciel » ou l'article)
+//     v40 : photoPlanete(canvas, planète) : une image de la planète ; surPlanete(id, montrer) : après un changement (le ciel suit)
+//   ouvrir('planete:<id>') ouvre directement la personnalisation de cette planète ; ouvrir('planetes') la liste « Mes planètes »
 import { t, tn, EN } from './langue.js';
 import * as E from './etoiles.js';
+import * as PL from './planetes.js';
 
 const CLE_LOOKS = 'constellation.looks.v1';
 const lireLooks = () => { try { return JSON.parse(localStorage.getItem(CLE_LOOKS)) || {}; } catch (e) { return {}; } };
@@ -27,8 +30,68 @@ export function monterCielPerso({ zone, corps, ctx }) {
   // v20 : sur téléphone, plein écran avec le ciel en direct en haut (ctx.apercuCiel recopie l'image du ciel dans ce canvas)
   if (ctx.apercuCiel) { const c = el('canvas', { width: '720', height: '440', 'aria-hidden': 'true' }); corps.before(el('div', { class: 'bq-apercu apercu-ciel' }, c)); ctx.apercuCiel(c); zone.classList.add('plein'); }
   const section = (titre, cle, ...contenu) => el('section', { class: 'reg-section', 'data-groupe': cle }, el('h2', {}, titre), ...contenu);
+  let edition = null;                                   // v40 : la planète qu'on personnalise (sinon, le panneau du ciel)
+
+  // ───── v40 : personnaliser une planète ─────
+  function rendrePlanete(id) {
+    const p = PL.planete(id); if (!p) { edition = null; rendre(); return; }
+    const a = k => E.possede(PL.OPTIONS[k]);
+    const changer = (patch, montrer = false) => { PL.maj(id, patch); ctx.surPlanete(id, montrer); rendrePlanete(id); };
+    // une option pas encore achetée montre son prix et mène à la boutique
+    const option = (nom, k, presse, faire) => a(k)
+      ? el('button', { 'aria-pressed': presse, onclick: faire }, nom)
+      : el('button', { class: 'verrou', onclick: () => ctx.boutique(PL.OPTIONS[k]) }, el('i', { class: 'cadenas', 'aria-hidden': 'true' }), nom + ' · ✦ ' + E.article(PL.OPTIONS[k]).prix);
+    const vue = el('canvas', { width: '480', height: '480', class: 'pl-vue', 'aria-hidden': 'true' }); ctx.photoPlanete(vue, PL.effective(p));
+    const nom = el('input', { type: 'text', value: p.nom, maxlength: '18', 'aria-label': t('Nom de la planète') });
+    nom.addEventListener('input', () => PL.maj(id, { nom: nom.value.trim() || p.nom }));
+    nom.addEventListener('keydown', e => { if (e.key === 'Enter') nom.blur(); });
+    const blocs = [
+      el('div', { class: 'choix pl-retour' }, el('button', { class: 'lien', onclick: () => { edition = null; rendre(); requestAnimationFrame(() => briller('planetes')); } }, '‹ ' + t('Mes planètes'))),
+      el('div', { class: 'pl-scene' }, vue),
+      section(t('Nom'), 'pl-nom', el('div', { class: 'rang-reg' }, nom)),
+      section(t('Type'), 'pl-type', el('div', { class: 'choix' },
+        [['solide', t('Solide')], ['gazeuse', t('Gazeuse')]].map(([k, n]) => el('button', { 'aria-pressed': p.type === k, onclick: () => changer({ type: k }) }, n)))),
+    ];
+    // couleurs : les palettes (gratuites), puis les couleurs libres
+    const tuiles = el('div', { class: 'tuiles pl-palettes' });
+    Object.entries(PL.PALETTES[p.type]).forEach(([k, pal]) => {
+      const c = p.type === 'gazeuse' ? [pal.bandes[0], pal.bandes[1], pal.bandes[2]] : [pal.ocean, pal.sable, pal.terre];
+      const b = el('button', { class: 'tuile', 'aria-pressed': p.palette === k, onclick: () => changer({ palette: k, couleurs: {} }) }, el('span', {}, pal.nom));
+      b.style.background = `linear-gradient(135deg, ${c[0]} 0 38%, ${c[1]} 38% 55%, ${c[2]} 55%)`; b.style.setProperty('--encre', '#1d1a2b'); tuiles.append(b);
+    });
+    const libres = [];
+    if (a('couleurs')) {
+      const pal = PL.PALETTES[p.type][p.palette], cs = p.couleurs || {};
+      const champs = p.type === 'gazeuse' ? [['b1', t('Bande 1'), pal.bandes[0]], ['b2', t('Bande 2'), pal.bandes[1]]] : [['ocean', t('Océan'), pal.ocean], ['terre', t('Terre'), pal.terre], ['sable', t('Sable'), pal.sable]];
+      const puces = el('div', { class: 'puces' });
+      champs.forEach(([k, n, def]) => { const c = el('input', { type: 'color', value: cs[k] || def, 'aria-label': n });
+        c.addEventListener('change', () => changer({ couleurs: { ...(PL.planete(id).couleurs || {}), [k]: c.value } }));
+        puces.append(el('label', { class: 'puce', title: n }, c, el('span', {}, n.toLowerCase()))); });
+      libres.push(puces);
+    } else libres.push(el('div', { class: 'choix' }, option(t('Couleurs libres'), 'couleurs', false, null)));
+    blocs.push(section(t('Couleurs'), 'pl-couleurs', tuiles, ...libres));
+    // éléments
+    if (p.type === 'solide') blocs.push(section(t('Éléments'), 'pl-elements', el('div', { class: 'choix' },
+      option(t('Nuages'), 'nuages', !!p.nuages, () => changer({ nuages: !p.nuages })),
+      option(t('Cerisiers'), 'cerisier', p.arbres === 'cerisier', () => changer({ arbres: p.arbres === 'cerisier' ? null : 'cerisier' })),
+      option(t('Sapins'), 'sapin', p.arbres === 'sapin', () => changer({ arbres: p.arbres === 'sapin' ? null : 'sapin' })),
+      option(t('Maisonnettes'), 'maisons', !!p.maisons, () => changer({ maisons: !p.maisons })))));
+    else blocs.push(section(t('Éléments'), 'pl-elements', el('div', { class: 'choix' },
+      el('button', { 'aria-pressed': !!p.tempete, onclick: () => changer({ tempete: !p.tempete }) }, t('Tempête')))));
+    // anneaux
+    const anneaux = a('anneaux')
+      ? [[null, t('Aucun')], ['fin', t('Fin')], ['large', t('Large')], ['penche', t('Penché')]].map(([k, n]) => el('button', { 'aria-pressed': (p.anneaux || null) === k, onclick: () => changer({ anneaux: k }) }, n))
+      : [option(t('Anneaux'), 'anneaux', false, null)];
+    if (a('anneaux') && p.anneaux) anneaux.push(option(t('Double anneau'), 'double', !!p.double, () => changer({ double: !p.double })));
+    blocs.push(section(t('Anneaux'), 'pl-anneaux', el('div', { class: 'choix' }, anneaux)));
+    blocs.push(section(t('Dans ton ciel'), 'pl-ciel', el('div', { class: 'choix' },
+      el('button', { 'aria-pressed': !!p.allumee, onclick: () => changer({ allumee: !p.allumee }, !p.allumee) }, p.allumee ? t('Visible') : t('Rangée')))));
+    corps.replaceChildren(...blocs);
+  }
 
   function rendre() {
+    zone.classList.toggle('edition-planete', !!edition);       // v40 : on regarde la planète, pas le ciel
+    if (edition) { rendrePlanete(edition); return; }
     const R = ctx.lire(), a = k => E.possede(k), blocs = [];
 
     // ambiances : de vraies miniatures du dégradé et d'une étoile ; celles qui ne sont pas à toi montrent leur prix
@@ -44,6 +107,17 @@ export function monterCielPerso({ zone, corps, ctx }) {
     });
     blocs.push(section(E.groupe('ciel', 'ambiance').nom, 'ambiance', tuiles));
 
+    // v40 : mes planètes, chacune se personnalise d'un toucher
+    {
+      const l = PL.liste(), grille = el('div', { class: 'bq-grille' });
+      l.forEach(p => { const c = el('canvas', { width: '160', height: '160', 'aria-hidden': 'true' }); ctx.photoPlanete(c, PL.effective(p));
+        grille.append(el('button', { type: 'button', class: 'bq-art pris' + (p.allumee ? ' on' : ''), 'data-cle': 'planete:' + p.id, onclick: () => ouvrirPlanete(p.id) },
+          c, el('span', { class: 'bq-nom' }, p.nom), el('small', { class: 'bq-prix' }, p.allumee ? t('Dans ton ciel') : t('Rangée')))); });
+      const s = section(t('Mes planètes'), 'planetes', l.length ? grille : el('p', { class: 'reg-note' }, t('Tu n’as pas encore de planète. Il y en a dans la boutique.')),
+        l.length < PL.MAX ? el('div', { class: 'choix' }, el('button', { onclick: () => ctx.boutique('planete-solide') }, t('Une nouvelle planète'))) : null);
+      blocs.push(s);
+    }
+
     // humeurs : une ligne de pastilles
     if (a('couleurs-humeurs')) {
       const puces = el('div', { class: 'puces' });
@@ -58,7 +132,7 @@ export function monterCielPerso({ zone, corps, ctx }) {
 
     // astres et animations : ce qui est à toi s'allume ou s'éteint d'un toucher
     for (const g of ['astres', 'animations']) {
-      const l = E.articles('ciel').filter(x => x.groupe === g && a(x.cle));
+      const l = E.articles('ciel').filter(x => x.groupe === g && x.type === 'interrupteur' && a(x.cle));
       if (l.length) blocs.push(section(E.groupe('ciel', g).nom, g, el('div', { class: 'choix' }, l.map(x => el('button', { 'aria-pressed': E.actif(x.cle), 'data-cle': x.cle, title: x.sous,
         onclick: () => { ctx.basculer(x.cle); rendre(); } }, x.nom)))));
     }
@@ -79,12 +153,16 @@ export function monterCielPerso({ zone, corps, ctx }) {
     corps.replaceChildren(...blocs);
   }
   function briller(cle) {
-    const n = cle && (corps.querySelector(`[data-cle="${cle}"]`) || corps.querySelector(`[data-groupe="${(E.article(cle) || {}).groupe}"]`)); if (!n) return;
+    const n = cle && (corps.querySelector(`[data-cle="${cle}"]`) || corps.querySelector(`[data-groupe="${(E.article(cle) || {}).groupe || cle}"]`)); if (!n) return;
     const r = n.getBoundingClientRect(), rc = corps.getBoundingClientRect(); corps.scrollTop += (r.top - rc.top) - 12;
     n.classList.remove('eclat'); void n.offsetWidth; n.classList.add('eclat'); setTimeout(() => n.classList.remove('eclat'), 1900);
   }
 
-  const ouvrir = cle => { rendre(); zone.hidden = false; corps.scrollTop = 0; if (typeof cle === 'string') requestAnimationFrame(() => briller(cle)); };
+  function ouvrirPlanete(id) { edition = id; rendre(); corps.scrollTop = 0; }
+  const ouvrir = cle => {
+    if (typeof cle === 'string' && cle.startsWith('planete:')) { edition = cle.slice(8); rendre(); zone.hidden = false; corps.scrollTop = 0; return; }
+    if (typeof cle === 'string' && E.article(cle) && E.article(cle).groupe === 'planetes') cle = 'planetes';
+    edition = null; rendre(); zone.hidden = false; corps.scrollTop = 0; if (typeof cle === 'string') requestAnimationFrame(() => briller(cle)); };
   const fermer = () => { zone.hidden = true; };
   zone.querySelector('#ciel-fermer').addEventListener('click', fermer);
   return { ouvrir, fermer, rendre, ouvert: () => !zone.hidden };

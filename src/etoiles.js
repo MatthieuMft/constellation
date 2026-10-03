@@ -38,7 +38,7 @@ export const GROUPES = {
   // v38 : la boutique Lueur rangée en rubriques claires ; les finitions (yeux, taille) en bas
   lueur: [['forme', t('Forme')], ['matiere', t('Matière')], ['expression', t('Expressions')], ['accessoire', t('Accessoires')],
     ['habit', t('Habits')], ['membres', t('Membres')], ['effets', t('Effets')], ['finitions', t('Finitions')]].map(([cle, nom]) => ({ cle, nom })),
-  ciel: [['ambiance', t('Ambiances')], ['matiere', t('Couleurs')], ['astres', t('Astres')], ['animations', t('Animations')]].map(([cle, nom]) => ({ cle, nom })),
+  ciel: [['ambiance', t('Ambiances')], ['matiere', t('Couleurs')], ['astres', t('Astres')], ['planetes', t('Planètes')], ['animations', t('Animations')]].map(([cle, nom]) => ({ cle, nom })),
 };
 
 const L = 'lueur', C = 'ciel';
@@ -99,10 +99,18 @@ export const ARTICLES = [
   choix(C, 'ambiance', 'theme-papier', t('Ciel Papier'), t('Un ciel clair, comme une page de carnet.'),      100, 'reglage', 'theme', 'papier'),
   regl(C, 'matiere', 'couleurs-humeurs', t('Couleurs des humeurs'), t('Choisis la couleur de chaque humeur.'), 50, 'reglage', { humeurs: {} }),
   inter(C, 'astres', 'lune',            t('La Lune'),           t('La vraie lune du jour, avec sa phase.'),       70),
-  inter(C, 'astres', 'planete-anneaux', t('Planète à anneaux'), t('Une planète dorée et ses anneaux, au loin.'),  150),
-  inter(C, 'astres', 'planete-bleue',   t('Planète océan'),     t('Une planète bleue aux nuages blancs.'),        180),
-  inter(C, 'astres', 'planete-rouge',   t('Géante rouge'),      t('Une énorme planète rousse, à l’horizon.'),     220),
   inter(C, 'astres', 'lactee',          t('Voie lactée'),       t('Une grande bande de lumière au loin.'),        250),
+  // v40 : tes planètes (planetes.js). « nouvelle » s'achète autant de fois qu'on veut (une planète de plus, jusqu'à six) ;
+  // les options s'achètent une fois et valent pour toutes les planètes (on les active sur chacune dans « Mes planètes »)
+  { cle: 'planete-solide', cat: C, groupe: 'planetes', type: 'nouvelle', nom: t('Planète solide'), sous: t('Des océans et des continents, à nommer et à personnaliser.'), prix: 150, planete: 'solide' },
+  { cle: 'planete-gazeuse', cat: C, groupe: 'planetes', type: 'nouvelle', nom: t('Planète gazeuse'), sous: t('Des bandes de couleurs qui tournent doucement.'), prix: 150, planete: 'gazeuse' },
+  regl(C, 'planetes', 'pl-nuages',        t('Nuages vaporeux'),  t('De fins voiles de nuages autour de tes planètes.'), 40, 'planete', {}),
+  regl(C, 'planetes', 'pl-cerisiers',     t('Cerisiers'),        t('Des cerisiers en fleurs qui luisent.'),               60, 'planete', {}),
+  regl(C, 'planetes', 'pl-sapins',        t('Sapins'),           t('Des sapins tout ronds.'),                             60, 'planete', {}),
+  regl(C, 'planetes', 'pl-maisons',       t('Maisonnettes'),     t('Des petites maisons rondes, la fenêtre allumée.'),    80, 'planete', {}),
+  regl(C, 'planetes', 'pl-anneaux',       t('Anneaux'),          t('Fins, larges ou penchés, autour de tes planètes.'),   100, 'planete', {}),
+  regl(C, 'planetes', 'pl-anneau-double', t('Double anneau'),    t('Un second anneau, plus loin.'),                       60, 'planete', {}),
+  regl(C, 'planetes', 'pl-couleurs',      t('Couleurs libres'),  t('Choisis toi-même la couleur des océans, des terres, des bandes.'), 50, 'planete', {}),
   inter(C, 'animations', 'croix',       t('Croix de lumière'),    t('Tes étoiles brillent avec de longues branches.'),             10),
   inter(C, 'animations', 'filantes-or', t('Filantes dorées'),     t('Des étoiles filantes dorées, plus souvent.'),                 10),
   inter(C, 'animations', 'poussiere',   t('Poussière d’étoiles'), t('Un voile de poussière qui traverse le ciel.'),                30),
@@ -140,7 +148,8 @@ export const groupe = (cat, k) => (GROUPES[cat] || []).find(g => g.cle === k) ||
 export const solde = () => etat.solde;
 export const possede = k => etat.achats.includes(k);
 export const actif = k => possede(k) && !((PAR_CLE[k] || {}).type === 'interrupteur' && etat.eteints.includes(k));   // acheté (et allumé)
-export const restants = cat => articles(cat).filter(a => !possede(a.cle)).length;
+export const restants = cat => articles(cat).filter(a => a.type !== 'nouvelle' && !possede(a.cle)).length;
+export const eteint = k => etat.eteints.includes(k);
 export const debloque = (cle, nJours) => TOUT_DEBLOQUE || nJours >= (PALIERS.find(p => p.cle === cle) || { j: 0 }).j;
 
 // à chaque enregistrement : ✦10 pour chaque jour écrit qui n'a pas encore rapporté. Renvoie le gain.
@@ -152,9 +161,12 @@ export function crediter(joursEcrits) {
   etat.credites = [...deja]; etat.solde += gain; ecrire(); return gain;
 }
 export function acheter(k) {
-  const a = article(k); if (!a || possede(k) || etat.solde < a.prix) return false;
+  const a = article(k); if (!a || a.type === 'nouvelle' || possede(k) || etat.solde < a.prix) return false;
   etat.solde -= a.prix; etat.achats.push(k); etat.eteints = etat.eteints.filter(x => x !== k); ecrire(); return true;
 }
+// v40 : payer sans posséder (une nouvelle planète, autant de fois qu'on veut) ; offrir (quand une ancienne planète devient une vraie planète)
+export function payer(prix) { if (etat.solde < prix) return false; etat.solde -= prix; ecrire(); return true; }
+export function offrir(k) { if (article(k) && !possede(k)) { etat.achats.push(k); ecrire(); } }
 export function basculer(k) {                       // un interrupteur acheté peut être éteint puis rallumé, sans le racheter
   const a = article(k); if (!possede(k) || !a || a.type !== 'interrupteur') return actif(k);
   etat.eteints = actif(k) ? [...etat.eteints, k] : etat.eteints.filter(x => x !== k); ecrire(); return actif(k);
