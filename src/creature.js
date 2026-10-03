@@ -120,6 +120,9 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   const exprV = new THREE.Vector4(), ecraseV = new THREE.Vector2(1, 1), _m = new THREE.Matrix4(), _q = new THREE.Quaternion(), _e = new THREE.Euler();
   const vue = { couleur: coul, clair: 0, app: 0, joie: 0, triste: 0, sourcils: 0, eclat: 0, calme: 0, grands: 0, sommeil: 0, cligne: 0, regard, expr: exprV, yeuxEtoiles: 0, battement: 0, ecrase: ecraseV, penche: 0, perso: null };
   let lacet = 0, tangage = 0, yeuxEt = 0;
+  // v25 : elle réagit davantage à ce qu'on fait (doigt, écriture, humeur, ciel qu'on tourne, inactivité)
+  let doigt = { x: 0, y: 0, t: -1e9 }, tapes = [], dernierSursaut = 0, hoche = 0, tournis = 0, tourneAcc = 0, azPrec = null, vAz = 0, baille = 0, bailleFait = false;
+  const _o = new THREE.Vector3();
 
   function base() { camera.updateMatrixWorld(); _r.setFromMatrixColumn(camera.matrixWorld, 0); _u.setFromMatrixColumn(camera.matrixWorld, 1); camera.getWorldDirection(_f); }
   const ndcPoint = (x, y, d, out) => out.set(x, y, .5).unproject(camera).sub(camera.position).normalize().multiplyScalar(d).add(camera.position);
@@ -150,6 +153,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   function choisirEtat(dt, ctx) {
     const now = performance.now();
     const dort = (ctx.inactivite > 70 || (ctx.nuit && ctx.inactivite > 16)) && !ctx.ecriture && !calin;
+    if (ctx.inactivite < 5) bailleFait = false;
+    else if (!bailleFait && !dort && !ctx.ecriture && !calin && etat !== 'dort' && ctx.inactivite > (ctx.nuit ? 11 : 60)) { bailleFait = true; baille = 2.4; etire = 1.4; dire(choix(['Aaaah…', '*bâille*', 'Je somnole un peu…']), { duree: 2400 }); }
     let n = 'flotte';
     if (peur > 0) n = 'peur';
     else if (ctx.ecriture) n = 'ecrit';
@@ -235,6 +240,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     apparition = Math.min(1, apparition + dt * .8);
     tProfil += dt; if (tProfil > 4) { tProfil = 0; const r = majProfil(); if (r.retour) { joie = 4; dire('Tu m’avais manqué.', { priorite: true }); } }
     etatT += dt; peur = Math.max(0, peur - dt); joie = Math.max(0, joie - dt); evolue = Math.max(0, evolue - dt); surprise = Math.max(0, surprise - dt); etire = Math.max(0, etire - dt);
+    hoche = Math.max(0, hoche - dt); tournis = Math.max(0, tournis - dt); baille = Math.max(0, baille - dt);
+    if (mimique.fin && performance.now() > mimique.fin) mimique = { mood: null, couleur: null };
     const now = performance.now(); if (fx.expr && now > fx.jusqu) fx.expr = null;
     if (ctx.eclair) peur = 4;
     prochainSouvenir -= dt;
@@ -246,6 +253,14 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       const dcam = camera.position.distanceTo(controls.target); const taux = prevD ? Math.abs(Math.log(dcam / prevD)) / Math.max(dt, 1e-3) : 0; prevD = dcam;
       if (taux > 1.3 && performance.now() - zoomWhee > 18000 && etat !== 'dort' && !ctx.ecriture) { zoomWhee = performance.now(); joie = Math.max(joie, 2); surprise = Math.max(surprise, .8); if (Math.random() < .6) dire(choix(['Wouiii !', 'On plonge ?', 'Ça tourne !', 'Haaaa !']), { duree: 1800, priorite: true }); }
     }
+    { // le ciel qu'on fait tourner : elle penche dans le sens du mouvement ; trop de tours et elle a le tournis
+      _o.copy(camera.position).sub(controls.target); const az = Math.atan2(_o.x, _o.z);
+      let da = azPrec === null ? 0 : az - azPrec; if (da > Math.PI) da -= Math.PI * 2; else if (da < -Math.PI) da += Math.PI * 2; azPrec = az;
+      if (!controls.enabled || controls.autoRotate) da = 0;
+      vAz += (da / Math.max(dt, 1e-3) - vAz) * Math.min(1, dt * 8);
+      tourneAcc = tourneAcc * Math.exp(-dt * .3) + Math.abs(da);
+      if (tourneAcc > Math.PI * 2.6 && !tournis && etat !== 'dort') { tournis = 3.6; tourneAcc = 0; surprise = Math.max(surprise, .5); dire(choix(['J’ai le tournis…', 'Ouh là, ça tourne !', 'Tout tourne…']), { priorite: true, duree: 2600 }); }
+    }
     const regardCible = viser(dt, t, ctx);
     const P = persoI(); if (P.couleur) _pc.set(P.couleur);
     coul.lerp(mimique.couleur || (P.couleur ? _pc : coulCible), Math.min(1, dt * (mimique.couleur ? 5 : P.couleur ? 3 : .7)));
@@ -255,6 +270,9 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     let lx = 0, ly = 0;
     const meteor = ctx.meteores && ctx.meteores[0];
     if (meteor) { _c.copy(meteor).project(camera); lx = _c.x - _p.x; ly = _c.y - _p.y; surprise = Math.max(surprise, .6); if (now - dernierSouhait > 90000) { dernierSouhait = now; dire('Vite, un vœu !', { priorite: true }); } }
+    else if (tournis > 0) { lx = Math.cos(t * 9); ly = Math.sin(t * 9); }                     // les yeux qui tournent
+    else if (now - doigt.t < 1800 && etat !== 'dort') { lx = (doigt.x / ctx.W * 2 - 1) - _p.x; ly = (1 - doigt.y / ctx.H * 2) - _p.y; }   // elle regarde là où tu touches
+    else if (ctx.ecriture && ctx.rectEcriture) { const r = ctx.rectEcriture; lx = ((r.left + r.width * (.25 + ctx.caret * .5)) / ctx.W * 2 - 1) - _p.x; ly = (1 - (r.top + r.height * .45) / ctx.H * 2) - _p.y; }   // elle se penche sur ton texte
     else if (regardCible) { _c.copy(regardCible).project(camera); lx = _c.x - _p.x; ly = _c.y - _p.y; }
     else if (ctx.curseurActif && etat !== 'dort') { lx = (ctx.curseur.x / ctx.W * 2 - 1) - _p.x; ly = (1 - ctx.curseur.y / ctx.H * 2) - _p.y; }
     else { _c.copy(pos).add(vel).project(camera); lx = (_c.x - _p.x) * 6; ly = (_c.y - _p.y) * 6; }
@@ -275,14 +293,15 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     if (expr === 'joie') joy = 1; else if (expr === 'triste') { sad = .9; joy = 0; brow = .7; } else if (expr === 'leve') { wide = .8; spark = .6; } else if (expr === 'wow') wide = 1;
     if (peur > 0) { wide = 1; brow = .9; sad = .3; joy = 0; spark = 0; }
     if (surprise > 0) wide = Math.max(wide, .7);
+    if (tournis > 0) { wide = Math.max(wide, .5); brow = .5; joy = 0; }
     const V = vue, k6 = Math.min(1, dt * 6), k12 = Math.min(1, dt * 12);   // v25 : les traits du visage passent vite d'une expression à l'autre (plus de visages superposés en transparence)
     V.joie += (joy - V.joie) * k12; V.triste += (sad - V.triste) * Math.min(1, dt * 3); V.sourcils += (brow - V.sourcils) * k6;
     V.eclat += (spark - V.eclat) * k6; V.calme += (relax - V.calme) * k6; V.grands += (wide - V.grands) * Math.min(1, dt * 9);
-    V.sommeil += ((dort ? 1 : 0) - V.sommeil) * Math.min(1, dt * 2.5);
+    V.sommeil += ((dort ? 1 : baille > .3 ? .8 : 0) - V.sommeil) * Math.min(1, dt * 2.5);
     V.cligne = blink; V.app = apparition; V.clair = clair ? 1 : 0; V.yeuxEtoiles = yeuxEt; V.perso = P;
     // l'expression choisie, seulement au repos : sommeil, peur, joie, mots, humeur imitée passent devant
     const ie = EXPRESSIONS.indexOf(P.expression), repos = dort || imi || expr || peur > 0 || surprise > 0 || joie > 0 || calin ? 0 : 1 - sad;
-    exprV.x += ((ie === 1 ? repos : 0) - exprV.x) * k12; exprV.y += ((ie === 2 ? repos : 0) - exprV.y) * k12; exprV.z += ((ie === 3 ? repos : 0) - exprV.z) * k12; exprV.w += ((ie === 4 ? repos : 0) - exprV.w) * k12;
+    exprV.x += ((ie === 1 ? repos : 0) - exprV.x) * k12; exprV.y += ((ie === 2 ? repos : 0) - exprV.y) * k12; exprV.z += ((ie === 3 ? repos : 0) - exprV.z) * k12; exprV.w += ((baille > .3 ? 1 : ie === 4 ? repos : 0) - exprV.w) * k12;   // bâillement : bouche ronde
     const vit = vel.length(); V.battement = Math.sin(t * (dort ? .8 : 7 + vit * .6)) * (dort ? .2 : 1);
 
     // forme : étirement dans le sens du mouvement, respiration, penchée dans les virages
@@ -290,7 +309,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const etir = 1 + clamp(vit * .028, 0, .25), resp = 1 + Math.sin(t * (dort ? 1.1 : 2.2)) * .035 * (dort ? 1.6 : 1);
     const ecr = dort ? .93 : 1 + (etire > 0 ? Math.sin(etire / 1.4 * Math.PI) * .22 : 0);
     ecraseV.set(resp / Math.sqrt(etir) * (calin ? 1.12 : 1) * (peur > 0 ? .9 : 1), resp * Math.sqrt(etir) * ecr * (calin ? .9 : 1));
-    V.penche += (clamp(-lat * .035, -.4, .4) + (peur > 0 ? Math.sin(t * 40) * .06 : 0) - V.penche) * Math.min(1, dt * 6);
+    const pEcrit = etat === 'ecrit' && ctx.rectEcriture ? clamp(((ctx.rectEcriture.left + ctx.rectEcriture.width / 2) - ecranPos.x) / ctx.W, -1, 1) * -.3 : 0;   // penchée vers le texte
+    V.penche += (clamp(-lat * .035 + vAz * .12, -.45, .45) + pEcrit + (tournis > 0 ? Math.sin(t * 6) * .3 * Math.min(1, tournis) : 0) + (peur > 0 ? Math.sin(t * 40) * .06 : 0) - V.penche) * Math.min(1, dt * 6);
     lueur.maj(dt, t, V);                                                 // couleur, expressions, regard, ailes, perso (silhouette, matière, articles portés)
 
     // taille : bien visible, et à peu près constante à l'écran quand elle s'éloigne ou se rapproche (s = « uSize » de la v11 : le corps fait s/4 de rayon)
@@ -304,6 +324,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     // lacet et tangage doux et bornés (le visage reste lisible) ; elle revient de face à l'arrêt, pendant qu'on écrit, qu'on la règle ou qu'elle dort
     let lc = clamp(lat * .16, -1.2, 1.2) + regard.x * .3, tg = clamp(-vel.dot(_u) * .05, -.35, .35) - regard.y * .2;
     if (dort) { lc *= .25; tg = .2; } else if (etat === 'ecrit' || etat === 'pose' || calin) { lc *= .4; tg *= .5; }
+    if (hoche > 0) tg += Math.sin((1 - hoche / .7) * Math.PI * 2) * .4;            // hochement de tête à la fin d'une phrase
+    if (baille > 0) tg -= Math.sin(baille / 2.4 * Math.PI) * .25;                  // tête en arrière en bâillant
     lacet += (clamp(lc, -1.3, 1.3) - lacet) * Math.min(1, dt * 3); tangage += (clamp(tg, -.45, .45) - tangage) * Math.min(1, dt * 3);
     _m.lookAt(camera.position, corps.position, _u); corps.quaternion.setFromRotationMatrix(_m).multiply(_q.setFromEuler(_e.set(tangage, lacet, 0)));
 
@@ -389,12 +411,25 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     // ─── pendant qu'on écrit ───
     taper(texte, curseur) {
       joie = Math.max(joie, .25);
+      if (/[\p{L}\d)»”"][.!?…]\s?$/u.test(texte.slice(0, curseur)) && hoche <= 0) hoche = .7;   // une phrase finie : elle hoche la tête
       const m = texte.slice(0, curseur).match(/([\p{L}’'-]{3,})[\s.,;:!?…]$/u);                    // un mot vient d'être terminé
       if (m) { const mot = norm(m[1]); const r = LEXIQUE.find(x => x.re.test(mot)); if (r) { fx = { expr: r.expr, jusqu: performance.now() + 2800 }; if (bullesEcriture < 4 && dire(choix(r.dit), { duree: 2800 })) bullesEcriture++; } }
       if (texte.length > 240 && !longDit) { longDit = true; dire('Tu as beaucoup à dire…', { duree: 3000 }); }
     },
     patiente() { if (!patienceDite) { patienceDite = true; dire('Prends ton temps.', { duree: 3200 }); } },
-    imiter(mood, couleur) { mimique = mood ? { mood, couleur: couleur ? new THREE.Color(couleur) : null } : { mood: null, couleur: null }; },
+    imiter(mood, couleur, duree = 0) {
+      const change = mood && mood !== mimique.mood;
+      mimique = mood ? { mood, couleur: couleur ? new THREE.Color(couleur) : null, fin: duree ? performance.now() + duree : 0 } : { mood: null, couleur: null };
+      if (change && montree) { particules.burst(corps.position, mimique.couleur || coul, 14, .9, true); bond = 0; if (mood === 'joie' || mood === 'elan') joie = Math.max(joie, 1.2); else etire = 1.4; }   // elle prend l'humeur aussitôt, avec un petit éclat
+    },
+    // le doigt (ou la souris) touche l'écran : elle regarde, et sursaute si on tape vite plusieurs fois
+    toucher(x, y) {
+      const now = performance.now(); doigt = { x, y, t: now }; tapes = tapes.filter(t0 => now - t0 < 1100); tapes.push(now);
+      if (tapes.length >= 3 && now - dernierSursaut > 4000 && montree && etat !== 'dort') { dernierSursaut = now; tapes = []; base(); vel.addScaledVector(_u, 9); surprise = 1.6; dire(choix(['Oh !', 'Hé !', 'Doucement !', 'Tu m’as fait peur !']), { priorite: true, duree: 1600 }); }
+    },
+    // une pensée vient d'être enregistrée : un bond de joie tout de suite
+    enregistre() { joie = Math.max(joie, 4); bond = 0; etire = 1.4; base(); vel.addScaledVector(_u, 7); if (montree) particules.burst(corps.position, coul, 22, 1.2, true); },
+
     finEcriture() { mimique = { mood: null, couleur: null }; },
     regler(c) { clair = c; },
     etat: () => ({ etat, stade: profil.stade, jours: profil.jours, seul: profil.seul, caresses: sauve.caresses, nom: sauve.nom, pos: pos.toArray().map(x => Math.round(x * 10) / 10), ecran: [Math.round(ecranPos.x), Math.round(ecranPos.y)] }),

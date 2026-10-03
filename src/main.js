@@ -555,7 +555,7 @@ const itemsDuJour = cle => items.filter(i => i.jour === cle);
 
 const panneauJour = monterJour($('f-contenu'), {
   items: itemsDuJour, humeur: cle => humeurDuJour(cle, items, meta), couleur: cm, aujourdhui: aujourdhui(),
-  setHumeur: async (cle, mood, couleur) => { meta[cle] = { humeur: mood, couleur: couleur || undefined }; sauverTout(); await recalculer(); },
+  setHumeur: async (cle, mood, couleur) => { creature.imiter(mood, couleur || cm(mood), 6000); meta[cle] = { humeur: mood, couleur: couleur || undefined }; sauverTout(); await recalculer(); },
   ajouter: cle => ouvrirEcrire({ jour: cle }), modifier: item => ouvrirEcrire({ item }),
   supprimer: item => supprimerItem(item), basculerFait: (item, fait) => { item.fait = fait; item.touched = Date.now(); sauverTout(); },
   voirMedia: (item, med) => voirMedia(item, med), mediaUrl: k => media.url(k),
@@ -681,6 +681,7 @@ function supernovaDe(id) {
 let calinMinuteur = null, calinFait = false;
 canvas.addEventListener('pointerdown', e => {
   bas = [e.clientX, e.clientY]; superFaite = false; const s = sous(e);
+  if (!s || s.type !== 'creature') creature.toucher(e.clientX, e.clientY);         // v25 : elle regarde où l'on touche
   if (s && s.type === 'creature') { calinFait = false; calinMinuteur = setTimeout(() => { calinFait = true; creature.calin(true); }, 550); return; }      // maintenir : câlin
   if (s && s.type === 'etoile' && R.animation > 0) { chargeId = s.id; chargeT0 = performance.now(); maintien = setTimeout(() => { superFaite = true; chargeId = null; supernovaDe(s.id); }, 800); }
 });
@@ -922,6 +923,7 @@ async function valider() {
     choisir(jour, { relire: false });                    // on va voir la journée, entrées comprises
     if (gain) setTimeout(() => toast(t('+ ✦{n} poussière d’étoiles', { n: gain })), 1500);
   }
+  creature.enregistre();
   const v = visuels.get(jour); if (v) { v.pulse = 1; setTimeout(() => creature.celebrer(jour), 1800); }
   if (type === 'journal') motsMagiques(texte, 2600);
 }
