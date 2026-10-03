@@ -940,3 +940,11 @@ body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: 
 .verrou-pave button { height: 64px; font-size: 1.4rem; font-family: var(--serif); background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 0; }
 .verrou-pave button:active { background: rgba(255,255,255,.12); }
 .verrou-bas { min-height: 2em; }
+
+/* v46 : nommer la constellation de la semaine (même boîte que « nommer ma lueur ») */
+.boite-figure { position: fixed; left: 50%; bottom: 96px; transform: translateX(-50%); z-index: 6; width: min(92vw, 420px); background: var(--panel); border: 1px solid var(--line);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); padding: 20px 20px 16px; }
+.boite-figure .lab { font-size: 1.15rem; margin: 0 0 4px; } .boite-figure .sous { color: var(--soft); font-style: italic; margin: 0 0 16px; }
+.boite-figure .rang { display: flex; gap: 8px; } .boite-figure input { flex: 1; min-width: 0; font-size: 15px; }
+.boite-figure .annuler { margin-top: 12px; }
+@media (max-width: 720px) { .boite-figure { left: 0; right: 0; bottom: 0; transform: none; width: auto; border-width: 1px 0 0; padding-bottom: calc(22px + env(safe-area-inset-bottom)); } }

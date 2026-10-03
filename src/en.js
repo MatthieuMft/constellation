@@ -817,6 +817,18 @@ export const EN = {
 "Qu’est-ce qui t’a surpris aujourd’hui ?": "What surprised you today?",
 "Une personne à qui tu as pensé aujourd’hui ?": "Someone you thought of today?",
 "Qu’as-tu appris aujourd’hui ?": "What did you learn today?",
+"Renommer ta constellation": "Rename your constellation",
+"Ta semaine forme une constellation": "Your week forms a constellation",
+"{n} étoiles, du {a} au {b}. Quel nom lui donnes-tu ?": "{n} stars, from {a} to {b}. What will you call it?",
+"ex. La semaine des retrouvailles": "e.g. The week of reunions",
+"Nommer": "Name it",
+"« {nom} » brille dans ton ciel. +✦{n}": "“{nom}” shines in your sky. +✦{n}",
+"Constellation renommée.": "Constellation renamed.",
+"Ta semaine forme une constellation. Tu lui donnes un nom ?": "Your week forms a constellation. Will you name it?",
+"Ta semaine forme une constellation ! Tu lui donnes un nom ?": "Your week forms a constellation! Will you name it?",
+"Renommer la constellation de la semaine": "Rename this week’s constellation",
+"Nommer la constellation de la semaine": "Name this week’s constellation",
+"constellation semaine figure nom": "constellation week figure name",
 };
 
 export const EN_HTML = {

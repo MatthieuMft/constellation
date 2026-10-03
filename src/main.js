@@ -36,6 +36,7 @@ import { monterCielPerso } from './ciel-ui.js';
 import { creerDecor } from './decor.js';
 import * as PL from './planetes.js';
 import { verrou } from './verrou.js';
+import { creerFigures } from './figures.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
@@ -238,6 +239,7 @@ function creerVisuel(e) {
 // ───────────── Le monde du temps ─────────────
 const monde = creerMonde({ scene, camera, controls, melange, pr: renderer.getPixelRatio() });
 const posDuJour = cle => monde.posJour(dateDeCle(cle));
+const figures = creerFigures({ scene, camera, melange, posJour: posDuJour });   // v46 : la constellation de la semaine
 const marques = creerMarques({ scene, camera, controls, melange, posJour: posDuJour, repere: $('repere'), surRepere: () => volerAujourdhui() });
 let niveau = 'semaine', foyer = {}, cleNiveau = '', dernierFoyer = 0, ignorerJour = null, fonduVolume = 0;
 
@@ -268,6 +270,7 @@ function reconstruireMonde() {
   serieInfo = rythme.series(jours.map(j => j.id), aujourdhui());
   marques.reconstruire({ chaines: pousse('constellation') ? serieInfo.chaines.filter(c => c.length > 1) : [], dates: dates.occurrences(mesDates, y0, y1), jour: aujourdhui() });
   marques.regler(T().clair, melange());
+  figures.reconstruire({ jours: jours.filter(j => !j.sample).map(j => j.id), clair: T().clair, encre: T().ui.ink });
 }
 
 // ───────────── Données → scène ─────────────
@@ -521,6 +524,7 @@ function boucle() {
   controls.update();
   creature.suivre(dAvant);
   marques.update(t, { niveau, masquer: intro.actif });
+  figures.update(t);
   { // saison : le ciel prend une légère teinte de la saison du mois regardé
     const m = foyer && foyer.mois && niveau !== 'annees' ? foyer.mois.m : new Date().getMonth(), tg = rythme.saisonDuMois(m).teinte, k = Math.min(1, dt * .9), f = T().clair ? .2 : 1;
     for (let i = 0; i < 3; i++) teinteCour[i] += (tg[i] * f - teinteCour[i]) * k;
@@ -955,6 +959,8 @@ async function valider() {
     if (gain) setTimeout(() => toast(t('+ ✦{n} poussière d’étoiles', { n: gain })), 1500);
   }
   creature.enregistre(!accueil.ecrireEnCours());
+  if (gain && !accueil.ecrireEnCours()) { const f = figures.figure(figures.semaineDe(jour)); if (f && f.jours.length === 3 && !f.nom)          // v46 : la 3e étoile de la semaine dessine la figure
+    setTimeout(() => creature.dire(t('Ta semaine forme une constellation ! Tu lui donnes un nom ?'), { priorite: true, duree: 10000, clic: () => ouvrirNommerFigure(f.cle) }), 4200); }
   const v = visuels.get(jour); if (v) { v.pulse = 1; setTimeout(() => creature.celebrer(jour), 1800); }
   if (type === 'journal') motsMagiques(texte, 2600);
 }
@@ -1080,7 +1086,7 @@ function appliquerTheme() {
   particules.material.blending = m; particules.material.needsUpdate = true;
   for (const v of visuels.values()) { for (const s of [v.halo, v.etoile]) { s.material.blending = m; s.material.needsUpdate = true; } }
   meteores.regler(clair, m, t.ui.ink); poussiere.regler(clair, m, clair ? t.ui.ink : t.etoile);
-  creature.regler(clair); marques.regler(clair, m); evenements.regler(clair, t.ui.ink); scenes.regler(clair, t.ui.ink); lucioles.m.blending = m; lucioles.m.uniforms.uCol.value.set(clair ? t.ui.ink : "#ffe9a0"); lucioles.m.needsUpdate = true;
+  figures.reconstruire({ clair, encre: t.ui.ink }); creature.regler(clair); marques.regler(clair, m); evenements.regler(clair, t.ui.ink); scenes.regler(clair, t.ui.ink); lucioles.m.blending = m; lucioles.m.uniforms.uCol.value.set(clair ? t.ui.ink : "#ffe9a0"); lucioles.m.needsUpdate = true;
   reglerPlanetes(true);
   recolorer(); appliquerCurseurs();
 }
@@ -1225,6 +1231,7 @@ const palette = monterPalette($('palette'), {
     Object.entries(THEMES).forEach(([k, th]) => l.push({ nom: t('Ciel : {nom}', { nom: th.nom }), mots: t('theme ambiance') + ' ' + k, etat: Re.theme === k ? t('actuel') : null, action: () => { if (k !== 'nuit' && !etoiles.possede('theme-' + k)) { boutique.ouvrir('ciel', 'theme-' + k); return; } majReglage({ theme: k, humeurs: {} }); rendreReglages(); } }));
     l.push({ nom: t('Sens profond'), mots: t('modele langage ia comprendre'), etat: t(mode === 'profonde' ? 'oui' : 'non'), action: clic('profond') });
     if (!$('btn-sauvegarde').hidden) l.push({ nom: t('Sauvegarde automatique'), mots: t('dossier copie backup'), etat: $('btn-sauvegarde').textContent.replace(t('Sauvegarde') + DP, ''), action: clic('btn-sauvegarde') });
+    { const f = figures.figure(figures.semaineDe(aujourdhui())); if (f) l.push({ nom: f.nom ? t('Renommer la constellation de la semaine') : t('Nommer la constellation de la semaine'), mots: t('constellation semaine figure nom'), etat: f.nom || null, action: () => ouvrirNommerFigure(f.cle) }); }
     l.push({ nom: t('Exporter le journal'), mots: t('telecharger json'), action: clic('exporter') }, { nom: t('Importer un journal'), mots: t('fichier json'), action: () => $('importer').click() });
     if (items.some(e => e.sample)) l.push({ nom: t('Effacer les entrées d’exemple'), mots: t('exemples demo fictives'), action: clic('exemples') });
     if (!dejaInstallee()) l.push({ nom: t('Ajouter à l’écran d’accueil'), mots: t('installer application appli raccourci'), action: proposerInstall });
@@ -1269,7 +1276,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v45'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v46'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1416,11 +1423,48 @@ function questionDuSoir(d = new Date()) {
   return pioche([t('Une pensée pour ce soir ?'), t('Quel moment de ta journée mérite une étoile ?'), t('Qu’est-ce qui t’a surpris aujourd’hui ?'), t('Une personne à qui tu as pensé aujourd’hui ?'), t('Qu’as-tu appris aujourd’hui ?')]);
 }
 
+// ───────────── v46 : nommer la constellation de la semaine ─────────────
+const RECOMPENSE_FIGURE = 15;
+function ouvrirNommerFigure(cleS) {
+  const f = figures.figure(cleS); if (!f) return;
+  document.querySelector('.boite-figure')?.remove();
+  const boite = document.createElement('div'); boite.className = 'boite-figure'; boite.setAttribute('role', 'dialog');
+  const d0 = dateDeCle(f.jours[0]), d1 = dateDeCle(f.jours.at(-1)), fmt = d => d.toLocaleDateString(LOC, { day: 'numeric', month: 'long' });
+  boite.innerHTML = `<p class="lab"></p><p class="sous"></p><div class="rang"><input type="text" maxlength="40"><button type="button" class="ok"></button></div><button type="button" class="lien annuler"></button>`;
+  boite.querySelector('.lab').textContent = f.nom ? t('Renommer ta constellation') : t('Ta semaine forme une constellation');
+  boite.querySelector('.sous').textContent = t('{n} étoiles, du {a} au {b}. Quel nom lui donnes-tu ?', { n: f.jours.length, a: fmt(d0), b: fmt(d1) });
+  const champ = boite.querySelector('input'); champ.value = f.nom; champ.placeholder = t('ex. La semaine des retrouvailles');
+  boite.querySelector('.ok').textContent = t('Nommer');
+  boite.querySelector('.annuler').textContent = t('Plus tard');
+  const valider = () => {
+    const nom = champ.value.trim(); if (!nom) { champ.focus(); return; }
+    const premiere = !f.nom; figures.nommer(cleS, nom); boite.remove();
+    if (premiere) { etoiles.donner(RECOMPENSE_FIGURE); creature.fete(t('« {nom} » brille dans ton ciel. +✦{n}', { nom, n: RECOMPENSE_FIGURE })); }
+    else statutTemporaire(t('Constellation renommée.'));
+  };
+  boite.querySelector('.ok').addEventListener('click', valider);
+  champ.addEventListener('keydown', e => { if (e.key === 'Enter') valider(); });
+  boite.querySelector('.annuler').addEventListener('click', () => boite.remove());
+  document.body.append(boite);
+  const c = figures.centre(cleS); if (c) voler(c, DIST.semaine * .75);
+  setTimeout(() => champ.focus(), 350);
+}
+// le dimanche (ou le lundi, pour la semaine qui vient de finir) : la lueur propose de nommer la figure
+function proposerFigure() {
+  const d = new Date(), j = d.getDay(); if (j !== 0 && j !== 1) return false;
+  const cleJ = j === 0 ? aujourdhui() : cleJour(new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));
+  const cleS = figures.semaineDe(cleJ), f = figures.figure(cleS); if (!f || f.nom) return false;
+  try { if (localStorage.getItem('constellation.figure-proposee') === aujourdhui()) return false; localStorage.setItem('constellation.figure-proposee', aujourdhui()); } catch (e) {}
+  creature.dire(t('Ta semaine forme une constellation. Tu lui donnes un nom ?'), { priorite: true, duree: 10000, clic: () => ouvrirNommerFigure(cleS) });
+  return true;
+}
+
 function apresIntro() {
   if (!accueilVu() && !joursEcrits().length) { setTimeout(() => accueil.demarrer(), 700); return; }
   marquerAccueil(); creature.montrer();
   setTimeout(() => { const l = datesDuJour(aujourdhui()); if (l.length) creature.fete(t('Aujourd’hui : {titre} !', { titre: l[0].titre })); }, 2500);
-  setTimeout(() => { if ($('ecrire').hidden) proposerAnniversaire(); }, 5000);
+  setTimeout(() => { if ($('ecrire').hidden && !proposerAnniversaire()) proposerFigure(); }, 5000);
+  setTimeout(() => { if ($('ecrire').hidden) proposerFigure(); }, 16000);
   if (new URLSearchParams(location.search).get('ecrire') === '1') setTimeout(() => ouvrirEcrire(), 1200);       // depuis la notification du rappel
 }
 
@@ -1581,5 +1625,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };

@@ -169,6 +169,7 @@ export function acheter(k) {
   etat.solde -= a.prix; etat.achats.push(k); etat.eteints = etat.eteints.filter(x => x !== k); ecrire(); return true;
 }
 // v40 : payer sans posséder (une nouvelle planète, autant de fois qu'on veut) ; offrir (quand une ancienne planète devient une vraie planète)
+export function donner(n) { etat.solde += n; ecrire(); }                 // v46 : récompense (nommer une constellation)
 export function payer(prix) { if (etat.solde < prix) return false; etat.solde -= prix; ecrire(); return true; }
 export function offrir(k) { if (article(k) && !possede(k)) { etat.achats.push(k); ecrire(); } }
 export function basculer(k) {                       // un interrupteur acheté peut être éteint puis rallumé, sans le racheter
