@@ -384,7 +384,7 @@ function surprise() {                                    // « Surprends-moi » 
 // ───────────── Entrée cinématique ─────────────
 // La caméra plonge des années vers la semaine en cours, dans un flou de zoom ; puis les étoiles s'allument une à une.
 const intro = { actif: false, t0: 0, duree: 5600 };
-const vueInitiale = () => { const cible = monde.posJour(new Date()), dir = new THREE.Vector3(.15, .55, .82).normalize(); return { cible, dir }; };
+const vueInitiale = () => { const cible = posDuJour(aujourdhui()), dir = new THREE.Vector3(.15, .55, .82).normalize(); return { cible, dir }; };
 function demarrerIntro() {
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) { finIntro(true); return; }
   intro.actif = true; intro.t0 = performance.now(); controls.enabled = false; controls.maxDistance = 6000;
