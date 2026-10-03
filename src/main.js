@@ -1325,6 +1325,9 @@ $('aide-ok').addEventListener('click', fermerAide);
 const accueil = monterAccueil({
   montrerLueur: () => creature.montrer(), nom: () => creature.nom(), renommer: n => creature.renommer(n),
   ouvrirBoutique: () => ouvrirBoutique(null, 'lueur'), toast, fini: () => { creature.celebrer(null); },
+  activerRappel: heure => rappels.activer(true, heure, creature.nom()),
+  peutInstaller: () => !!invitationInstall,
+  installer: async () => { if (!invitationInstall) return false; invitationInstall.prompt(); const r = await invitationInstall.userChoice.catch(() => null); invitationInstall = null; $('installer').hidden = true; return !!r && r.outcome === 'accepted'; },   // v29 : même invitation que le bouton « Installer » (plus bas)
 });
 function apresIntro() {
   if (!accueilVu() && !joursEcrits().length) { setTimeout(() => accueil.demarrer(), 700); return; }
