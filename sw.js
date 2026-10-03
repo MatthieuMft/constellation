@@ -3,7 +3,7 @@
 //   chaque mise en ligne change VERSION : le navigateur installe alors la nouvelle version en arrière-plan,
 //   puis la page se recharge d'elle-même (voir main.js). Donc : incrémenter VERSION à chaque livraison ;
 // - rappel du soir : notification (periodic background sync, quand le navigateur l'autorise) et clic qui rouvre l'appli.
-const VERSION = 'constellation-v41';
+const VERSION = 'constellation-v42';
 const COQUILLE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'app.js'];   // v18 : tout le code tient dans app.js
 
 self.addEventListener('install', e => {          // cache: 'reload' : on prend les fichiers frais, pas ceux du cache HTTP
@@ -14,6 +14,7 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  if (new URL(e.request.url).pathname.includes('/etudes/')) return;   // v42 : les pages d'étude ne passent pas par l'appli (sinon on recevait l'accueil de l'appli à leur place)
   const req = e.request; if (req.method !== 'GET') return;
   const url = new URL(req.url); if (url.origin !== location.origin) return;
   const reseau = () => fetch(req).then(r => { if (r.ok) { const copie = r.clone(); caches.open(VERSION).then(c => c.put(req, copie)); } return r; });
