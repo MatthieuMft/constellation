@@ -33,18 +33,18 @@ export function monterAccueil(ctx) {
     document.body.classList.toggle('ac-ecrire', e === 'ecrire'); document.body.classList.toggle('ac-fin', e === 'fin');
     if (e === 'bienvenue') carte(`<h2>${t('Bienvenue dans ton univers.')}</h2><p>${t('Pour l’instant, il est vide. C’est à toi de le construire, une pensée à la fois.')}</p><div class="ac-langue" role="group" aria-label="Langue · Language"><button type="button" data-langue="fr"${LANGUE === 'fr' ? ' class="actif"' : ''}>Français</button><button type="button" data-langue="en"${LANGUE === 'en' ? ' class="actif"' : ''}>English</button></div><div class="ligne"><button class="plein" data-a="suivant">${t('Commencer')}</button></div>`);
     // v36 : on voit d'abord la lueur arriver, puis la carte
-    if (e === 'lueur') { ctx.montrerLueur(); carte(''); setTimeout(() => { if (ETAPES[etape] === 'lueur') carte(`<h2>${t('Voici ta lueur.')}</h2><p>${t('Elle t’accompagne et grandit avec toi. Comment veux-tu l’appeler ?')}</p><input id="ac-nom" maxlength="18" autocomplete="off" placeholder="${t('Un prénom')}" value="${echap(ctx.nom())}" aria-label="${t('Un prénom')}"><div class="ligne"><button class="plein" data-a="nommer">${t('Continuer')}</button><button data-a="suivant">${t('Je choisirai plus tard')}</button></div>`); }, 1700); }
+    if (e === 'lueur') { ctx.montrerLueur(); carte(''); setTimeout(() => { if (ETAPES[etape] === 'lueur') carte(`<h2>${t('Salut, je suis ta lueur !')}</h2><p>${t('Je vais t’accompagner et grandir avec toi. Comment veux-tu m’appeler ?')}</p><input id="ac-nom" maxlength="18" autocomplete="off" placeholder="${t('Un prénom')}" value="${echap(ctx.nom())}" aria-label="${t('Un prénom')}"><div class="ligne"><button class="plein" data-a="nommer">${t('Continuer')}</button><button data-a="suivant">${t('Je choisirai plus tard')}</button></div>`); }, 1700); }
     if (e === 'ecrire') { carte(''); setTimeout(() => montrerBulle(t('Touche + pour écrire ta journée. Tu peux y glisser une photo.')), 400); }
-    if (e === 'etoile') carte(`<h2>${t('Ta première étoile.')}</h2><p>${t('Chaque jour où tu écris en allume une nouvelle. Sa couleur, c’est ton humeur.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>`);
-    if (e === 'poussiere') carte(`<h2>${t('Ta poussière d’étoiles.')}</h2><p>${t('Tu en gagnes chaque jour où tu écris. Elle sert à personnaliser ta lueur et ton ciel, dans la boutique.')}</p><div class="ligne"><button class="plein" data-a="boutique">${t('Ouvrir la boutique')}</button></div>`);
-    if (e === 'rappel') carte(`<h2>${t('Un petit rappel ?')}</h2><p>${t('Ta lueur peut te faire signe chaque jour, à l’heure de ton choix, pour écrire ta journée.')}</p><label class="ac-heure">${t('Chaque jour à')} <input id="ac-heure" type="time" value="21:00" aria-label="${t('Heure du rappel')}"></label><div class="ligne"><button class="plein" data-a="rappel">${t('Activer le rappel')}</button><button data-a="suivant">${t('Non merci')}</button></div>`);
+    if (e === 'etoile') carte(`<h2>${t('Regarde, ta première étoile !')}</h2><p>${t('Chaque jour où tu écris, j’en allume une nouvelle. Sa couleur, c’est ton humeur.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>`);
+    if (e === 'poussiere') carte(`<h2>${t('Et voici de la poussière d’étoiles.')}</h2><p>${t('Tu en gagnes chaque jour où tu écris. Avec, tu peux me faire belle et décorer ton ciel, dans la boutique.')}</p><div class="ligne"><button class="plein" data-a="boutique">${t('Ouvrir la boutique')}</button></div>`);
+    if (e === 'rappel') carte(`<h2>${t('Un petit rappel ?')}</h2><p>${t('Je peux te faire signe chaque jour, à l’heure de ton choix, pour qu’on écrive ta journée ensemble.')}</p><label class="ac-heure">${t('Chaque jour à')} <input id="ac-heure" type="time" value="21:00" aria-label="${t('Heure du rappel')}"></label><div class="ligne"><button class="plein" data-a="rappel">${t('Activer le rappel')}</button><button data-a="suivant">${t('Non merci')}</button></div>`);
     if (e === 'appli') {
       if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) { aller(etape + 1); return; }   // déjà ouverte comme une appli
-            carte(`<h2>${t('Comme une appli.')}</h2><p>${t('Ajoute Constellation à ton écran d’accueil : elle s’ouvrira en plein écran, sans la barre du navigateur, avec plus de place pour écrire.')}</p>`
+            carte(`<h2>${t('Comme une appli.')}</h2><p>${t('Mets-moi sur ton écran d’accueil : je m’ouvrirai en plein écran, sans la barre du navigateur, avec plus de place pour écrire.')}</p>`
         + `<p class="ac-astuce" id="ac-astuce" hidden></p>`
         + `<div class="ligne"><button class="plein" data-a="installer">${t('Ajouter à l’écran d’accueil')}</button><button data-a="suivant">${t('Plus tard')}</button></div>`);   // v34 : toujours un bouton ; si le navigateur ne permet pas l'ajout en un geste, il montre où toucher
     }
-    if (e === 'fin') carte(`<h2>${t('Ton univers commence ici.')}</h2><p>${t('Reviens demain pour une nouvelle étoile. La boutique, tes réglages et la langue sont dans ⋯.')}</p><div class="ligne"><button class="plein" data-a="finir">${t('C’est parti')}</button></div>`);
+    if (e === 'fin') carte(`<h2>${t('Ton univers commence ici.')}</h2><p>${t('Reviens demain, on allumera une nouvelle étoile. La boutique, les réglages et la langue sont dans ⋯. À demain !')}</p><div class="ligne"><button class="plein" data-a="finir">${t('C’est parti')}</button></div>`);
   }
   function terminer() {
     actif = false; marquerVu(); zone.hidden = true; montrerBulle(null); document.body.classList.remove('ac-g1', 'ac-g2', 'ac-g3');
@@ -73,6 +73,7 @@ export function monterAccueil(ctx) {
 
   return {
     actif: () => actif,
+    etapeNom: () => actif ? ETAPES[etape] : null,   // v37 : la lueur se place selon l'étape
     allerA(nom) { if (!actif) this.demarrer(); aller(ETAPES.indexOf(nom)); },   // pour les tests
     ecrireEnCours: () => actif && ETAPES[etape] === 'ecrire',
     demarrer() { actif = true; zone.hidden = false; document.body.classList.add('accueil'); aller(0); },

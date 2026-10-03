@@ -1470,7 +1470,10 @@ function montrerDansLeCiel(cle) {
 function carteTuto() {
   if (!document.body.classList.contains('accueil')) return null;
   const c = $('ac-carte'); if (!c || c.classList.contains('cache') || !c.childElementCount) return null;
-  return c.getBoundingClientRect();
+  const r = c.getBoundingClientRect();
+  // v37 : à l'étape de la première étoile, elle se range sur le côté pour ne pas cacher l'étoile (au centre de l'écran)
+  if (accueil.etapeNom() === 'etoile') return { left: r.left - r.width * .32, width: r.width, top: r.top - 40 };
+  return r;
 }
 
 // ───────────── Démarrage ─────────────
