@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { cleJour } from './store.js';
 import { MOIS, MOIS_COURT, JOURS, EN, t } from './langue.js';
+import { pointsSemaine } from './figures.js';
 
 export const NOMS_MOIS = MOIS;
 export const NOMS_JOURS = JOURS;
@@ -25,9 +26,11 @@ export function posSemaine(y, m, w, y0) {
 }
 // v24 : la hauteur du jour se calcule sur son midi. Avec l'heure exacte (new Date()), elle changeait à chaque milliseconde
 // et l'entrée animée visait un point qui sautait de haut en bas à chaque image : l'étoile du jour et ses voisines vibraient.
+// v50 : les jours ne sont plus sur un anneau. Chaque jour est posé sur un point de la constellation de sa semaine
+// (lundi = 1er point), dispersé en profondeur : tes étoiles SONT le chemin, et dessinent la constellation en fin de semaine.
 export function posJour(d, y0) {
-  const a = lundi0(d) / 7 * Math.PI * 2 - Math.PI / 2;
-  return posSemaine(d.getFullYear(), d.getMonth(), indexSemaine(d), y0).add(new THREE.Vector3(Math.cos(a) * GEO.rayonJours, (bruit(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12).getTime() / 86400000) - .5) * 2.4, Math.sin(a) * GEO.rayonJours));
+  const y = d.getFullYear(), m = d.getMonth(), w = indexSemaine(d);
+  return pointsSemaine(`${y}-${String(m + 1).padStart(2, '0')}-s${w}`, posSemaine(y, m, w, y0))[lundi0(d)];
 }
 
 // Distances caméra → cible qui définissent le niveau de zoom.
