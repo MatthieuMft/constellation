@@ -37,7 +37,7 @@ export const DEFAUT_CHOIX = { forme: 'rond', texture: 'lisse', expression: 'douc
 export const GROUPES = {
   lueur: [['forme', t('Silhouettes')], ['texture', t('Textures')], ['couleur', t('Couleur')], ['visage', t('Visage')],
     ['accessoire', t('Accessoires')], ['habit', t('Habits')], ['membres', t('Membres')], ['magie', t('Magie')]].map(([cle, nom]) => ({ cle, nom })),
-  ciel: [['ambiance', t('Ambiances')], ['matiere', t('Matière')], ['astres', t('Astres')], ['animations', t('Animations')]].map(([cle, nom]) => ({ cle, nom })),
+  ciel: [['ambiance', t('Ambiances')], ['matiere', t('Couleurs')], ['astres', t('Astres')], ['animations', t('Animations')]].map(([cle, nom]) => ({ cle, nom })),
 };
 
 const L = 'lueur', C = 'ciel';
@@ -82,10 +82,6 @@ export const ARTICLES = [
   choix(C, 'ambiance', 'theme-aube',   t('Ciel Aube'),   t('Un ciel rose et violet, comme au petit matin.'), 60,  'reglage', 'theme', 'aube'),
   choix(C, 'ambiance', 'theme-ocean',  t('Ciel Océan'),  t('Un ciel bleu profond, comme sous la mer.'),      80,  'reglage', 'theme', 'ocean'),
   choix(C, 'ambiance', 'theme-papier', t('Ciel Papier'), t('Un ciel clair, comme une page de carnet.'),      100, 'reglage', 'theme', 'papier'),
-  regl(C, 'matiere', 'brume',         t('Brume'),         t('Les nébuleuses deviennent des nuages épais.'), 60, 'reglage', { brume: 0 }),
-  regl(C, 'matiere', 'scintillement', t('Scintillement'), t('Tes étoiles se mettent à scintiller.'),        20, 'reglage', { scintillement: 0 }),
-  regl(C, 'matiere', 'rotation',      t('Rotation'),      t('Le ciel tourne lentement sur lui-même.'),      20, 'reglage', { vitesse: 0 }),
-  regl(C, 'matiere', 'optique', t('Réglages de lumière'), t('Lueur, profondeur de champ et effet cinéma.'), 50, 'reglage', { lueur: DEFAUT.lueur, flou: DEFAUT.flou, cinema: DEFAUT.cinema }),
   regl(C, 'matiere', 'couleurs-humeurs', t('Couleurs des humeurs'), t('Choisis la couleur de chaque humeur.'), 50, 'reglage', { humeurs: {} }),
   inter(C, 'astres', 'lune',            t('La Lune'),           t('La vraie lune du jour, avec sa phase.'),       70),
   inter(C, 'astres', 'planete-anneaux', t('Planète à anneaux'), t('Une planète dorée et ses anneaux, au loin.'),  150),
@@ -170,7 +166,9 @@ function effectif(source, o) {
   }
   return r;
 }
-export const reglagesEffectifs = R => effectif('reglage', R);
+// v21 (choix de Matthieu) : brume, scintillement, rotation, lueur, profondeur de champ et cinéma ne se règlent plus : valeurs fixes
+export const FIXES = { brume: DEFAUT.brume, scintillement: DEFAUT.scintillement, vitesse: DEFAUT.vitesse, lueur: DEFAUT.lueur, flou: DEFAUT.flou, cinema: DEFAUT.cinema };
+export const reglagesEffectifs = R => ({ ...effectif('reglage', R), ...FIXES });
 export const persoEffectif = P => effectif('perso', P);
 
 // passage à la v11 : ce qui avait déjà été personnalisé (avant que tout s'achète) est offert, une seule fois

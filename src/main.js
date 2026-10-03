@@ -520,8 +520,8 @@ function boucle() {
 }
 
 // vol de caméra vers un point, à une distance qui correspond à un niveau de zoom
-function voler(position, dist = DIST.jour) {
-  const dir = camera.position.clone().sub(controls.target); if (dir.lengthSq() < 1e-6) dir.set(.15, .55, .82); dir.normalize(); if (dir.y < .3) { dir.y = .3; dir.normalize(); }
+function voler(position, dist = DIST.jour, vue = null) {     // vue (facultatif) : direction du regard voulue à l'arrivée (pour montrer une planète)
+  const dir = vue ? vue.clone().negate().normalize() : camera.position.clone().sub(controls.target); if (dir.lengthSq() < 1e-6) dir.set(.15, .55, .82); dir.normalize(); if (!vue && dir.y < .3) { dir.y = .3; dir.normalize(); }
   const c2 = position.clone().addScaledVector(dir, dist), saut = camera.position.distanceTo(c2);
   vol_cam = { t0: performance.now(), duree: Math.min(2800, Math.max(1100, 800 + Math.log10(saut + 10) * 650)), t1: controls.target.clone(), t2: position.clone(), c1: camera.position.clone(), c2 };
 }
@@ -1341,7 +1341,7 @@ const cielUI = monterCielPerso({ zone: $('perso-ciel'), corps: $('ciel-corps'), 
   apercuCiel: c => apercusCiel.push(c),
   lire: () => R, maj: majReglage, themes: THEMES, moods: MOODS, couleur: cm,
   remplacer: r => { const av = Re.theme; R = { ...DEFAUT, ...r }; sauverReglages(R); majEffectifs(); Re.theme !== av ? appliquerTheme() : (recolorer(), appliquerCurseurs()); },
-  basculer: cle => { etoiles.basculer(cle); appliquerObjets(); },
+  basculer: cle => { etoiles.basculer(cle); appliquerObjets(); montrerDansLeCiel(cle); },
   boutique: cle => { cielUI.fermer(); ouvrirBoutique(cle, 'ciel'); },
 } });
 function ouvrirCielPerso(cle) { fermerPanneaux(); cielUI.ouvrir(cle); }
@@ -1362,7 +1362,7 @@ function appliquerObjets() {
 }
 function ouvrirBoutique(cle, onglet) { const a = cle && etoiles.article(cle); fermerPanneaux(); boutique.ouvrir(a ? a.cat : (onglet || 'lueur'), cle); }
 const boutique = monterBoutique($('boutique'), {
-  surChange: () => appliquerObjets(),
+  surChange: cle => { appliquerObjets(); montrerDansLeCiel(cle); },
   vignette3D: (toile, o) => creature.vignette(toile, o),   // vignettes de la lueur : la vraie lueur 3D portant l'article
   apercu: toile => creature.apercu(toile),                 // l'aperçu fixe en haut : la lueur telle qu'elle est
   apercuCiel: c => apercusCiel.push(c),                    // onglet « Ton ciel » (téléphone) : le ciel en direct
@@ -1375,13 +1375,20 @@ const boutique = monterBoutique($('boutique'), {
   ouvrirReglage: a => { boutique.fermer(); a.cat === 'lueur' ? ouvrirPerso(a.cle) : ouvrirCielPerso(a.cle); },
   surAchat: cle => {
     const a = etoiles.article(cle); toast(a.nom);
-    if (cle === 'filantes-or' || cle === 'filantes') meteores.rafale(3);
-    if (a.cat === 'lueur') creature.celebrer(null);
-    const ev = { aurores: 'aurore', cometes: 'comete', baleine: 'baleine', dessins: 'dessin', satellites: 'satellite' }[cle]; if (ev) setTimeout(() => evenements.declencher(ev), 900);
+    if (a.cat === 'lueur') creature.celebrer(null);   // le ciel : montrerDansLeCiel (surChange)
     accueil.surAchat();
   },
 });
 glisserPourFermer($('boutique'), () => boutique.fermer());
+// v21 : allumer un astre ou une animation du ciel le montre tout de suite (la vue tourne vers la planète, l'animation se joue)
+function montrerDansLeCiel(cle) {
+  const a = etoiles.article(cle); if (!a || a.cat !== 'ciel' || a.type !== 'interrupteur' || !etoiles.actif(cle)) return;
+  if (decor.PLANETES.includes(cle)) { voler(controls.target.clone(), camera.position.distanceTo(controls.target), decor.direction(cle)); setTimeout(() => decor.apparaitre(cle), 900); return; }
+  if (cle === 'filantes-or' || cle === 'filantes') { meteores.rafale(3); return; }
+  const ev = { aurores: 'aurore', cometes: 'comete', baleine: 'baleine', dessins: 'dessin', satellites: 'satellite', lune: 'lune' }[cle];
+  if (ev) { setTimeout(() => evenements.declencher(ev), 400); return; }
+  if (cle === 'croix' || cle === 'lucioles') voler(posDuJour(aujourdhui()), DIST.semaine);
+}
 
 // ───────────── Démarrage ─────────────
 // Première visite : choisir la langue (présélection selon le navigateur). Une autre langue que la présélection recharge la page.

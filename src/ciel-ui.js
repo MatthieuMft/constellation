@@ -10,7 +10,6 @@
 //     basculer(cle) : allume / éteint un astre ou une animation achetés ; boutique(cle?) : ouvre la boutique (onglet « Ton ciel » ou l'article)
 import { t, tn, EN } from './langue.js';
 import * as E from './etoiles.js';
-import { fil } from './reglages.js';
 
 const CLE_LOOKS = 'constellation.looks.v1';
 const lireLooks = () => { try { return JSON.parse(localStorage.getItem(CLE_LOOKS)) || {}; } catch (e) { return {}; } };
@@ -23,8 +22,6 @@ const el = (tag, attrs = {}, ...enfants) => {
 };
 
 // [article, champ de R, nom, min, max]
-const MATIERE = [['brume', 'brume', t('Brume'), 0, 2.5], ['scintillement', 'scintillement', t('Scintillement'), 0, 2], ['rotation', 'vitesse', t('Rotation'), 0, 2]];
-const LUMIERE = [['lueur', t('Lueur'), 0, 1.6], ['flou', t('Profondeur de champ'), 0, 1], ['cinema', t('Cinéma'), 0, 1]];
 
 export function monterCielPerso({ zone, corps, ctx }) {
   // v20 : sur téléphone, plein écran avec le ciel en direct en haut (ctx.apercuCiel recopie l'image du ciel dans ce canvas)
@@ -46,11 +43,6 @@ export function monterCielPerso({ zone, corps, ctx }) {
       tuiles.append(b);
     });
     blocs.push(section(E.groupe('ciel', 'ambiance').nom, 'ambiance', tuiles));
-
-    // matière et lumière : un curseur par article acheté
-    const matiere = MATIERE.filter(([k]) => a(k)).map(([k, champ, nom, min, max]) => { const f = fil(R, [champ, nom, min, max], ctx.maj); f.dataset.cle = k; return f; });
-    if (matiere.length) blocs.push(section(t('Matière'), 'matiere', ...matiere));
-    if (a('optique')) { const s = section(t('Lumière'), 'optique', ...LUMIERE.map(c => fil(R, c, ctx.maj))); s.dataset.cle = 'optique'; blocs.push(s); }
 
     // humeurs : une ligne de pastilles
     if (a('couleurs-humeurs')) {

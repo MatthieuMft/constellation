@@ -73,6 +73,23 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     };
   }
   function vignette(toile, o = {}) { fileV.push(toile, o); }
+  // aperçu (v21) : on la fait tourner en glissant le doigt (ou la souris) dessus ; chaque canvas garde son angle de vue
+  const vues = new WeakMap();
+  function apercu(toile, o = {}) {
+    let v = vues.get(toile); if (!v) { v = { az: -.35, el: .12 }; vues.set(toile, v); tournable(toile, v); }
+    vignette(toile, { perso: perso(), etoiles: yeuxEt === 1, S: toile.width, az: v.az, el: v.el, ...o });
+  }
+  function tournable(toile, v) {
+    let x0 = null, y0 = 0, attente = false; toile.style.touchAction = 'none'; toile.style.cursor = 'grab';
+    const fin = () => { x0 = null; toile.style.cursor = 'grab'; };
+    toile.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; toile.style.cursor = 'grabbing'; try { toile.setPointerCapture(e.pointerId); } catch (_) {} });
+    toile.addEventListener('pointermove', e => {
+      if (x0 == null) return;
+      v.az -= (e.clientX - x0) * .012; v.el = Math.min(.6, Math.max(-.35, v.el + (e.clientY - y0) * .006)); x0 = e.clientX; y0 = e.clientY;
+      if (!attente) { attente = true; requestAnimationFrame(() => { attente = false; apercu(toile); }); }
+    });
+    toile.addEventListener('pointerup', fin); toile.addEventListener('pointercancel', fin);
+  }
   function rendreVignettes(renderer) {                                   // appelée par la boucle, avant composer.render() : quelques vignettes par image
     if (!fileV.length) return; const t0 = performance.now();
     if (!vgn) vgn = creerVignettes();
@@ -344,7 +361,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     memoriser, suivre, perso, personnaliser, fete, dessiner: () => ecranPos,
     yeuxEtoiles: on => { yeuxEt = on ? 1 : 0; },
     lueur, prechauffer: (renderer, cam) => lueur.prechauffer(renderer, cam), vignette, rendreVignettes,
-    apercu: (toile, o = {}) => vignette(toile, { perso: perso(), etoiles: yeuxEt === 1, S: toile.width, az: -.35, ...o }),   // la lueur telle qu'elle est maintenant (aperçu de la boutique)
+    apercu,   // la lueur telle qu'elle est maintenant (aperçus de la boutique et de « Personnaliser ma lueur »), qu'on fait tourner au doigt
     update, majProfil, dire, souvenirMaintenant() { souvenir = null; prochainSouvenir = rnd(70, 130); lancerSouvenir(); return !!souvenir; },
     montrer() { if (montree) return; montree = true; apparition = 0; majProfil(true); base(); ndcPoint(0, .05, distRef(), pos); vel.set(0, 0, 0);   // elle naît devant toi, où que regarde la caméra
       particules.burst(pos, new THREE.Color(1, .95, .8), 40, 2.6, true); },

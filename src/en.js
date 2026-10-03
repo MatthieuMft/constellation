@@ -308,6 +308,7 @@ export const EN = {
 "Suit mon humeur": "Follows my mood",
 "Couleur : suit mon humeur": "Colour: follows my mood",
 "Couleur": "Colour",
+"Couleurs": "Colours",
 "Accessoire": "Accessory",
 "Couleur de l’accessoire": "Accessory colour",
 "Yeux": "Eyes",
