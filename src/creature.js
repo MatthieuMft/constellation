@@ -56,7 +56,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     return (renderer, toile, o) => {
       S = Math.min(o.S || 160, renderer.domElement.width, renderer.domElement.height); const k = S / 160;   // jamais plus grand que l'écran (sinon l'image est coupée)
       const P = Object.assign({}, PERSO0, o.perso), ie = EXPRESSIONS.indexOf(P.expression), az = o.az ?? -.45, el = o.el ?? .12;
-      ev.perso = P; ev.couleur.set(P.couleur || '#ffd98a'); ev.expr.set(+(ie === 1), +(ie === 2), +(ie === 3), +(ie === 4)); ev.yeuxEtoiles = o.etoiles ? 1 : 0; ev.regard.x = az * .7;
+      ev.perso = P; ev.couleur.set(P.couleur || '#ffd98a'); ev.expr.set(+(ie === 1), +(ie === 2), +(ie === 3), +(ie === 4)); ev.yeuxEtoiles = o.etoiles ? 1 : 0; ev.regard.x = az * .7; ev.cligne = o.cligne || 0;
       l.maj(1, 2.2, ev); l.maj(1, 2.2, ev);                              // dt = 1 : les articles sont là d'un coup (présence 1)
       const e = l.encombrement(), R = o.R || Math.min(33, 118 / (e.haut + e.bas), 60 / e.cote), cx = o.cx ?? 80, cy = o.cy ?? 80 + (e.haut - e.bas) * R / 2;
       const d = 80 / R / Math.tan(cam.fov * Math.PI / 360);               // le corps (rayon 1) fait R px sur 160
@@ -275,14 +275,14 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     if (expr === 'joie') joy = 1; else if (expr === 'triste') { sad = .9; joy = 0; brow = .7; } else if (expr === 'leve') { wide = .8; spark = .6; } else if (expr === 'wow') wide = 1;
     if (peur > 0) { wide = 1; brow = .9; sad = .3; joy = 0; spark = 0; }
     if (surprise > 0) wide = Math.max(wide, .7);
-    const V = vue, k6 = Math.min(1, dt * 6);
-    V.joie += (joy - V.joie) * k6; V.triste += (sad - V.triste) * Math.min(1, dt * 3); V.sourcils += (brow - V.sourcils) * k6;
+    const V = vue, k6 = Math.min(1, dt * 6), k12 = Math.min(1, dt * 12);   // v25 : les traits du visage passent vite d'une expression à l'autre (plus de visages superposés en transparence)
+    V.joie += (joy - V.joie) * k12; V.triste += (sad - V.triste) * Math.min(1, dt * 3); V.sourcils += (brow - V.sourcils) * k6;
     V.eclat += (spark - V.eclat) * k6; V.calme += (relax - V.calme) * k6; V.grands += (wide - V.grands) * Math.min(1, dt * 9);
     V.sommeil += ((dort ? 1 : 0) - V.sommeil) * Math.min(1, dt * 2.5);
     V.cligne = blink; V.app = apparition; V.clair = clair ? 1 : 0; V.yeuxEtoiles = yeuxEt; V.perso = P;
     // l'expression choisie, seulement au repos : sommeil, peur, joie, mots, humeur imitée passent devant
     const ie = EXPRESSIONS.indexOf(P.expression), repos = dort || imi || expr || peur > 0 || surprise > 0 || joie > 0 || calin ? 0 : 1 - sad;
-    exprV.x += ((ie === 1 ? repos : 0) - exprV.x) * k6; exprV.y += ((ie === 2 ? repos : 0) - exprV.y) * k6; exprV.z += ((ie === 3 ? repos : 0) - exprV.z) * k6; exprV.w += ((ie === 4 ? repos : 0) - exprV.w) * k6;
+    exprV.x += ((ie === 1 ? repos : 0) - exprV.x) * k12; exprV.y += ((ie === 2 ? repos : 0) - exprV.y) * k12; exprV.z += ((ie === 3 ? repos : 0) - exprV.z) * k12; exprV.w += ((ie === 4 ? repos : 0) - exprV.w) * k12;
     const vit = vel.length(); V.battement = Math.sin(t * (dort ? .8 : 7 + vit * .6)) * (dort ? .2 : 1);
 
     // forme : étirement dans le sens du mouvement, respiration, penchée dans les virages
