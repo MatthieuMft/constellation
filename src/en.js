@@ -481,6 +481,7 @@ export const EN = {
 "Un petit tour ?": "A little tour?",
 "Je suis bien, ici.": "I like it here.",
 "Wouiii !": "Wheee!",
+"+ Ajouter un média": "+ Add media",
 "jours écrits": "days written",
 "humeur dominante": "main mood",
 "ciel moyen": "average sky",

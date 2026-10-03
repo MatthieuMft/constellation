@@ -796,3 +796,46 @@ body.calme #zoom-aujourdhui, body.intro #zoom-aujourdhui, body.ecriture #zoom-au
 body.barre-on #ecrire { bottom: calc(var(--clavier, 0px) + 48px); max-height: calc(86dvh - 48px - var(--clavier, 0px)); }
 .barre-clavier .bc-micro[aria-pressed="true"] { color: #ff8a8a; }
 #btn-palette { color: var(--ink); font-size: 24px; }
+
+/* v27 : plus de titre « Constellation » à l'écran (gardé pour les lecteurs d'écran) */
+.sr-only { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* v27 : écrire = une grande page, détachée du ciel. En haut, une fenêtre sur le ciel où la lueur te regarde écrire ;
+   en dessous, la page opaque : date et humeurs en petit, le texte en grand, « Ajouter un média » sous le texte. */
+#ecrire { position: fixed; inset: 0; left: 0; right: 0; top: 0; bottom: 0; transform: none; width: auto; max-height: none; z-index: 5;
+  display: flex; flex-direction: column; background: none; border: 0; backdrop-filter: none; animation: feuilleBas .35s var(--ease); }
+#ecrire .p-grip { display: none !important; }
+#ecrire .p-tete { flex: none; align-items: flex-start; height: calc(128px + env(safe-area-inset-top, 0px)); padding: calc(10px + env(safe-area-inset-top, 0px)) 8px 0 18px; border: 0;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 35%, transparent), color-mix(in srgb, var(--bg) 10%, transparent) 45%, var(--bg)); }
+#ecrire .p-titre { font: 400 1.15rem var(--serif); padding: 8px 0; text-shadow: 0 0 10px var(--bg); }
+#ecrire .p-corps { flex: 1 1 auto; background: var(--bg); padding: 4px 18px 24px; display: flex; flex-direction: column; }
+#ecrire .p-pied { background: var(--bg); }
+#ecrire .lab { font-size: .95rem; color: var(--soft); margin: 0 0 10px; }
+#ecrire .ligne-date { font: 11px var(--mono); color: var(--soft); margin: 0 0 10px; }
+#ecrire .ligne-date input { font: 11px var(--mono); padding: 4px 6px; }
+#humeurs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; gap: 5px; margin: 0 -18px 14px; padding: 0 18px; }
+#humeurs::-webkit-scrollbar { display: none; }
+#humeurs button { flex: none; border-left-width: 3px; font-size: 10px; letter-spacing: .04em; padding: 5px 9px; min-height: 0; }
+#humeurs label.libre { flex: none; border-left-width: 3px; font-size: 10px; padding: 1px 6px 1px 9px; gap: 6px; }
+#humeurs label.libre input { width: 16px; height: 16px; }
+#ecrire #bloc-plus, #ecrire .bloc-astuce { display: none; }
+#ecrire .bloc-outils { margin: 0; }
+#ecrire #editeur { flex: 1 0 auto; min-height: 40vh; margin: 0; padding: 4px 0; border: 0; font-size: 17px; }
+#ecrire #editeur.vide::before { left: 0; top: 4px; right: 0; color: var(--soft); }
+#ecrire #zone-media { margin-top: 14px; }
+#ecrire .rang-media { margin: 0; }
+#ecrire button.ajout-media { flex: none; padding: 9px 14px; font-size: 11px; color: var(--soft); border-style: dashed; }
+body.ecriture #bulle { z-index: 7; }
+@media (min-width: 721px) {
+  #ecrire { left: 50%; right: auto; width: min(760px, 100vw); transform: translateX(-50%); border-left: 1px solid var(--line); border-right: 1px solid var(--line); animation: fond .3s var(--ease); }
+  #ecrire .p-corps, #ecrire .p-pied { padding-left: 32px; padding-right: 32px; }
+  #humeurs { margin-left: -32px; margin-right: -32px; padding: 0 32px; }
+  .barre-clavier { left: 50%; right: auto; width: min(760px, 100vw); transform: translateX(-50%); }
+}
+@media (max-width: 720px) {
+  body.barre-on #ecrire { top: 0; bottom: calc(var(--clavier, 0px) + 48px); max-height: none; }
+  body.barre-on #ecrire .p-tete { height: calc(96px + env(safe-area-inset-top, 0px)); }
+  body.barre-on #ecrire #titre-ecrire, body.barre-on #ecrire .ligne-date { display: none; }
+  body.barre-on #ecrire #editeur { min-height: 0; }
+}
+#ecrire .p-corps > * { flex-shrink: 0; }
+@media (min-width: 721px) { body.barre-on #ecrire { bottom: 48px; max-height: none; } }

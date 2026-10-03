@@ -841,7 +841,7 @@ function placerBarre() {
   document.documentElement.style.setProperty('--clavier', bas + 'px');
 }
 function montrerBarre(on) { $('barre-clavier').hidden = !on; document.body.classList.toggle('barre-on', on); if (on) placerBarre(); else fermerBlocs(); }
-$('editeur').addEventListener('focus', () => { if (tactile.matches || innerWidth < 700) montrerBarre(true); });
+$('editeur').addEventListener('focus', () => montrerBarre(true));           // v27 : la barre des blocs aussi sur PC (le bouton « + Ajouter » a disparu)
 $('editeur').addEventListener('blur', () => setTimeout(() => { if (document.activeElement !== $('editeur') && $('bloc-menu').hidden) montrerBarre(false); }, 150));
 if (window.visualViewport) { visualViewport.addEventListener('resize', placerBarre); visualViewport.addEventListener('scroll', placerBarre); }
 barre.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });   // garder le clavier ouvert

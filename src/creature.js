@@ -216,7 +216,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       case 'guide': cible.copy(ctx.guide).addScaledVector(_u, 2.2); raideur = 3.2; vmax = 22; break;
       case 'ecrit': {                                                    // elle flotte juste au-dessus de l'éditeur, devant le texte
         const r = ctx.rectEcriture; if (!r) { ndcPoint(0, .2, d * .7, cible); break; }
-        const [nx, ny] = ndcDe(clamp(r.left + r.width * (.14 + .72 * ctx.caret), 40, W - 40), r.top - 56 - sousCorps());
+        const [nx, ny] = ndcDe(r.left + r.width * (.6 + .08 * Math.sin(etatT * .4)), r.top + (r.top < 40 ? 64 : -56) - sousCorps() * .3);   // v27 : la page couvre l'écran : elle flotte dans la fenêtre sur le ciel, en haut
         ndcPoint(nx, ny, d * .62, cible); raideur = 2.8; vmax = 18; break; }
       case 'curieux': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx + .12, ny + .16, d * .9, cible); raideur = 1.5; vmax = 9; break; }
       case 'calin': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx, ny, d * .7, cible); raideur = 4; vmax = 20; break; }

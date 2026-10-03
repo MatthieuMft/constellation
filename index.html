@@ -16,7 +16,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1084569"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1084584"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -69,7 +69,7 @@
 
 
 <header>
-  <h1>Constellation</h1>
+  <h1 class="sr-only">Constellation</h1>
   <nav id="fil" aria-label="Position dans le temps"></nav>
   <p id="compte"></p>
   <p id="bilan"></p>
@@ -123,7 +123,7 @@
     <textarea id="texte" hidden rows="5" maxlength="4000" placeholder="Écrivez. Ce texte ne quitte jamais cet appareil."></textarea>
     <div id="editeur" class="editeur" aria-label="Texte de l’entrée"></div>
     <div id="zone-media">
-      <div class="rang-media" hidden><button type="button" id="choisir-media" class="ajout-media">+ Photo ou vidéo</button></div>
+      <div class="rang-media"><button type="button" id="choisir-media" class="ajout-media">+ Ajouter un média</button></div>
       <input id="fichiers-media" type="file" accept="image/*,video/*" multiple hidden>
       <input id="fichiers-autres" type="file" multiple hidden>
       <div id="vignettes-ecrire"></div>
