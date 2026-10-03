@@ -948,3 +948,17 @@ body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: 
 .boite-figure .rang { display: flex; gap: 8px; } .boite-figure input { flex: 1; min-width: 0; font-size: 15px; }
 .boite-figure .annuler { margin-top: 12px; }
 @media (max-width: 720px) { .boite-figure { left: 0; right: 0; bottom: 0; transform: none; width: auto; border-width: 1px 0 0; padding-bottom: calc(22px + env(safe-area-inset-bottom)); } }
+
+/* v48 : activités du jour (petites icônes à cocher sous l'humeur) */
+.activites { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.activites[hidden] { display: none; }
+.activites button { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; min-height: 34px; border: 1px solid var(--line); background: transparent; color: var(--soft); border-radius: 0; font-size: 12px; }
+.activites button svg, .act-i svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.activites button[aria-pressed="true"] { color: var(--ink); border-color: var(--ink); background: rgba(255,255,255,.08); }
+:root[data-clair] .activites button[aria-pressed="true"] { background: rgba(0,0,0,.06); }
+.act-liens { list-style: none; padding: 0; margin: 8px 0; display: grid; gap: 6px; }
+.act-liens li { display: grid; grid-template-columns: 22px 1fr auto 44px; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.act-liens small { color: var(--soft); } .act-liens b { text-align: right; font-weight: normal; }
+.act-liens li.plus b { color: #9fe3b0; } .act-liens li.moins b { color: #f2a08f; }
+:root[data-clair] .act-liens li.plus b { color: #2f7a45; } :root[data-clair] .act-liens li.moins b { color: #a2442f; }
+.act-i { display: inline-flex; color: var(--ink); }

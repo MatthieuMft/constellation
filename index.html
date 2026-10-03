@@ -17,7 +17,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1145021"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1152794"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -104,6 +104,7 @@
     <p class="lab" id="titre-ecrire" hidden></p>
     <label class="ligne-date">Jour <input type="date" id="ecrire-date" aria-label="Jour de l’entrée"></label>
     <div id="humeurs" role="radiogroup" aria-label="Humeur du jour"></div>
+    <div id="activites" class="activites" aria-label="Activités du jour"></div>
     <input id="note-titre" type="text" maxlength="80" placeholder="Titre (facultatif)" aria-label="Titre de la note" hidden>
     <div class="bloc-outils"><button type="button" id="bloc-plus" aria-haspopup="menu" aria-expanded="false" title="Ajouter un bloc">+ Ajouter</button><span class="bloc-astuce">ou tapez / au début d’une ligne</span>
       <div id="bloc-menu" class="bloc-menu" role="menu" hidden>

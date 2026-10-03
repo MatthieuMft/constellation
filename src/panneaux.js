@@ -1,5 +1,6 @@
 // Panneau « Analyses » : météo intérieure (courbe de ciel) et bilan du mois.
 import { meteo, resumeMeteo, bilanMois, VALENCE } from './analyse.js';
+import { liensActivites, nomActivite, ACTIVITES } from './activites.js';
 import { t } from './langue.js';
 
 const el = (tag, attrs = {}, ...enfants) => {
@@ -57,6 +58,22 @@ export function monterAnalyse(zone, ctx) {
     });
     corps.append(el('h3', { class: 'ana-titre' }, t('Répartition')), barre, liste, el('p', { class: 'texte-ana doux' }, resumeMeteo(jours)));
     requestAnimationFrame(() => dessinerCourbe(canvas, jours));
+    if (ctx.activites) activitesEtHumeur();
+  }
+
+  // v48 : ce qui va avec tes bons jours (activités cochées dans la note du jour)
+  function activitesEtHumeur() {
+    const r = liensActivites(ctx.activites().map(j => ({ ...j, valeur: VALENCE[j.mood] ?? 0 })));
+    corps.append(el('h3', { class: 'ana-titre' }, t('Ce qui va avec tes bons jours')));
+    if (!r.assez) { corps.append(el('p', { class: 'texte-ana doux' }, r.n ? t('Encore quelques jours avec des activités cochées, et le lien avec ton humeur apparaîtra ici.') : t('Coche tes activités en écrivant (sport, amis, travail…) : au bout de quelques jours, tu verras ce qui va avec tes bons jours.'))); return; }
+    const liste = el('ul', { class: 'act-liens' }), icone = k => { const a = ACTIVITES.find(x => x.k === k); const i = el('i', { class: 'act-i' }); i.innerHTML = a ? a.i : ''; return i; };
+    for (const a of r.liste.slice(0, 8)) {
+      const pc = Math.round(a.ecart * 50), signe = pc > 3 ? 'plus' : pc < -3 ? 'moins' : 'egal';
+      liste.append(el('li', { class: signe }, icone(a.k), el('span', {}, nomActivite(a.k)), el('small', {}, t('{n} jours', { n: a.n })),
+        el('b', {}, signe === 'egal' ? '=' : (pc > 0 ? '+' : '') + pc)));
+    }
+    const top = r.liste[0];
+    corps.append(liste, el('p', { class: 'texte-ana doux' }, top.ecart > .1 ? t('Les jours avec « {a} », ton ciel est plus dégagé que d’habitude.', { a: nomActivite(top.k) }) : t('Pas encore de lien net : continue de cocher tes activités.')));
   }
 
   function leMois() {

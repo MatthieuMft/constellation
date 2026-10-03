@@ -37,6 +37,8 @@ import { creerDecor } from './decor.js';
 import * as PL from './planetes.js';
 import { verrou } from './verrou.js';
 import { creerFigures } from './figures.js';
+import { son } from './son.js';
+import { monterActivites } from './activites.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
@@ -438,6 +440,7 @@ const creature = creerCreature({
   sceneUI, camera, controls, particules, texHalo, entrees: () => joursHumeur, couleurDe: e => new THREE.Color(e.color || cm(e.mood)), surMessage: t => statutTemporaire(t, 6500),
   etoiles: () => visuelsVisibles, ouvrirPensee: id => choisir(id), mobile,
 });
+{ const f = creature.fete; creature.fete = (...a) => { son.fete(); return f(...a); }; }   // v48 : un tintement aux moments de fête
 const pointeur = { x: 0, y: 0, t: -1e9 };
 { // elle réagit au ciel : orage, pluie, baleine…
   const jouer = scenes.jouer.bind(scenes), declencher = evenements.declencher.bind(evenements);
@@ -571,7 +574,7 @@ const itemsDuJour = cle => items.filter(i => i.jour === cle);
 
 const panneauJour = monterJour($('f-contenu'), {
   items: itemsDuJour, humeur: cle => humeurDuJour(cle, items, meta), couleur: cm, aujourdhui: aujourdhui(),
-  setHumeur: async (cle, mood, couleur) => { creature.imiter(mood, couleur || cm(mood), 6000); meta[cle] = { humeur: mood, couleur: couleur || undefined }; sauverTout(); await recalculer(); },
+  setHumeur: async (cle, mood, couleur) => { creature.imiter(mood, couleur || cm(mood), 6000); meta[cle] = { ...(meta[cle] || {}), humeur: mood, couleur: couleur || undefined }; sauverTout(); await recalculer(); },
   ajouter: cle => ouvrirEcrire({ jour: cle }), modifier: item => ouvrirEcrire({ item }),
   supprimer: item => supprimerItem(item), basculerFait: (item, fait) => { item.fait = fait; item.touched = Date.now(); sauverTout(); },
   voirMedia: (item, med) => voirMedia(item, med), mediaUrl: k => media.url(k),
@@ -627,6 +630,7 @@ function phrasesLueur() {
 }
 
 function choisir(cle, { relire = true, voler: aller = true } = {}) {
+  son.tinte();
   selection = cle; ignorerJour = null;
   const v = visuels.get(cle); if (v) v.pulse = .6;
   if (relire) { itemsDuJour(cle).forEach(i => { i.touched = Date.now(); }); sauverTout(); const e = jours.find(j => j.id === cle); if (e) motsMagiques(e.text, 700); }
@@ -776,10 +780,11 @@ function choisirHumeur(k, couleur) {
   if (!$('ecrire').hidden && typeEdite() === 'journal') creature.imiter(k, couleur || cm(k));          // la mascotte imite l'humeur choisie
 }
 choisirHumeur('calme', null);
+const activites = monterActivites($('activites'));   // v48 : sport, amis, travail… cochés dans la note du jour
 
 // une ancienne entrée garde ses champs : titre pour une note, légende pour un média, pas d'humeur hors journal
 function configurer(type) {
-  $('humeurs').hidden = type !== 'journal'; $('note-titre').hidden = type !== 'note';
+  $('humeurs').hidden = $('activites').hidden = type !== 'journal'; $('note-titre').hidden = type !== 'note';
   $('choisir-media').hidden = $('vignettes-ecrire').hidden = type !== 'journal';   // v33 : Dicter vit dans ce rang, il reste pour tous les types
   $('texte').placeholder = type === 'media' ? t('Une légende (facultatif)') : t('Écrivez. Ce texte ne quitte jamais cet appareil.');
   $('texte').rows = type === 'media' ? 2 : type === 'tache' ? 2 : 5;
@@ -810,6 +815,7 @@ function ouvrirEcrire({ jour = null, item = null } = {}) {
   $('note-titre').value = item && item.titre ? item.titre : '';
   const d = $('ecrire-date'); d.max = aujourdhui(); d.value = item ? item.jour : (jour || jourParDefaut());
   if (item && item.type === 'journal') choisirHumeur(item.mood || 'calme', item.color || null); else if (!item) { const h = humeurDuJour(d.value, items, meta); choisirHumeur(h ? h.mood : 'calme', h && h.color ? h.color : null); }
+  activites.ecrire((meta[d.value] || {}).activites || []);
   configurer(ty);
   if (brouillon && (brouillon.texte || '').trim()) { $('texte').value = brouillon.texte || ''; $('nbc').textContent = $('texte').value.length + ' / 4000'; if (brouillon.jour && brouillon.jour <= aujourdhui() && !jour) d.value = brouillon.jour; $('interim').textContent = t('Brouillon retrouvé.'); }
   $('valider').textContent = item ? t('Enregistrer') : t('Cristalliser');
@@ -936,10 +942,10 @@ async function valider() {
     const i = edition; i.touched = Date.now(); i.jour = jour; delete i.sample;
     if (type === 'media') i.legende = texte; else i.texte = texte;
     if (type === 'note') i.titre = $('note-titre').value.trim();
-    if (type === 'journal') { i.mood = humeur; if (couleurLibre) i.color = couleurLibre; else delete i.color; meta[jour] = { humeur, couleur: couleurLibre || undefined }; if (medias.length) i.medias = [...(i.medias || []), ...medias]; }
+    if (type === 'journal') { i.mood = humeur; if (couleurLibre) i.color = couleurLibre; else delete i.color; meta[jour] = { ...(meta[jour] || {}), humeur, couleur: couleurLibre || undefined, activites: activites.lire().length ? activites.lire() : undefined }; if (medias.length) i.medias = [...(i.medias || []), ...medias]; }
   } else {
     items.push({ id: nouvelId(), jour, date: heureDe(jour), type: 'journal', texte, mood: humeur, color: couleurLibre || undefined, medias: medias.length ? medias : undefined, touched: Date.now() });
-    meta[jour] = { humeur, couleur: couleurLibre || undefined };
+    meta[jour] = { ...(meta[jour] || {}), humeur, couleur: couleurLibre || undefined, activites: activites.lire().length ? activites.lire() : undefined };
   }
   const nouvelle = !edition;
   sauverTout(); effacerBrouillon(); fermerEcrire(); effacerBrouillon();
@@ -952,6 +958,7 @@ async function valider() {
     setTimeout(() => vol.replaceChildren(), 3500);
   }
   await recalculer(true);
+  if (nouvelle) setTimeout(() => son.naissance(), 600);       // v48 : une petite cloche quand l'étoile naît
   const gain = etoiles.crediter(joursEcrits());                // ✦10 pour un jour écrit pour la première fois
   if (accueil.ecrireEnCours()) { accueil.surEntree(gain); const v = visuels.get(jour); if (v) v.pulse = 1.4; voler(posDuJour(jour), DIST.semaine * .7); }
   else {
@@ -1121,6 +1128,10 @@ const rendreReglages = monterReglages($('reglages'), {
       ...(items.some(e => e.sample) ? [[t('Effacer les entrées d’exemple'), () => $('exemples').click()]] : []),
       [t('Tout effacer et recommencer'), toutEffacer, 'danger'],
     ]],
+    [t('Son'), [
+      [t('Ambiance') + DP + t(son.conf().nappe ? 'oui' : 'non'), () => { son.regler({ nappe: !son.conf().nappe }); rendreReglages(); }],
+      [t('Sons des étoiles') + DP + t(son.conf().effets ? 'oui' : 'non'), () => { son.regler({ effets: !son.conf().effets }); if (son.conf().effets) son.naissance(); rendreReglages(); }],
+    ]],
     [t('Verrou'), verrou.actif()
       ? [[t('Changer le code'), async () => { await verrou.choisir(); rendreReglages(); }], [t('Retirer le verrou'), () => { verrou.retirer(); statutTemporaire(t('Le verrou est retiré.')); rendreReglages(); }]]
       : [[t('Ajouter un code'), async () => { if (await verrou.choisir()) statutTemporaire(t('Le code sera demandé à chaque ouverture.'), 5000); rendreReglages(); }]]],
@@ -1200,6 +1211,7 @@ const rendreAnalyse = monterAnalyse($('analyse'), {
   entries: () => joursHumeur, couleur: k => cm(k), encre: () => T().ui.ink,
   survoler: (ids, titre) => { $('analyse').hidden = true; parcourir(ids, titre); },
   ouvrirJour: cle => choisir(cle), ecrire: () => ouvrirEcrire(),
+  activites: () => joursHumeur.filter(j => !j.sample).map(j => ({ cle: j.id, mood: j.mood, activites: (meta[j.id] || {}).activites || [] })),   // v48
 });
 $('btn-analyse').addEventListener('click', () => { const z = $('analyse'); z.hidden = !z.hidden; if (!z.hidden) { $('reglages').hidden = true; rendreAnalyse(); } });
 $('btn-reglages').addEventListener('click', () => { if (!$('reglages').hidden) $('analyse').hidden = true; });
@@ -1276,7 +1288,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v47'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v48'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
