@@ -142,6 +142,10 @@ if (TOUT_DEBLOQUE) {
   etat.achats = etat.achats.filter(k => (PAR_CLE[k] || {}).prix === 0); etat.eteints = []; etat.finEssai = true; ecrire();
 }
 
+// v41 : un cadeau unique de ✦500 pour essayer les planètes (demande de Matthieu : « je peux pas les débloquer »)
+export let cadeauRecu = 0;
+if (!etat.cadeau41) { etat.solde += 500; etat.cadeau41 = true; cadeauRecu = 500; ecrire(); }
+
 export const articles = cat => cat ? ARTICLES.filter(a => a.cat === cat) : ARTICLES;
 export const article = k => PAR_CLE[k] || null;
 export const groupe = (cat, k) => (GROUPES[cat] || []).find(g => g.cle === k) || null;

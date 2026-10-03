@@ -421,7 +421,8 @@ const secousse = (amp, dur) => { tremble = { amp, t0: performance.now(), dur: du
 const evenements = creerEvenements({ scene, camera, melange, texHalo, pr: renderer.getPixelRatio() });
 const lucioles = evenements.creerLucioles(() => visuelsVisibles);
 const decor = creerDecor({ scene, camera, renderer });
-PL.migrer();                                        // v40 : les anciennes planètes achetées deviennent de vraies planètes (une seule fois)
+PL.migrer();
+if (etoiles.cadeauRecu) setTimeout(() => toast(t('Cadeau : ✦{n} de poussière d’étoiles pour essayer les planètes.', { n: etoiles.cadeauRecu }), 5200), 2500);                                        // v40 : les anciennes planètes achetées deviennent de vraies planètes (une seule fois)
 let nbPlanetes = 0;
 function reglerPlanetes(direct = false) { const v = PL.visibles(); nbPlanetes = v.length; decor.regler({ planetes: v, clair: T().clair, direct }); }
 const scenes = creerScenes({ scene, camera, particules, meteores, melange, texHalo, evenements, secousse }); scenesRef = scenes; scenes.redim(innerWidth, innerHeight);
@@ -1260,7 +1261,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v40'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v41'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));

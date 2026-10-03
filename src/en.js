@@ -784,7 +784,8 @@ export const EN = {
 "Tu n’as pas encore de planète. Il y en a dans la boutique.": "You don’t have a planet yet. There are some in the shop.",
 "Une nouvelle planète": "A new planet",
 "Ton ciel a déjà six planètes.": "Your sky already has six planets.",
-"Nouvelle planète : {nom}": "New planet: {nom}"
+"Nouvelle planète : {nom}": "New planet: {nom}",
+"Cadeau : ✦{n} de poussière d’étoiles pour essayer les planètes.": "A gift: ✦{n} stardust to try the planets."
 };
 
 export const EN_HTML = {
