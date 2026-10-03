@@ -446,10 +446,14 @@ export function monterBoutique(zone, ctx) {
   function contenu() {
     const blocs = [], debut = onglet === 'lueur' && DEBUT.every(k => !E.possede(k));
     if (debut) blocs.push(section(t('Pour commencer'), DEBUT.map(E.article), el('p', { class: 'bq-note haut' }, t('Un premier cadeau, pour ✦10.'))));
+    const rubriques = [];
     E.GROUPES[onglet].forEach(g => {
       const liste = E.articles(onglet).filter(a => a.groupe === g.cle && !(debut && DEBUT.includes(a.cle)));
-      if (liste.length) blocs.push(section(g.nom, liste));
+      if (liste.length) { const s = section(g.nom, liste); s.dataset.rubrique = g.cle; blocs.push(s); rubriques.push([g, s]); }
     });
+    // v38 : une rangée de rubriques en haut, pour aller droit à Forme, Expressions, Accessoires…
+    if (rubriques.length > 3) blocs.unshift(el('nav', { class: 'bq-rubriques', 'aria-label': t('Rubriques') },
+      rubriques.map(([g, s]) => el('button', { type: 'button', onclick: () => { const r = s.getBoundingClientRect(), rc = corps.getBoundingClientRect(); corps.scrollTo({ top: corps.scrollTop + r.top - rc.top - 52, behavior: 'smooth' }); } }, g.nom))));
     blocs.push(el('p', { class: 'bq-note' }, t('Tu gagnes ✦10 chaque jour où tu écris. Touche un objet à toi pour le porter, l’allumer ou le régler.')));
     return blocs;
   }

@@ -61,20 +61,21 @@ export function monterPerso({ zone, corps, creature, nommer, objets }) {
 
     const sections = [];
     const ajoute = (cle, ...contenu) => { const c = contenu.filter(Boolean); if (c.length) sections.push(groupe(nomG(cle), cle, ...c)); return c.length; };
+    // v38 : mêmes rubriques que la boutique (Forme, Matière, Expressions, Accessoires, Habits, Membres, Effets, Finitions)
     ajoute('forme', rangee('forme'));
-    ajoute('texture', rangee('texture'));
-    ajoute('couleur', a('couleur-lueur') && bloc('couleur-lueur', null, pastilles(P.couleur, c => maj({ couleur: c }), { suit: true })));
-    ajoute('visage',
-      a('expression-rieuse') || a('expression-reveuse') || a('expression-malicieuse') || a('expression-etonnee') ? bloc('expression', t('Expression'), rangee('expression')) : null,
-      a('couleur-yeux') && bloc('couleur-yeux', art('couleur-yeux').nom, pastilles(P.yeuxCouleur, c => maj({ yeuxCouleur: c }), { defaut: true })),
-      a('taille-yeux') && bloc('taille-yeux', art('taille-yeux').nom, el('div', { class: 'choix' }, YEUX.map(([n, v]) => el('button', { 'aria-pressed': Math.abs(P.yeux - v) < .05, onclick: () => maj({ yeux: v }) }, n)))),
-      a('yeux-etoiles') && bloc('yeux-etoiles', null, bascules(['yeux-etoiles'])));
+    ajoute('matiere', rangee('texture'), a('couleur-lueur') && bloc('couleur-lueur', art('couleur-lueur').nom, pastilles(P.couleur, c => maj({ couleur: c }), { suit: true })));
+    ajoute('expression', a('expression-rieuse') || a('expression-reveuse') || a('expression-malicieuse') || a('expression-etonnee') ? rangee('expression') : null);
     const nAcc = ajoute('accessoire', rangee('acc')), nHabit = ajoute('habit', rangee('habit'));
     // la couleur de l'accessoire vaut aussi pour l'habit : seulement si l'un des deux est porté
     if (a('couleur-accessoire') && (nAcc || nHabit) && (P.acc || P.habit))
       sections[sections.length - 1].append(bloc('couleur-accessoire', art('couleur-accessoire').nom, pastilles(P.accCouleur, c => maj({ accCouleur: c || '#ffd98a' }))));
     ajoute('membres', bascules(['membres-ailes', 'membres-bras', 'membres-pieds']));
-    ajoute('magie', a('taille-lueur') && bloc('taille-lueur', art('taille-lueur').nom, taille()), a('etincelles') && bloc('etincelles', null, bascules(['etincelles'])));
+    ajoute('effets', a('etincelles') && bloc('etincelles', null, bascules(['etincelles'])));
+    ajoute('finitions',
+      a('couleur-yeux') && bloc('couleur-yeux', art('couleur-yeux').nom, pastilles(P.yeuxCouleur, c => maj({ yeuxCouleur: c }), { defaut: true })),
+      a('taille-yeux') && bloc('taille-yeux', art('taille-yeux').nom, el('div', { class: 'choix' }, YEUX.map(([n, v]) => el('button', { 'aria-pressed': Math.abs(P.yeux - v) < .05, onclick: () => maj({ yeux: v }) }, n)))),
+      a('yeux-etoiles') && bloc('yeux-etoiles', null, bascules(['yeux-etoiles'])),
+      a('taille-lueur') && bloc('taille-lueur', art('taille-lueur').nom, taille()));
 
     majApercu();
     const reste = E.restants('lueur');

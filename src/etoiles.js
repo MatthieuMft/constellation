@@ -35,8 +35,9 @@ export const PALIERS = [
 export const DEFAUT_CHOIX = { forme: 'rond', texture: 'lisse', expression: 'douce', acc: 0, habit: 0, theme: 'nuit' };
 
 export const GROUPES = {
-  lueur: [['forme', t('Silhouettes')], ['texture', t('Textures')], ['couleur', t('Couleur')], ['visage', t('Visage')],
-    ['accessoire', t('Accessoires')], ['habit', t('Habits')], ['membres', t('Membres')], ['magie', t('Magie')]].map(([cle, nom]) => ({ cle, nom })),
+  // v38 : la boutique Lueur rangée en rubriques claires ; les finitions (yeux, taille) en bas
+  lueur: [['forme', t('Forme')], ['matiere', t('Matière')], ['expression', t('Expressions')], ['accessoire', t('Accessoires')],
+    ['habit', t('Habits')], ['membres', t('Membres')], ['effets', t('Effets')], ['finitions', t('Finitions')]].map(([cle, nom]) => ({ cle, nom })),
   ciel: [['ambiance', t('Ambiances')], ['matiere', t('Couleurs')], ['astres', t('Astres')], ['animations', t('Animations')]].map(([cle, nom]) => ({ cle, nom })),
 };
 
@@ -52,18 +53,18 @@ export const ARTICLES = [
   choix(L, 'forme', 'forme-fantome', t('Silhouette fantôme'), t('Un bas en vagues qui ondule doucement.'),     150, 'perso', 'forme', 'fantome'),
   choix(L, 'forme', 'forme-coeur',   t('Silhouette cœur'),    t('Ta lueur prend la forme d’un cœur.'),         200, 'perso', 'forme', 'coeur'),
   choix(L, 'forme', 'forme-etoile',  t('Silhouette étoile'),  t('Cinq branches arrondies, toutes douces.'),    250, 'perso', 'forme', 'etoile'),
-  choix(L, 'texture', 'texture-nacre',      t('Nacre'),      t('Des reflets irisés, comme une perle.'),           60, 'perso', 'texture', 'nacre'),
-  choix(L, 'texture', 'texture-givre',      t('Givre'),      t('Une surface glacée qui scintille.'),              70, 'perso', 'texture', 'givre'),
-  choix(L, 'texture', 'texture-paillettes', t('Paillettes'), t('De minuscules éclats qui pétillent.'),            80, 'perso', 'texture', 'paillettes'),
-  choix(L, 'texture', 'texture-nebuleuse',  t('Nébuleuse'),  t('Un petit ciel qui tourbillonne à l’intérieur.'), 100, 'perso', 'texture', 'nebuleuse'),
-  regl(L, 'couleur', 'couleur-lueur', t('Couleur de la lueur'), t('Choisis sa teinte, ou laisse-la suivre ton humeur.'), 30, 'perso', { couleur: null }),
-  choix(L, 'visage', 'expression-rieuse',     t('Rieuse'),     t('Des yeux plissés de bonheur.'),                30, 'perso', 'expression', 'rieuse'),
-  choix(L, 'visage', 'expression-reveuse',    t('Rêveuse'),    t('Un regard doux, à demi fermé.'),               30, 'perso', 'expression', 'reveuse'),
-  choix(L, 'visage', 'expression-malicieuse', t('Malicieuse'), t('Un clin d’œil et un sourire en coin.'),        40, 'perso', 'expression', 'malicieuse'),
-  choix(L, 'visage', 'expression-etonnee',    t('Étonnée'),    t('De grands yeux ronds et une petite bouche.'),  30, 'perso', 'expression', 'etonnee'),
-  regl(L, 'visage', 'couleur-yeux', t('Couleur des yeux'), t('Des yeux de la couleur de ton choix.'), 30, 'perso', { yeuxCouleur: null }),
-  inter(L, 'visage', 'yeux-etoiles', t('Yeux étoilés'), t('Un reflet en étoile dans les yeux de ta lueur.'), 10),
-  regl(L, 'visage', 'taille-yeux', t('Taille des yeux'), t('Petits, normaux ou grands.'), 20, 'perso', { yeux: 1 }),
+  choix(L, 'matiere', 'texture-nacre',      t('Nacre'),      t('Des reflets irisés, comme une perle.'),           60, 'perso', 'texture', 'nacre'),
+  choix(L, 'matiere', 'texture-givre',      t('Givre'),      t('Une surface glacée qui scintille.'),              70, 'perso', 'texture', 'givre'),
+  choix(L, 'matiere', 'texture-paillettes', t('Paillettes'), t('De minuscules éclats qui pétillent.'),            80, 'perso', 'texture', 'paillettes'),
+  choix(L, 'matiere', 'texture-nebuleuse',  t('Nébuleuse'),  t('Un petit ciel qui tourbillonne à l’intérieur.'), 100, 'perso', 'texture', 'nebuleuse'),
+  regl(L, 'matiere', 'couleur-lueur', t('Couleur de la lueur'), t('Choisis sa teinte, ou laisse-la suivre ton humeur.'), 30, 'perso', { couleur: null }),
+  choix(L, 'expression', 'expression-rieuse',     t('Rieuse'),     t('Des yeux plissés de bonheur.'),                30, 'perso', 'expression', 'rieuse'),
+  choix(L, 'expression', 'expression-reveuse',    t('Rêveuse'),    t('Un regard doux, à demi fermé.'),               30, 'perso', 'expression', 'reveuse'),
+  choix(L, 'expression', 'expression-malicieuse', t('Malicieuse'), t('Un clin d’œil et un sourire en coin.'),        40, 'perso', 'expression', 'malicieuse'),
+  choix(L, 'expression', 'expression-etonnee',    t('Étonnée'),    t('De grands yeux ronds et une petite bouche.'),  30, 'perso', 'expression', 'etonnee'),
+  regl(L, 'finitions', 'couleur-yeux', t('Couleur des yeux'), t('Des yeux de la couleur de ton choix.'), 30, 'perso', { yeuxCouleur: null }),
+  inter(L, 'finitions', 'yeux-etoiles', t('Yeux étoilés'), t('Un reflet en étoile dans les yeux de ta lueur.'), 10),
+  regl(L, 'finitions', 'taille-yeux', t('Taille des yeux'), t('Petits, normaux ou grands.'), 20, 'perso', { yeux: 1 }),
   choix(L, 'accessoire', 'acc-anneau',   t('Anneau'),              t('Un halo qui flotte au-dessus de sa tête.'), 30, 'perso', 'acc', 1),
   choix(L, 'accessoire', 'acc-antenne',  t('Antenne'),             t('Une tige fine et une petite lanterne.'),    30, 'perso', 'acc', 2),
   choix(L, 'accessoire', 'acc-lunettes', t('Lunettes'),            t('De petites lunettes rondes.'),              40, 'perso', 'acc', 3),
@@ -76,8 +77,8 @@ export const ARTICLES = [
   inter(L, 'membres', 'membres-ailes', t('Petites ailes'), t('Des ailes de lumière qui battent.'), 120, 'ailes'),
   inter(L, 'membres', 'membres-bras',  t('Petits bras'),   t('Pour faire coucou.'),                 80, 'bras'),
   inter(L, 'membres', 'membres-pieds', t('Petits pieds'),  t('Deux petits pieds qui pendent.'),     80, 'pieds'),
-  regl(L, 'magie', 'taille-lueur', t('Taille'), t('Plus petite ou plus grande.'), 20, 'perso', { taille: 1 }),
-  inter(L, 'magie', 'etincelles', t('Étincelles'), t('Elle sème de petites étincelles.'), 40, 'etincelles'),
+  regl(L, 'finitions', 'taille-lueur', t('Taille'), t('Plus petite ou plus grande.'), 20, 'perso', { taille: 1 }),
+  inter(L, 'effets', 'etincelles', t('Étincelles'), t('Elle sème de petites étincelles.'), 40, 'etincelles'),
   // ── ton ciel ──
   choix(C, 'ambiance', 'theme-nuit',   t('Ciel Nuit'),   t('Le ciel de départ, bleu nuit.'),                  0,   'reglage', 'theme', 'nuit'),   // v23 : pour y revenir depuis la boutique
   choix(C, 'ambiance', 'theme-aube',   t('Ciel Aube'),   t('Un ciel rose et violet, comme au petit matin.'), 60,  'reglage', 'theme', 'aube'),

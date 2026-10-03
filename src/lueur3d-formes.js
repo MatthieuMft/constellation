@@ -227,7 +227,7 @@ export const MATIERES = {
     vec3 q = g.pa*4.2; float cr = abs(n3(q) - .5), cr2 = abs(n3(q*2.3 + 7.1) - .5);
     float ve = (smoothstep(.06, .012, cr)*.65 + smoothstep(.05, .01, cr2)*.35)*smoothstep(.15, .5, cv);   // craquelures (s'effacent de biais : pas de moiré)
     float fr = n3(g.pa*15.)*.6 + n3(g.pa*31.)*.4;                                                       // grain du givre
-    vec3 glace = mix(vec3(.74, .88, 1.), g.vif, .2);
+    vec3 glace = mix(vec3(.86, .93, 1.), g.vif, .45);   // v38 : la glace garde la couleur choisie
     g.c = mix(g.c, glace*(.82 + .26*fr), .45*pe);
     g.c = mix(g.c, vec3(.95, .99, 1.), ve*.35*pe*(1. - .5*g.ep));
     float ec = matEclat(g.pa*9., .8, 1.3, .14) + matEclat(g.pa*15. + 3.1, .82, 1.9, .12)*.7;
@@ -258,14 +258,15 @@ export const MATIERES = {
   float nebuleuseCiel(vec3 q){ q.xz = rot2(uT*.12 + length(q)*1.7)*q.xz; float n1 = n3(q*2.1 + vec3(0., uT*.05, 0.)); return n1*.62 + n3(q*4.4 - n1*1.7)*.38; }
   void matNebuleuse(inout Gaz g){
     float L = max(g.ep, .25)*.55, nb = (nebuleuseCiel(g.p - g.rd*L) + nebuleuseCiel(g.p + g.rd*L))*.5, n2 = nebuleuseCiel(g.p*1.6 + 3.);
-    vec3 violet = mix(vec3(.3, .14, .72), g.vif*vec3(.5, .4, 1.), .15), lilas = mix(g.vif, vec3(.66, .46, 1.), .7);
-    vec3 neb = mix(violet, lilas, smoothstep(.34, .6, nb));
-    neb = mix(neb, vec3(1., .66, .88), smoothstep(.56, .78, n2)*.5);                     // nuées roses
+    // v38 : le petit ciel prend la couleur de la lueur (il restait violet quelle que soit la couleur choisie)
+    vec3 profond = g.vif*.32, clair = mix(g.vif, vec3(1.), .25);
+    vec3 neb = mix(profond, clair, smoothstep(.34, .6, nb));
+    neb = mix(neb, mix(g.vif, vec3(1.), .6), smoothstep(.56, .78, n2)*.5);               // nuées pâles
     neb = mix(neb, g.coeur, smoothstep(.6, .98, g.ep)*.45 + smoothstep(.6, .78, nb)*.45);   // le cœur et les crêtes restent dorés
     g.c = mix(g.c, neb, .85*smoothstep(.05, .35, g.D));
     g.E *= 1.04;
     vec3 qs = g.p*8. + g.rd*.4; g.brille += vec3(1., .96, .88)*matEclat(qs, .7, 1.6, .12)*.7*smoothstep(.25, .7, g.D)*(1. - .5*uClair);   // petites étoiles dedans
   }`,
-    grains: { brume: 1.25, poussiere: 1.15, etincelles: 1, teinte: [.78, .62, 1], part: .38, scint: 1.1, taille: 1 },
+    grains: { brume: 1.25, poussiere: 1.15, etincelles: 1, teinte: [1, 1, 1], part: .38, scint: 1.1, taille: 1 },
   },
 };

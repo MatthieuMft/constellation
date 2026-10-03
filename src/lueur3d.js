@@ -259,19 +259,21 @@ const VISAGE_F = `uniform float uApp, uJoy, uSad, uBrow, uSpark, uRelax, uWide, 
     for (int k = 0; k < 2; k++) {
       float s = k == 0 ? -1. : 1.;
       float jk = s > 0. ? max(joyeux, uExpr.z*(1. - uSleep)) : joyeux;                 // malicieuse : un clin d'œil
+      jk = smoothstep(.4, .6, jk);                                                      // v38 : bascule franche, jamais un œil ouvert ET plissé à moitié
+      float ferme = step(.5, max(uSleep, uRelax));                            // v38 : endormie / relâchée : l'œil se ferme d'un coup, sans fantôme
       float ok = ouv*(1. - uExpr.y*.3)*(1. - uExpr.z*.1);                               // rêveuse : paupières mi-closes, arrondies
       vec2 c = vec2(s*.16, .08 - triste*.025) + reg;
       float pau = c.y + rayon.y*ok*mix(1.3, .55, uExpr.y), cl = pau - 7.*(qf.x - c.x)*(qf.x - c.x), hc = min(.007, max(aa, .0015)), coupe = smoothstep(cl + hc, cl - hc, qf.y);
       vec2 le = (qf - c)/(rayon*vec2(1., max(ok, .002))); float lL = length(le), aL = aa*1.2/min(rayon.x, rayon.y*max(ok, .25));
-      float rond = smoothstep(1. + aL, 1. - aL - .04, lL)*(1. - jk)*(1. - sp)*coupe*(1. - .85*smoothstep(.4, 1., uRelax))*(1. - fb);  // le contour de l'œil : net, anticrénelé (relâchée : paupières closes)
+      float rond = smoothstep(1. + aL, 1. - aL - .04, lL)*(1. - jk)*(1. - sp)*coupe*(1. - ferme)*(1. - fb);  // le contour de l'œil : net, anticrénelé (relâchée : paupières closes)
       float arc = L(.026, .008, abs(length(qf - (c + vec2(0., -.055))) - .088))*marche(c.y - .002, qf.y)*jk;
-      float dort = L(.026, .008, abs(length(qf - (c + vec2(0., .055))) - .088))*(1. - marche(c.y + .002, qf.y))*max(uSleep, uRelax);
-      dort = max(dort, L(.018, .006, abs(length(qf - (c + vec2(0., .07))) - .1))*(1. - marche(c.y - .005, qf.y))*smoothstep(.07, .02, abs(qf.x - c.x) - .06)*fb*(1. - jk)*(1. - uSleep));   // œil fermé du clignement : un trait fin
-      float lid = L(.014, .004, abs(qf.y - cl))*(1. - marche(rayon.x*1.1, abs(qf.x - c.x)))*uExpr.y*(1. - jk)*(1. - uSleep)*smoothstep(.2, .5, ok);
+      float dort = L(.026, .008, abs(length(qf - (c + vec2(0., .055))) - .088))*(1. - marche(c.y + .002, qf.y))*ferme*(1. - jk);
+      dort = max(dort, L(.018, .006, abs(length(qf - (c + vec2(0., .07))) - .1))*(1. - marche(c.y - .005, qf.y))*smoothstep(.07, .02, abs(qf.x - c.x) - .06)*fb*(1. - jk)*(1. - ferme));   // œil fermé du clignement : un trait fin
+      float lid = L(.014, .004, abs(qf.y - cl))*(1. - marche(rayon.x*1.1, abs(qf.x - c.x)))*uExpr.y*(1. - jk)*(1. - ferme)*(1. - fb)*smoothstep(.2, .5, ok);   // v38 : la paupière de la rêveuse s'efface quand l'œil se ferme
       vec2 hl = vec2(.03, mix(.04, -.012, uExpr.y))*(1. + wide*.3);
-      float lum = (L(.034, .012, length(qf - c - hl)) + L(.016, .004, length(qf - c + vec2(.026, .034))))*ok*(1. - jk)*(1. - uSleep)*(1. - sp)*coupe*sansReflet;
+      float lum = (L(.034, .012, length(qf - c - hl)) + L(.016, .004, length(qf - c + vec2(.026, .034))))*ok*(1. - jk)*(1. - ferme)*(1. - sp)*coupe*sansReflet;
       vec2 e = abs(qf - c), er = abs(qf - c - vec2(.022, hl.y*.75)*(1. + wide*.3));     // « Yeux étoilés » : le reflet devient une petite étoile
-      float refletEt = (smoothstep(.05, .0, er.x + er.y*4.) + smoothstep(.05, .0, er.y + er.x*4.) + L(.022, .0, length(er)))*ok*(1. - jk)*(1. - uSleep)*(1. - sp)*min(etG, 1.)*coupe*sansReflet;
+      float refletEt = (smoothstep(.05, .0, er.x + er.y*4.) + smoothstep(.05, .0, er.y + er.x*4.) + L(.022, .0, length(er)))*ok*(1. - jk)*(1. - ferme)*(1. - sp)*min(etG, 1.)*coupe*sansReflet;
       lum *= 1. - min(etG, 1.)*.85;
       etoile += sp*(smoothstep(.1 + aa, .0, e.x + e.y*3.) + smoothstep(.1 + aa, .0, e.y + e.x*3.))*(1. - uSleep); blanc += sp*L(.03, .008, length(e))*(1. - uSleep);   // éclat : une étoile sombre, un point de lumière au cœur
       // l'œil : une lentille sombre et vernie (reflet large et doux en haut, lumière du corps reflétée en bas) ; couleur choisie : iris en dégradé (v11)

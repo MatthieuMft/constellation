@@ -909,3 +909,8 @@ body.ecriture .ac-points, body.ecriture #ac-passer { display: none; }
 body.ac-g1 #ecrire #humeurs button { animation: guide 1.6s ease-in-out infinite; }
 body.ac-g2 #ecrire #editeur { outline: 1px dashed color-mix(in srgb, var(--ink) 40%, transparent); outline-offset: 6px; }
 body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: guide 1.4s ease-in-out infinite; }
+/* v38 : rubriques de la boutique (Forme, Matière, Expressions…) : une rangée qui défile, collée en haut */
+.bq-rubriques { position: sticky; top: 0; z-index: 3; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; margin: -4px -2px 14px; padding: 8px 2px; background: var(--panel-s); border-bottom: 1px solid var(--line); }
+.bq-rubriques::-webkit-scrollbar { display: none; }
+.bq-rubriques button { flex: none; padding: 7px 12px; font: 11px var(--mono); color: var(--soft); white-space: nowrap; }
+.bq-rubriques button:hover { color: var(--ink); border-color: var(--ink); }
