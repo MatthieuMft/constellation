@@ -12,8 +12,8 @@ const el = (tag, attrs = {}, ...enfants) => {
 
 // ctx : { jours() → clés triées, items(cle), couleurJour(cle), mediaUrl(cle), voirMedia(item, m), album(k, n), ouvrirJour(cle) }
 export function creerLecture(ctx) {
-  let ecran = null, cle = null, anim = null, finir = null;
-  const fermer = () => { if (anim) anim.cancel(); anim = finir = null; if (ecran) ecran.remove(); ecran = null; };
+  let ecran = null, cle = null;
+  const fermer = () => { if (tour) { tour.mort = true; cancelAnimationFrame(tour.raf); tour = null; } if (ecran) ecran.remove(); ecran = null; };
   function medias(item) {
     const l = (item.medias || []).concat(item.media ? [item.media] : []); if (!l.length) return null;
     return el('div', { class: 'lec-medias' }, l.map(m => { const b = el('button', { type: 'button', class: 'vignette', onclick: () => ctx.voirMedia(item, m) });
@@ -40,34 +40,105 @@ export function creerLecture(ctx) {
     ecran.querySelector('.lec-prec').disabled = i <= 0; ecran.querySelector('.lec-suiv').disabled = i < 0 || i >= L.length - 1;
     ecran.querySelector('.lec-pos').textContent = i >= 0 ? (i + 1) + ' / ' + L.length : '';
   }
-  // v69 : on tourne les pages comme dans un livre. Vers l'avant, la page se soulève et se replie vers la reliure (à gauche) ;
-  // vers l'arrière, la page d'avant revient se poser par-dessus. Mouvement réduit demandé par le téléphone : on change simplement de page.
-
-  function page(sens = 0) {
-    entete();
-    const corps = ecran.querySelector('.lec-corps'), livre = ecran.querySelector('.lec-livre');
-    if (finir) { anim.cancel(); finir(); }                               // une page tournée pendant qu'une autre tourne encore : on termine la première d'un coup
-    const doux = !sens || !livre.animate || matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (doux) { corps.replaceChildren(...construire(cle)); corps.scrollTop = 0; return; }
-    const recto = el('div', { class: 'lec-recto' }), feuille = el('div', { class: 'lec-feuille' }, recto, el('div', { class: 'lec-verso' }), el('i', { class: 'lec-pli' })), ombre = el('i', { class: 'lec-ombre' });
-    const temps = { duration: 780, easing: 'cubic-bezier(.45,.05,.3,1)' };
-    if (sens > 0) {
-      const haut = corps.scrollTop; recto.append(...corps.childNodes); livre.append(ombre, feuille); recto.scrollTop = haut;
-      corps.replaceChildren(...construire(cle)); corps.scrollTop = 0;
-      anim = feuille.animate([{ transform: 'rotateY(0deg)' }, { transform: 'rotateY(-180deg)' }], temps);
-      feuille.lastChild.animate([{ opacity: 0 }, { opacity: .8, offset: .45 }, { opacity: .2 }], temps);
-      ombre.animate([{ opacity: .7 }, { opacity: 0 }], temps);
-      finir = () => { feuille.remove(); ombre.remove(); anim = finir = null; }; anim.onfinish = () => finir && finir();
-    } else {
-      recto.append(...construire(cle)); livre.append(ombre, feuille);
-      anim = feuille.animate([{ transform: 'rotateY(-180deg)' }, { transform: 'rotateY(0deg)' }], temps);
-      feuille.lastChild.animate([{ opacity: .2 }, { opacity: .8, offset: .55 }, { opacity: 0 }], temps);
-      ombre.animate([{ opacity: 0 }, { opacity: .7 }], temps);
-      finir = () => { corps.replaceChildren(...recto.childNodes); corps.scrollTop = 0; feuille.remove(); ombre.remove(); anim = finir = null; }; anim.onfinish = () => finir && finir();
+  // v73 (Matthieu : « trop rigide ») : une page souple. Elle se soulève par un coin, se replie le long d'un pli qui bouge,
+  // et son dos apparaît, ombré, comme une vraie feuille. On peut l'attraper du doigt et la tirer : elle suit le geste,
+  // puis termine de tourner (ou retombe) quand on lâche. Mouvement réduit demandé par le téléphone : on change simplement de page.
+  // Géométrie : le coin C va vers le point P ; le pli est la médiatrice de [CP]. La partie côté coin est repliée (symétrie par rapport au pli).
+  const reduit = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let tour = null;
+  function couper(poly, f) {                                            // garde la partie du polygone où f ≥ 0
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+      const a = poly[i], b = poly[(i + 1) % poly.length], fa = f(a), fb = f(b);
+      if (fa >= 0) out.push(a);
+      if ((fa >= 0) !== (fb >= 0)) { const k = fa / (fa - fb); out.push({ x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k }); }
     }
+    return out;
   }
-  function aller(k, sens) { if (!k) return; cle = k; page(sens); }
-  function voisin(delta) { const L = ctx.jours(), i = L.indexOf(cle); const k = L[i + delta]; if (k) aller(k, delta); }
+  const clip = (e, pts) => { e.style.clipPath = pts && pts.length > 2 ? 'polygon(' + pts.map(q => q.x.toFixed(1) + 'px ' + q.y.toFixed(1) + 'px').join(',') + ')' : 'polygon(0 0,0 0,0 0)'; };
+  const bande = (i, M, u) => { i.style.left = M.x + 'px'; i.style.top = (M.y - 3000) + 'px'; i.style.transform = 'rotate(' + Math.atan2(u.y, u.x) + 'rad)'; };
+  function dessiner(T, P) {
+    // la feuille ne se déchire pas : le coin reste à une largeur de page de la reliure
+    const S = { x: 0, y: T.Cy }, S2 = { x: 0, y: T.H - T.Cy }, D = Math.hypot(T.W, T.H);
+    let dx = P.x - S.x, dy = P.y - S.y, d = Math.hypot(dx, dy); if (d > T.W) P = { x: S.x + dx / d * T.W, y: S.y + dy / d * T.W };
+    dx = P.x - S2.x; dy = P.y - S2.y; d = Math.hypot(dx, dy); if (d > D) P = { x: S2.x + dx / d * D, y: S2.y + dy / d * D };
+    T.P = P;
+    const cx = T.W - P.x, cy = T.Cy - P.y, l = Math.hypot(cx, cy), rect = [{ x: 0, y: 0 }, { x: T.W, y: 0 }, { x: T.W, y: T.H }, { x: 0, y: T.H }];
+    if (l < .5) { clip(T.feuille, rect); clip(T.dos, null); clip(T.ombre, null); return; }
+    const n = { x: cx / l, y: cy / l }, M = { x: (T.W + P.x) / 2, y: (T.Cy + P.y) / 2 }, cote = q => (q.x - M.x) * n.x + (q.y - M.y) * n.y;
+    const coin = couper(rect, cote), refl = q => { const k = 2 * cote(q); return { x: q.x - k * n.x, y: q.y - k * n.y }; };
+    // le pli n'est pas une arête droite : la feuille s'arrondit (une courbe qui bombe vers le coin), ce qui la rend souple
+    const sur = coin.filter(q => Math.abs(cote(q)) < 1e-6), b = Math.min(30, l * .14);
+    let plier = poly => poly;
+    if (sur.length === 2) {
+      const [A, B] = sur, courbe = []; for (let i = 1; i < 12; i++) { const u = i / 12, h = b * Math.pow(Math.sin(Math.PI * u), .8); courbe.push({ x: A.x + (B.x - A.x) * u + n.x * h, y: A.y + (B.y - A.y) * u + n.y * h }); }
+      const pres = (q, r) => Math.abs(q.x - r.x) < .01 && Math.abs(q.y - r.y) < .01;
+      plier = poly => { for (let i = 0; i < poly.length; i++) { const a = poly[i], c = poly[(i + 1) % poly.length];
+        if (pres(a, A) && pres(c, B)) return [...poly.slice(0, i + 1), ...courbe, ...poly.slice(i + 1)];
+        if (pres(a, B) && pres(c, A)) return [...poly.slice(0, i + 1), ...courbe.slice().reverse(), ...poly.slice(i + 1)]; } return poly; };
+    }
+    clip(T.feuille, plier(couper(rect, q => -cote(q)))); clip(T.dos, plier(coin.map(refl))); clip(T.ombre, plier(coin));
+    bande(T.ombre.firstChild, { x: M.x + n.x * b * .6, y: M.y + n.y * b * .6 }, n); T.ombre.style.setProperty('--o', Math.min(70, l * .35) + 'px');
+    bande(T.dos.firstChild, M, { x: -n.x, y: -n.y }); T.dos.style.setProperty('--o', Math.min(170, l * .5) + 'px');
+  }
+  function monter(sens, k, y0) {                                         // prépare la feuille qui tourne (sens > 0 : on avance)
+    const livre = ecran.querySelector('.lec-livre'), corps = ecran.querySelector('.lec-corps'), W = livre.clientWidth, H = livre.clientHeight;
+    const Cy = y0 != null && y0 < H * .45 ? 0 : H, haut = corps.scrollTop;
+    const recto = el('div', { class: 'lec-recto' }), feuille = el('div', { class: 'lec-feuille' }, recto);
+    const ombre = el('div', { class: 'lec-ombre' }, el('i')), dos = el('div', { class: 'lec-dos' }, el('i')), dosO = el('div', { class: 'lec-dos-ombre' }, dos);
+    if (sens > 0) { recto.append(...corps.childNodes); corps.replaceChildren(...construire(k)); corps.scrollTop = 0; } else recto.append(...construire(k));
+    livre.append(ombre, feuille, dosO); if (sens > 0) recto.scrollTop = haut;
+    const T = { sens, W, H, Cy, feuille, ombre, dos, debut: { x: sens > 0 ? W : -W, y: Cy }, fin: { x: sens > 0 ? -W : W, y: Cy }, cible: null, raf: 0, mort: false };
+    const nettoyer = () => { T.mort = true; cancelAnimationFrame(T.raf); feuille.remove(); ombre.remove(); dosO.remove(); if (tour === T) tour = null; };
+    T.annuler = () => { if (sens > 0) { corps.replaceChildren(...recto.childNodes); corps.scrollTop = haut; } nettoyer(); };
+    T.valider = () => { if (sens < 0) { corps.replaceChildren(...recto.childNodes); corps.scrollTop = 0; } cle = k; entete(); nettoyer(); };
+    T.terminer = () => (T.cible === 'fin' ? T.valider : T.annuler)();
+    tour = T; dessiner(T, T.debut); return T;
+  }
+  function glisser(T, vers, ms, arc, apres) {                            // le coin file vers « vers », en se soulevant un peu (arc)
+    const de = { ...T.P }, t0 = performance.now();
+    const pas = now => {
+      if (T.mort) return;
+      const k = Math.min(1, (now - t0) / ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2, h = Math.sin(Math.PI * e) * arc;
+      dessiner(T, { x: de.x + (vers.x - de.x) * e, y: de.y + (vers.y - de.y) * e + (T.Cy ? -h : h) });
+      if (k < 1) T.raf = requestAnimationFrame(pas); else apres();
+    };
+    T.raf = requestAnimationFrame(pas);
+  }
+  function page(sens = 0, k = cle) {
+    const corps = ecran.querySelector('.lec-corps');
+    if (tour) tour.terminer();                                           // une page tournée pendant qu'une autre tourne encore : on termine la première d'un coup
+    if (!sens || reduit()) { cle = k; entete(); corps.replaceChildren(...construire(k)); corps.scrollTop = 0; return; }
+    const T = monter(sens, k, null); T.cible = 'fin';
+    glisser(T, T.fin, 900, T.H * .2, () => T.valider());
+  }
+  function aller(k, sens) { if (!k) return; page(sens, k); }
+  function voisin(delta) { if (tour) tour.terminer(); const L = ctx.jours(), i = L.indexOf(cle); const k = L[i + delta]; if (k) aller(k, delta); }
+  // attraper la page du doigt
+  function geste(livre) {
+    let g = null;
+    livre.addEventListener('pointerdown', e => { if (!tour && e.isPrimary) g = { x: e.clientX, y: e.clientY, id: e.pointerId, t: performance.now(), T: null }; });
+    livre.addEventListener('pointermove', e => {
+      if (!g || e.pointerId !== g.id) return;
+      const r = livre.getBoundingClientRect(), dx = e.clientX - g.x, dy = e.clientY - g.y;
+      if (!g.T) {
+        if (Math.abs(dx) < 12 || Math.abs(dx) < Math.abs(dy) * 1.3) { if (Math.abs(dy) > 14) g = null; return; }
+        const sens = dx < 0 ? 1 : -1, L = ctx.jours(), k = L[L.indexOf(cle) + sens]; if (!k || reduit()) { g = null; return; }
+        g.x0 = g.x - r.left; g.y0 = g.y - r.top; g.T = monter(sens, k, g.y0); g.t = performance.now();
+        try { livre.setPointerCapture(e.pointerId); } catch (err) {}
+      }
+      const T = g.T, fx = e.clientX - r.left, fy = e.clientY - r.top;
+      const px = T.sens > 0 ? T.W - (g.x0 - fx) * (2 * T.W / Math.max(60, g.x0)) : -T.W + (fx - g.x0) * (2 * T.W / Math.max(60, T.W - g.x0));
+      dessiner(T, { x: px, y: T.Cy + (fy - g.y0) * .8 });
+    });
+    const lacher = (e, annule) => {
+      if (!g || e.pointerId !== g.id) return; const T = g.T, vite = performance.now() - g.t < 300; g = null; if (!T) return;
+      const prog = T.sens > 0 ? (T.W - T.P.x) / (2 * T.W) : (T.P.x + T.W) / (2 * T.W);
+      if (!annule && (prog > .3 || (vite && prog > .06))) { T.cible = 'fin'; glisser(T, T.fin, 250 + 450 * (1 - prog), 0, () => T.valider()); }
+      else { T.cible = 'debut'; glisser(T, T.debut, 180 + 380 * prog, 0, () => T.annuler()); }
+    };
+    livre.addEventListener('pointerup', e => lacher(e, false)); livre.addEventListener('pointercancel', e => lacher(e, true));
+  }
   function ouvrir(depart = null) {
     fermer(); const L = ctx.jours(); if (!L.length) return false;
     cle = depart && L.includes(depart) ? depart : (depart ? (L.filter(k => k <= depart).pop() || L[0]) : L[L.length - 1]);
@@ -79,13 +150,9 @@ export function creerLecture(ctx) {
         el('button', { type: 'button', class: 'fermer', 'aria-label': t('Fermer'), onclick: fermer }, '×')),
       el('div', { class: 'lec-livre' }, el('div', { class: 'lec-corps' })),
       el('div', { class: 'lec-pied' }, el('span', { class: 'lec-pos' }), el('button', { type: 'button', class: 'lien', onclick: () => { const k = cle; fermer(); ctx.ouvrirJour(k); } }, t('Voir dans le ciel'))));
-    // glisser d'un jour à l'autre
-    const corps = ecran.querySelector('.lec-corps'); let g = null;
-    corps.addEventListener('pointerdown', e => { g = { x: e.clientX, y: e.clientY, t: performance.now() }; });
-    corps.addEventListener('pointerup', e => { if (!g) return; const dx = e.clientX - g.x, dy = e.clientY - g.y; if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.4 && performance.now() - g.t < 800) voisin(dx < 0 ? 1 : -1); g = null; });
-    corps.addEventListener('pointercancel', () => { g = null; });
+    geste(ecran.querySelector('.lec-livre'));
     ecran.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') voisin(-1); if (e.key === 'ArrowRight') voisin(1); if (e.key === 'Escape') fermer(); });
-    document.body.append(ecran); page(); ecran.tabIndex = -1; ecran.focus(); return true;
+    document.body.append(ecran); page(0, cle); ecran.tabIndex = -1; ecran.focus(); return true;
   }
   return { ouvrir, fermer, ouvert: () => !!ecran, cle: () => cle };
 }
