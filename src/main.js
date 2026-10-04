@@ -470,7 +470,7 @@ const scenes = creerScenes({ scene, camera, particules, meteores, melange, texHa
 // La petite lueur : un esprit de lumière qui vit dans la galaxie, dessiné nettement par-dessus les effets (voir creature.js).
 const creature = creerCreature({
   sceneUI, camera, controls, particules, texHalo, entrees: () => joursHumeur, couleurDe: e => new THREE.Color(e.color || cm(e.mood)), surMessage: t => statutTemporaire(t, 6500),
-  etoiles: () => visuelsVisibles, ouvrirPensee: id => choisir(id), mobile, jouer: k => { if (k === 'cache') jouerCache(); },
+  etoiles: () => visuelsVisibles, ouvrirPensee: id => choisir(id), mobile, jouer: k => { if (k === 'cache') jouerCache(); else if (k === 'filante') { if (meteores.attraperUne()) son.tinte(); recompenseFilante(true); } },
 });
 { const f = creature.fete; creature.fete = (...a) => { son.fete(); return f(...a); }; }   // v48 : un tintement aux moments de fête
 const pointeur = { x: 0, y: 0, t: -1e9 };
@@ -751,6 +751,9 @@ function gagnerJeu(n, quoi, type) {
   if (k) { etoiles.donner(k); boutique.rendre && boutique.ouvert() && boutique.rendre(); }
   toast(k ? quoi + ' · ✦ +' + k : quoi);
 }
+// v58 : des fois rien, des fois oui (une filante : 1 fois sur 4 ✦ +1, rarement une dorée à ✦ +3 ; cache-cache : de 0 à 3)
+function tirage(type) { const r = Math.random(); return type === 'filante' ? (r < .05 ? 3 : r < .3 ? 1 : 0) : (r < .3 ? 0 : r < .7 ? 1 : r < .9 ? 2 : 3); }
+function recompenseFilante(seule) { const n = tirage('filante'); if (n) gagnerJeu(n, n === 3 ? t('Une filante dorée !') : seule ? t('Elle te l’a rapportée') : t('Étoile filante attrapée'), 'filante'); }
 const ecranDe = p => { const v = _vEcran.copy(p).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, vu: v.z < 1 }; };
 const _vEcran = new THREE.Vector3();
 function montrerEndroit(x, y) {
@@ -767,7 +770,7 @@ function jouerCache() {
 }
 function toucherCache(id) {
   const c = cacheJeu, cible = visuels.get(c.id), v = visuels.get(id); if (!cible) { cacheJeu = null; creature.sortir(false); return; }
-  if (id === c.id) { cacheJeu = null; son.tinte(); creature.sortir(true); setTimeout(() => gagnerJeu(3, t('Trouvée !'), 'cache'), 600); return; }
+  if (id === c.id) { cacheJeu = null; son.tinte(); creature.sortir(true); setTimeout(() => gagnerJeu(tirage('cache'), t('Trouvée !'), 'cache'), 600); return; }
   c.essais++; if (v) v.pulse = Math.max(v.pulse, .5);
   const a = ecranDe(cible.groupe.position), b = v ? ecranDe(v.groupe.position) : a, d = Math.hypot(a.x - b.x, a.y - b.y);
   toast(d < 100 ? t('Chaud !') : d < 230 ? t('Tiède…') : t('Froid…'), 1600);
@@ -795,7 +798,7 @@ canvas.addEventListener('pointerup', e => {
   clearTimeout(calinMinuteur); if (calinFait) { calinFait = false; creature.calin(false); return; }
   if (!bas || Math.hypot(e.clientX - bas[0], e.clientY - bas[1]) > 5) return;
   { const m = meteores.proche(e.clientX, e.clientY, 80);   // v57 : on touche une étoile filante, la lueur file l'attraper
-    if (m >= 0 && creature.attraper(e.clientX, e.clientY, () => gagnerJeu(1, t('Étoile filante attrapée'), 'filante'))) { meteores.attraper(m); son.tinte(); return; } }
+    if (m >= 0 && creature.attraper(e.clientX, e.clientY, () => recompenseFilante(false))) { meteores.attraper(m); son.tinte(); return; } }
   const s = sous(e);
   if (s && s.type === 'etoile' && cacheJeu) { toucherCache(s.id); return; }   // v57 : cache-cache, on cherche derrière les étoiles
   if (!s) {
@@ -1409,7 +1412,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v57'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v58'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));

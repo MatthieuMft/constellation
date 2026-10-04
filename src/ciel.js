@@ -99,7 +99,8 @@ export function creerEtoilesFilantes(scene, camera) {
     return best;
   }
   function attraper(i) { const v = vies[i]; if (!v || !v.vivant) return null; v.vivant = false; return v.tete.clone(); }
-  return { update, regler, rafale, pluie, vives, dorees, proche, attraper };
+  const attraperUne = () => { const i = vies.findIndex(v => v.vivant); return i < 0 ? null : attraper(i); };   // v58 : la lueur en attrape une toute seule
+  return { update, regler, rafale, pluie, vives, dorees, proche, attraper, attraperUne };
 }
 
 // Poussière cosmique : points qui dérivent lentement autour de la galaxie (mouvement calculé sur le GPU).

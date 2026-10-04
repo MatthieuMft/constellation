@@ -135,6 +135,46 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   let cache = null, cacheF = 0, couchee = false, reveil = false, tCouchee = 9, serie = 0, proposeCache = 0;   // v57 : cache-cache, couchée pour la nuit
   const doree = new THREE.Color(1, .88, .55);
   const _o = new THREE.Vector3();
+  // v58 : sa vie en solo (croquer l'étoile du jour, en faire le tour, la planche, jongler, polir une étoile, une sieste, éternuer) et ses réactions aux filantes
+  const SOLO = { croque: 7.5, orbite: 9, planche: 10, jongle: 8, polit: 8, sieste: 14 };
+  let solo = null, eternue = 0, prochainEternue = rnd(120, 260), filR = null, filVue = 0;
+  const balles = [0, 1, 2].map(() => { const m = new THREE.SpriteMaterial({ map: texHalo, color: new THREE.Color(1, .9, .6), blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true, opacity: 0 }), b = new THREE.Sprite(m); b.renderOrder = 12; b.visible = false; sceneUI.add(b); return b; });
+  const cleEtoile = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+  function etoileDuJour() { const m = etoiles(), v = m.get(cleEtoile()); if (v) return v; let best = null; for (const w of m.values()) if (!best || String(w.id) > String(best.id)) best = w; return best; }   // pas encore écrit aujourd'hui : la plus récente
+  const couleurEtoile = v => v.mat && v.mat.uniforms && v.mat.uniforms.uColor ? v.mat.uniforms.uColor.value : coul;
+  function preparerSolo(n) {
+    if (n === 'croque' || n === 'orbite') { const v = etoileDuJour(); return v && proj(v.groupe.position).vu ? { v, a0: Math.random() * 6.283 } : null; }
+    if (n === 'polit' || n === 'sieste') { const vus = [...etoiles().values()].filter(v => proj(v.groupe.position).vu); return vus.length ? { v: choix(vus) } : null; }
+    return { dir: Math.random() < .5 ? -1 : 1 };
+  }
+  function debutSolo(n) {
+    const l = { croque: [.35, ['Elle a l’air bonne, ton étoile…', 'Juste une bouchée…']], orbite: [.4, ['Un petit tour de ton étoile !', 'Je fais le tour !']], planche: [.5, ['Je fais la planche…', 'Je me laisse flotter.']],
+      jongle: [.5, ['Regarde, je jongle !', 'Hop, hop, hop !']], polit: [.4, ['Je la fais briller pour toi.', 'Un peu de poussière, là…']], sieste: [.4, ['Une petite sieste…', 'Je me pose un peu.']] }[n];
+    if (l && Math.random() < l[0]) dire(choix(l[1]), { duree: 2600 });
+  }
+  function finSolo(n) {
+    if (n === 'jongle' && Math.random() < .5) { joie = 2; dire(choix(['Ta-da !', 'Et voilà !']), { priorite: true, duree: 1600 }); }
+    if (n === 'sieste' && solo && !solo.reveillee) { etire = 1.4; if (Math.random() < .4) dire(choix(['Ah, ça fait du bien.', 'Petite sieste… finie !']), { duree: 2200 }); }
+  }
+  function reactionFilante(ctx, m) {                                   // une réaction tirée au hasard à chaque filante
+    const t0 = performance.now();
+    if ((jeux.attrapes || 0) < 3 && t0 - dernierSouhait > 90000 && etat !== 'dort' && etat !== 'sieste' && !cache) { dernierSouhait = t0; dire('Touche-la, je l’attrape !', { priorite: true }); }
+    if (etat === 'dort' || etat === 'sieste' || cache || tenue || etat === 'ecrit' || etat === 'fete' || etat === 'souvenir' || etat === 'lancee' || etat === 'revient') return { type: 'ignore' };
+    if (SOLO[etat] && Math.random() < .6) return { type: 'ignore' };   // occupée : elle s'en fiche
+    const libre = ['flotte', 'regarde', 'joue', 'danse', 'visite', 'attend', 'curieux'].includes(etat) && !ctx.ecriture;
+    const r = Math.random(), type = r < .28 ? 'voeu' : r < .5 ? 'suit' : r < .7 ? 'bouche' : libre ? 'court' : 'suit';
+    if (type === 'voeu' && Math.random() < .45) dire(choix(['Je fais un vœu…', 'Un vœu pour toi.', 'Chut, je fais un vœu.']), { duree: 2600 });
+    else if (type === 'bouche' && Math.random() < .4) dire(choix(['Ooooh…', 'Waouh…', 'Tu as vu ?']), { duree: 2000 });
+    else if (type === 'suit' && Math.random() < .25) dire(choix(['Elle file !', 'Regarde-la filer.']), { duree: 2000 });
+    else if (type === 'court') {                                       // elle court après toute seule, et parfois elle l'attrape
+      dire(choix(['Attends-moi !', 'Je l’attrape !', 'Elle est à moi !']), { priorite: true, duree: 1600 }); souvenir = null;
+      _c.copy(m).project(camera); const p = ndcPoint(clamp(_c.x, -.9, .9), clamp(_c.y, -.85, .85), camera.position.distanceTo(pos), new THREE.Vector3());
+      forceCible = { point: p, vite: true, chasse: true, jusqu: t0 + 2600, surArrivee: () => {
+        if (Math.random() < .45) { jouer && jouer('filante'); joie = 4; particules.burst(pos, doree, 30, 1.3, true); dire(choix(['Je l’ai eue toute seule !', 'Attrapée ! Pour toi.']), { priorite: true, duree: 2400 }); }
+        else { surprise = .6; dire(choix(['Raté… elle va trop vite.', 'Zut, envolée !', 'Pfff, la prochaine fois.']), { priorite: true, duree: 2200 }); } } };
+    }
+    return { type, t0 };
+  }
 
   function base() { camera.updateMatrixWorld(); _r.setFromMatrixColumn(camera.matrixWorld, 0); _u.setFromMatrixColumn(camera.matrixWorld, 1); camera.getWorldDirection(_f); }
   const ndcPoint = (x, y, d, out) => out.set(x, y, .5).unproject(camera).sub(camera.position).normalize().multiplyScalar(d).add(camera.position);
@@ -164,7 +204,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   // ───── comportement ─────
   function choisirEtat(dt, ctx) {
     const now = performance.now();
-    const dort = (ctx.inactivite > 70 || (ctx.nuit && ctx.inactivite > 16)) && !ctx.ecriture && !calin;
+    const dort = (ctx.inactivite > 150 || (ctx.nuit && ctx.inactivite > 16)) && !ctx.ecriture && !calin;
     if (ctx.inactivite < 5) bailleFait = false;
     else if (!bailleFait && !dort && !ctx.ecriture && !calin && etat !== 'dort' && ctx.inactivite > (ctx.nuit ? 11 : 60)) { bailleFait = true; baille = 2.4; etire = 1.4; dire(choix(['Aaaah…', '*bâille*', 'Je somnole un peu…']), { duree: 2400 }); }
     let n = 'flotte';
@@ -186,9 +226,13 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     else if (ctx.curseurActif && ctx.curseurImmobile > 2.4 && !ctx.occupe && now > poseeJusqu) n = 'curieux';   // v56 : tout juste posée, elle reste où on l'a mise
     else if (profil.seul > .4) n = 'attend';
     else if ((etat === 'joue' && etatT < 5.5) || (etat === 'danse' && etatT < 4.5) || (etat === 'regarde' && etatT < 6)) n = etat;
+    else if (SOLO[etat] && solo && etatT < SOLO[etat]) n = etat;       // v58 : une scène en solo va jusqu'au bout
     else if (etat === 'visite' && etatT < prochainChangement) n = 'visite';
     else if (etat === 'flotte' && etatT > prochainChangement && (animSuivante !== 'visite' || etoiles().size)) n = animSuivante;
+    if (SOLO[n] && n !== etat && !(solo = preparerSolo(n))) { n = 'flotte'; animSuivante = 'joue'; }
     if (n !== etat) {
+      if (SOLO[etat]) finSolo(etat);
+      if (SOLO[n]) debutSolo(n);
       if (etat === 'dort' && n !== 'tenue') { etire = 1.4; if (reveil) { jeux.bonjour = cleJour(); sauverJeux(); } dire(reveil ? 'Bonjour ! J’ai bien dormi.' : 'Hm ? Oh, tu es là.'); reveil = false; }
       if (etat === 'ecrit') { bullesEcriture = 0; longDit = false; patienceDite = false; }
       if (etat === 'revient' && n !== 'tenue') { joie = 2.5; dire(choix(['Pfiou ! Quel voyage.', 'Tu m’as lancée loin !', 'Encore ! … Non, en fait.', 'Me revoilà !']), { priorite: true, duree: 2400 }); }
@@ -197,7 +241,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       etat = n; etatT = 0; arrivee = false;
       if (etat === 'regarde') regardT = 0;
       if (etat === 'visite') { const vs = [...etoiles().values()]; visiteId = vs[Math.floor(Math.random() * vs.length)]; prochainChangement = rnd(8, 13); }
-      if (etat === 'flotte') { prochainChangement = rnd(10, 22); animSuivante = choix(['visite', 'visite', 'joue', 'danse', 'regarde', 'joue']); }
+      if (etat === 'flotte') { prochainChangement = rnd(10, 22); animSuivante = choix(['visite', 'visite', 'joue', 'danse', 'regarde', 'joue', 'croque', 'croque', 'orbite', 'orbite', 'planche', 'jongle', 'jongle', 'polit', 'sieste']); }
       if (etat === 'danse') dire(choix(['Lalala~', 'Tu danses avec moi ?', '♪']), { duree: 2600 });
       if (etat === 'joue') joie = Math.max(joie, 2.5);
       if (etat === 'dort') visiteId = plusProcheEtoile(pos);
@@ -247,6 +291,29 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       case 'peur': { const e = plusProcheEtoile(pos); if (e) cible.copy(e.groupe.position).addScaledVector(_f, 2.2); else ndcPoint(-.3, -.45, d * .8, cible); raideur = 4; vmax = 20; break; }
       case 'cache': { const v = etoiles().get(cache.id); if (!v) { cache = null; break; }    // v57 : elle file derrière l'étoile et s'efface
         cible.copy(v.groupe.position).addScaledVector(_f, 2.5); raideur = 3.5; vmax = 30; break; }
+      case 'croque': {                                                   // v58 : elle croque un bout de ton étoile du jour, grimace, et recrache tout en étincelles
+        const v = solo.v, sp = v.groupe.position; regardCible = sp;
+        cible.copy(sp).addScaledVector(_r, -2.8).addScaledVector(_f, -2.4).addScaledVector(_u, .4); raideur = 2.6; vmax = 14;
+        if (solo.arrive == null && (pos.distanceTo(cible) < 2.5 || etatT > 4)) solo.arrive = etatT;
+        if (solo.arrive != null) { const ta = etatT - solo.arrive;
+          if (ta > .45 && ta < .85) cible.addScaledVector(_r, 1.6);       // la bouchée
+          if (ta > .7 && !solo.mord) { solo.mord = true; v.pulse = Math.max(v.pulse, .8); particules.burst(sp, couleurEtoile(v), 10, .5); dire(choix(['Miam !', 'Crounch !', '*croque*']), { priorite: true, duree: 1400 }); }
+          if (ta > 2.7 && !solo.crache) { solo.crache = true; _b.copy(pos).addScaledVector(_r, 1); particules.burst(_b, couleurEtoile(v), 22, 1.3, true); particules.burst(_b, doree, 10, 1, true); vel.addScaledVector(_r, -7).addScaledVector(_u, 2); v.pulse = Math.max(v.pulse, 1);
+            dire(choix(['Pouah ! Ça pique.', 'Trop chaud !', 'Beurk, ça brille trop !', 'Bon… je te la rends.']), { priorite: true, duree: 2400 }); }
+        } break; }
+      case 'orbite': { const sp = solo.v.groupe.position, a = solo.a0 + etatT * 1.6, R = 6;   // elle tourne autour de ton étoile du jour (devant, puis derrière)
+        cible.copy(sp).addScaledVector(_r, Math.cos(a) * R).addScaledVector(_f, Math.sin(a) * R * .8).addScaledVector(_u, .8 + Math.sin(a * 2) * .6); raideur = etatT < 1.5 ? 2.5 : 7; vmax = 28; regardCible = sp;
+        if (Math.random() < dt * 10) particules.burst(pos, coul, 1, .12); break; }
+      case 'planche': ndcPoint(clamp(maison.x + solo.dir * (etatT * .045 - .22), -.8, .8), maison.y + .14 + Math.sin(t * .7) * .03, d * .9, cible); raideur = 1; vmax = 3; break;   // elle se laisse dériver, allongée
+      case 'jongle': ndcPoint(maison.x + .02, maison.y + .06, d * .85, cible); raideur = 2; vmax = 8; break;
+      case 'polit': { const v = solo.v, sp = v.groupe.position; regardCible = sp;          // elle frotte une de tes étoiles jusqu'à ce qu'elle brille
+        cible.copy(sp).addScaledVector(_f, -3).addScaledVector(_r, 1.7).addScaledVector(_u, .3); raideur = 2.4; vmax = 14;
+        if (solo.arrive == null && (pos.distanceTo(cible) < 2.5 || etatT > 3.5)) solo.arrive = etatT;
+        if (solo.arrive != null) { const ta = etatT - solo.arrive; cible.addScaledVector(_r, Math.sin(ta * 13) * .55).addScaledVector(_u, Math.cos(ta * 13) * .3); raideur = 9; vmax = 22;
+          if (Math.random() < dt * 6) particules.burst(sp, blanc, 1, .3); v.pulse = Math.max(v.pulse, Math.min(.6, ta * .12));
+          if (etatT > SOLO.polit - .8 && !solo.fini) { solo.fini = true; v.pulse = Math.max(v.pulse, 1.3); particules.burst(sp, doree, 22, 1.1, true); joie = 2.5; dire(choix(['Toute propre !', 'Elle brille, hein ?', 'Voilà, comme neuve.']), { priorite: true, duree: 2200 }); } }
+        break; }
+      case 'sieste': cible.copy(solo.v.groupe.position).addScaledVector(_u, 2.1).addScaledVector(_f, -1); raideur = 1.4; vmax = 7; break;   // couchée sur une étoile
       case 'dort': {
         if (couchee) { ndcPoint(maison.x, maison.y - .05, d * .9, cible); raideur = 1.1; vmax = 4; break; }   // couchée : là où elle vit, sous sa couverture
         const e = visiteId && etoiles().get(visiteId.id) ? visiteId : plusProcheEtoile(pos);
@@ -276,7 +343,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const now = performance.now(); if (fx.expr && now > fx.jusqu) fx.expr = null;
     if (ctx.eclair) peur = 4;
     prochainSouvenir -= dt;
-    if (prochainSouvenir <= 0 && etat !== 'dort' && !ctx.occupe && !ctx.ecriture && !souvenir) { prochainSouvenir = rnd(70, 130); lancerSouvenir(); }
+    if (prochainSouvenir <= 0 && etat !== 'dort' && !SOLO[etat] && !ctx.occupe && !ctx.ecriture && !souvenir) { prochainSouvenir = rnd(70, 130); lancerSouvenir(); }
     choisirEtat(dt, ctx);
     { // bavardage : de temps en temps, un mot sur la journée, la série, une date qui compte
       chat -= dt;
@@ -294,6 +361,9 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       if (tourneAcc > Math.PI * 2.6 && !tournis && etat !== 'dort') { tournis = 3.6; tourneAcc = 0; surprise = Math.max(surprise, .5); dire(choix(['J’ai le tournis…', 'Ouh là, ça tourne !', 'Tout tourne…']), { priorite: true, duree: 2600 }); }
     }
     const regardCible = viser(dt, t, ctx);
+    if (eternue > 0) { const avant = eternue; eternue = Math.max(0, eternue - dt);   // v58 : A… a… atchoum !
+      if (avant > .7 && eternue <= .7) { base(); _b.copy(corps.position).addScaledVector(_f, -1.2); particules.burst(_b, coul, 18, 1.2, true); particules.burst(_b, blanc, 10, .9, true); vel.addScaledVector(_u, -4).addScaledVector(_f, 3); surprise = .8; dire('Atchoum !', { priorite: true, duree: 1500 }); } }
+    else if ((etat === 'flotte' || etat === 'regarde' || etat === 'attend') && !ctx.ecriture && !ctx.occupe) { prochainEternue -= dt; if (prochainEternue <= 0) { prochainEternue = rnd(150, 320); eternue = 2.2; dire(choix(['A… a…', 'Ah… ah…']), { priorite: true, duree: 1300 }); } }
     const P = persoI(); if (P.couleur) _pc.set(P.couleur);
     coul.lerp(mimique.couleur || (P.couleur ? _pc : coulCible), Math.min(1, dt * (mimique.couleur ? 5 : P.couleur ? 3 : .7)));
 
@@ -301,8 +371,13 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     _p.copy(pos).project(camera);
     let lx = 0, ly = 0;
     const meteor = ctx.meteores && ctx.meteores[0];
-    if (meteor) { _c.copy(meteor).project(camera); lx = _c.x - _p.x; ly = _c.y - _p.y; surprise = Math.max(surprise, .6); if (now - dernierSouhait > 90000 && etat !== 'dort') { dernierSouhait = now; dire((jeux.attrapes || 0) < 3 ? 'Touche-la, je l’attrape !' : 'Vite, un vœu !', { priorite: true }); } }
+    if (meteor) filVue = now; else if (filR && now - filVue > 900) filR = null;
+    if (meteor && !filR) filR = reactionFilante(ctx, meteor);                // v58 : plus toujours la même tête : un vœu, la suivre, bouche bée, lui courir après, ou rien
+    const fil = meteor && filR ? filR.type : null;
+    if (fil === 'court' && forceCible && forceCible.chasse) { _c.copy(meteor).project(camera); ndcPoint(clamp(_c.x, -.9, .9), clamp(_c.y, -.85, .85), camera.position.distanceTo(pos), forceCible.point); _p.copy(pos).project(camera); }
+    if (fil === 'suit' || fil === 'bouche' || fil === 'court') { _c.copy(meteor).project(camera); lx = _c.x - _p.x; ly = _c.y - _p.y; }
     else if (tournis > 0) { lx = Math.cos(t * 9); ly = Math.sin(t * 9); }                     // les yeux qui tournent
+    else if (etat === 'jongle') { lx = Math.sin(etatT * 3.9) * .35; ly = .7; }   // les yeux suivent les balles
     else if (now - doigt.t < 1800 && etat !== 'dort') { lx = (doigt.x / ctx.W * 2 - 1) - _p.x; ly = (1 - doigt.y / ctx.H * 2) - _p.y; }   // elle regarde là où tu touches
     else if (ctx.ecriture && ctx.rectEcriture) { const r = ctx.rectEcriture; lx = ((r.left + r.width * (.25 + ctx.caret * .5)) / ctx.W * 2 - 1) - _p.x; ly = (1 - (r.top + r.height * .45) / ctx.H * 2) - _p.y; }   // elle se penche sur ton texte
     else if (regardCible) { _c.copy(regardCible).project(camera); lx = _c.x - _p.x; ly = _c.y - _p.y; }
@@ -315,7 +390,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     blinkV = Math.max(0, blinkV - dt); const blink = blinkV > 0 ? Math.sin(blinkV / .16 * Math.PI) : 0;
 
     // expressions : état + humeur imitée + réaction de mot
-    const dort = etat === 'dort', seul = profil.seul, imi = mimique.mood, expr = fx.expr;
+    const dort = etat === 'dort' || (etat === 'sieste' && etatT > 3.5), seul = profil.seul, imi = mimique.mood, expr = fx.expr;
     let joy = joie > 0 ? 1 : 0, sad = clamp(seul * .9 + (profil.valence < -.4 ? .3 : 0), 0, 1), brow = 0, spark = 0, relax = 0, wide = 0;
     if (!joy && profil.valence > .5 && !seul) joy = .4;
     if (imi === 'joie') joy = Math.max(joy, 1); else if (imi === 'calme') joy = Math.max(joy, .5);        // v26 : calme, les yeux restent ouverts (ils se fermaient pendant toute l'écriture)
@@ -329,6 +404,16 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     if (tenue && !tournis) { wide = Math.max(wide, .45); joy = Math.max(joy, .6); }                    // v56 : tenue, lancée, fou rire
     if (lancee > 0) { wide = 1; joy = 1; }
     if (rire > 0) { joy = 1; wide = 0; sad = 0; brow = 0; }
+    // v58 : filantes et vie en solo
+    if (fil === 'voeu') { joy = Math.max(joy, .7); if (Math.random() < dt * 5) particules.burst(_b.copy(corps.position).addScaledVector(_u, 2), doree, 1, .1); }
+    else if (fil === 'bouche') { wide = 1; spark = Math.max(spark, .7); joy = 0; }
+    else if (fil === 'suit') joy = Math.max(joy, .5);
+    else if (fil === 'court') { wide = Math.max(wide, .6); joy = Math.max(joy, .6); }
+    const ta = etat === 'croque' && solo && solo.arrive != null ? etatT - solo.arrive : -1, joues = ta > .7 && ta < 2.7, grimace = ta > 1.5 && ta < 3.8;
+    if (grimace) { brow = -.7; sad = .35; joy = 0; wide = .3; spark = 0; }
+    if (etat === 'planche') { relax = 1; joy = Math.max(joy, .5); }
+    if (etat === 'polit' && solo && solo.arrive != null) { joy = Math.max(joy, .6); relax = Math.max(relax, .3); }
+    if (etat === 'jongle') { joy = Math.max(joy, .6); spark = Math.max(spark, .3); }
     // v39 : expressions faites avec les traits existants (donc compatibles avec tout : clignement, sommeil, accessoires)
     const repos0 = dort || imi || expr || peur > 0 || surprise > 0 || joie > 0 || calin ? 0 : 1 - sad;
     if (P.expression === 'emerveillee') spark = Math.max(spark, repos0);
@@ -337,11 +422,11 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const V = vue, k6 = Math.min(1, dt * 6), k12 = Math.min(1, dt * 12);   // v25 : les traits du visage passent vite d'une expression à l'autre (plus de visages superposés en transparence)
     V.joie += (joy - V.joie) * k12; V.triste += (sad - V.triste) * Math.min(1, dt * 3); V.sourcils += (brow - V.sourcils) * k6;
     V.eclat += (spark - V.eclat) * k6; V.calme += (relax - V.calme) * k6; V.grands += (wide - V.grands) * Math.min(1, dt * 9);
-    V.sommeil += ((dort ? 1 : baille > .3 ? .8 : 0) - V.sommeil) * Math.min(1, dt * 2.5);
+    V.sommeil += ((dort ? 1 : fil === 'voeu' ? .92 : baille > .3 ? .8 : eternue > .7 ? .55 : 0) - V.sommeil) * Math.min(1, dt * 2.5);
     V.cligne = blink; V.app = apparition; V.clair = clair ? 1 : 0; V.yeuxEtoiles = yeuxEt; V.perso = P;
     // l'expression choisie, seulement au repos : sommeil, peur, joie, mots, humeur imitée passent devant
     const ie = EXPRESSIONS.indexOf(P.expression), repos = dort || imi || expr || peur > 0 || surprise > 0 || joie > 0 || calin ? 0 : 1 - sad;
-    exprV.x += ((rire > 0 ? 1 : ie === 1 ? repos : 0) - exprV.x) * k12; exprV.y += ((ie === 2 ? repos : P.expression === 'ensommeillee' ? .55 * repos : 0) - exprV.y) * k12; exprV.z += ((ie === 3 ? repos : 0) - exprV.z) * k12; exprV.w += ((baille > .3 ? 1 : ie === 4 ? repos : 0) - exprV.w) * k12;   // bâillement : bouche ronde
+    exprV.x += ((rire > 0 ? 1 : ie === 1 ? repos : 0) - exprV.x) * k12; exprV.y += ((ie === 2 ? repos : P.expression === 'ensommeillee' ? .55 * repos : 0) - exprV.y) * k12; exprV.z += ((ie === 3 ? repos : 0) - exprV.z) * k12; exprV.w += ((baille > .3 || fil === 'bouche' || eternue > .7 ? 1 : ie === 4 ? repos : 0) - exprV.w) * k12;   // bâillement : bouche ronde
     const vit = vel.length(); V.battement = Math.sin(t * (dort ? .8 : 7 + vit * .6)) * (dort ? .2 : 1);
 
     // forme : étirement dans le sens du mouvement, respiration, penchée dans les virages
@@ -349,9 +434,9 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const etir = 1 + clamp(vit * .028, 0, .25), resp = 1 + Math.sin(t * (dort ? 1.1 : 2.2)) * .035 * (dort ? 1.6 : 1);
     const ecr = dort ? .93 : 1 + (etire > 0 ? Math.sin(etire / 1.4 * Math.PI) * .22 : 0);
     const sec = rire > 0 ? 1 + Math.sin(t * 26) * .07 : pirouette > 0 ? 1 + Math.sin(pirouette / .9 * Math.PI) * .12 : 1;   // v56 : secouée de rire, étirée pendant la pirouette
-    ecraseV.set(resp / Math.sqrt(etir) * (calin ? 1.12 : 1) * (peur > 0 ? .9 : 1) / Math.sqrt(sec), resp * Math.sqrt(etir) * ecr * (calin ? .9 : 1) * sec);
+    ecraseV.set(resp / Math.sqrt(etir) * (calin ? 1.12 : 1) * (joues ? 1.13 + Math.sin(t * 14) * .025 : 1) * (peur > 0 ? .9 : 1) / Math.sqrt(sec), resp * Math.sqrt(etir) * ecr * (calin ? .9 : 1) * sec);
     const pEcrit = etat === 'ecrit' && ctx.rectEcriture ? clamp(((ctx.rectEcriture.left + ctx.rectEcriture.width / 2) - ecranPos.x) / ctx.W, -1, 1) * -.3 : 0;   // penchée vers le texte
-    V.penche += (clamp(-lat * .035 + vAz * .12, -.45, .45) + pEcrit + (tournis > 0 ? Math.sin(t * 6) * .3 * Math.min(1, tournis) : 0) + (peur > 0 ? Math.sin(t * 40) * .06 : 0) + (rire > 0 ? Math.sin(t * 19) * .22 : 0) + (tenue ? Math.sin(t * 11) * .14 : 0) - V.penche) * Math.min(1, dt * 6);
+    V.penche += (clamp(-lat * .035 + vAz * .12, -.45, .45) + pEcrit + (tournis > 0 ? Math.sin(t * 6) * .3 * Math.min(1, tournis) : 0) + (peur > 0 ? Math.sin(t * 40) * .06 : 0) + (rire > 0 ? Math.sin(t * 19) * .22 : 0) + (tenue ? Math.sin(t * 11) * .14 : 0) + (etat === 'planche' && solo ? solo.dir * 1.3 * Math.min(1, etatT / 1.2, (SOLO.planche - etatT) / 1) : 0) - V.penche) * Math.min(1, dt * 6);
     lueur.maj(dt, t, V);                                                 // couleur, expressions, regard, ailes, perso (silhouette, matière, articles portés)
 
     // taille : bien visible, et à peu près constante à l'écran quand elle s'éloigne ou se rapproche (s = « uSize » de la v11 : le corps fait s/4 de rayon)
@@ -362,12 +447,17 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const bob = Math.sin(t * 1.7) * .25 * (dort ? .3 : 1), tr = peur > 0 ? .12 : 0;
     corps.position.copy(pos).addScaledVector(_u, bob).add(_a.set((Math.random() - .5) * tr, (Math.random() - .5) * tr, (Math.random() - .5) * tr));
     corps.scale.setScalar(s * .25 * (1 - cacheF * .97)); corps.visible = cacheF < .97;   // v57 : cachée derrière une étoile
+    { const on = etat === 'jongle', R = s * .25;                          // v58 : trois grains de poussière d'étoile qu'elle lance d'un côté à l'autre
+      for (let i = 0; i < 3; i++) { const b = balles[i], m = b.material; m.opacity += ((on ? .95 : 0) - m.opacity) * Math.min(1, dt * 5); b.visible = m.opacity > .02; if (!b.visible) continue;
+        const ph = etatT * 1.25 + i / 3, j = Math.floor(ph), p = ph - j, sens = j % 2 ? 1 : -1;
+        b.position.copy(corps.position).addScaledVector(_r, sens * R * 1.5 * (1 - 2 * p)).addScaledVector(_u, R * (.2 + 8 * p * (1 - p))).addScaledVector(_f, -R * .5); b.scale.setScalar(R * 1.25); m.color.copy(i === 1 ? blanc : doree); } }
     // orientation : face à la caméra, mais elle tourne la tête vers là où elle va et ce qu'elle regarde (trois-quarts, profil en voyage),
     // lacet et tangage doux et bornés (le visage reste lisible) ; elle revient de face à l'arrêt, pendant qu'on écrit, qu'on la règle ou qu'elle dort
     let lc = clamp(lat * .16, -1.2, 1.2) + regard.x * .3, tg = clamp(-vel.dot(_u) * .05, -.35, .35) - regard.y * .2;
     if (dort) { lc *= .25; tg = .2; } else if (etat === 'ecrit' || etat === 'pose' || calin) { lc *= .4; tg *= .5; }
     if (hoche > 0) tg += Math.sin((1 - hoche / .7) * Math.PI * 2) * .4;            // hochement de tête à la fin d'une phrase
     if (baille > 0) tg -= Math.sin(baille / 2.4 * Math.PI) * .25;                  // tête en arrière en bâillant
+    if (eternue > .7) tg -= (2.2 - eternue) / 1.5 * .35; else if (eternue > 0) tg += eternue / .7 * .35;   // v58 : l'éternuement
     lacet += (clamp(lc, -1.3, 1.3) - lacet) * Math.min(1, dt * 3); tangage += (clamp(tg, -.45, .45) - tangage) * Math.min(1, dt * 3);
     const tour = pirouette > 0 ? Math.PI * 2 * lisse01(1 - pirouette / .9) : 0;     // v56 : la pirouette, un tour complet sur elle-même
     _m.lookAt(camera.position, corps.position, _u); corps.quaternion.setFromRotationMatrix(_m).multiply(_q.setFromEuler(_e.set(tangage, lacet + tour, 0)));
@@ -555,6 +645,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     caresse() {
       const now = performance.now();
       if (couchee && etat === 'dort') { particules.burst(corps.position, doree, 6, .3); dire(choix(['Zzz…', 'Encore cinq minutes…', 'Mmh… bonne nuit…']), { priorite: true, duree: 2000 }); return; }   // v57 : couchée, elle dort
+      if (etat === 'sieste' && etatT > 3.5 && solo) { solo.reveillee = true; etatT = 99; etire = 1.4; dire(choix(['Oh ! Je faisais la sieste.', 'Hm ? J’étais bien, là…']), { priorite: true, duree: 2000 }); return; }   // v58
       if (etat !== 'ecrit' && now - derniereCaresse < 450) { derniereCaresse = 0; faitPirouette(); return; }   // v56 : deux tapes, une pirouette
       derniereCaresse = now;
       sauve.caresses = (sauve.caresses || 0) + 1; sauver(sauve); bond = 0; particules.burst(corps.position, rose, 12, .7);
@@ -571,6 +662,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       const ph = phraseToucher(); dire(ph, { priorite: true, duree: Math.max(2200, ph.length * 70) });
     },
     prendre, tirer, lacher, tenue: () => !!tenue,
+    forcerSolo: n => { animSuivante = n; etat = 'flotte'; etatT = 999; }, eternuer: () => { eternue = 2.2; },   // v58 : pour les tests
     attraper, allerIci, seCacher, sortir, cachee: () => cache ? cache.id : null, couchee: () => couchee,
     calin(actif, discret = false) { calin = actif;
       if (!actif && etat === 'calin' && !discret && estNuit(new Date().getHours())) {   // v57 : le soir, un câlin la met au lit
