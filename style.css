@@ -1233,3 +1233,23 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .bq-essai-t small { display: block; font: 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: #ffd98a; }
 .bq-essai button { flex: none; min-height: 44px; padding: 0 14px; white-space: nowrap; }
 .bq-essai-oui:disabled { opacity: .55; cursor: default; }
+
+/* ── v82 : la voix ── */
+.voix-barre { position: fixed; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); z-index: 40; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); background: var(--panel-s); backdrop-filter: blur(16px); font: 400 16px var(--serif); }
+.voix-barre .voix-t { flex: 1; min-width: 0; }
+.voix-barre button { min-height: 44px; padding: 0 14px; }
+.voix-point { width: 12px; height: 12px; border-radius: 50%; background: #ff6b6b; box-shadow: 0 0 12px #ff6b6b; animation: voixPouls 1.2s ease-in-out infinite; flex: none; }
+@keyframes voixPouls { 50% { opacity: .35; transform: scale(.8); } }
+.voix-temps { font: 12px var(--mono); color: var(--soft); min-width: 3.2em; text-align: right; }
+.voix-lecteur { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 4%, transparent); }
+.voix-jouer { flex: none; width: 40px; height: 40px; min-height: 0; padding: 0; display: grid; place-items: center; font: 14px var(--mono); }
+.voix-nom { font: italic 14px var(--serif); color: var(--soft); flex: none; }
+.voix-piste { position: relative; flex: 1; height: 24px; cursor: pointer; }
+.voix-piste::before, .voix-piste i { content: ""; position: absolute; left: 0; top: 11px; height: 2px; }
+.voix-piste::before { right: 0; background: var(--line); }
+.voix-piste i { width: 0; background: #ffd98a; box-shadow: 0 0 8px #ffd98a; }
+.voix-fig { grid-column: 1 / -1; margin: 0; }
+#vignettes-ecrire .mini.mini-voix { width: 100%; height: auto; background: none; overflow: visible; }
+#vignettes-ecrire .mini-voix .voix-lecteur { padding-right: 34px; }
+#vignettes-ecrire .mini-voix .voix-jouer { position: static; width: 40px; height: 40px; background: none; color: var(--ink); border: 1px solid var(--line); }
+.lec-medias .voix-fig { width: 100%; }

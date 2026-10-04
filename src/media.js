@@ -20,12 +20,12 @@ async function reduireImage(fichier, max = 1600) {
 
 // retourne { cle, kind, nom, w?, h? }
 export async function stocker(fichier) {
-  const kind = fichier.type.startsWith('video/') ? 'video' : fichier.type.startsWith('image/') ? 'image' : 'fichier';
+  const kind = fichier.type.startsWith('video/') ? 'video' : fichier.type.startsWith('image/') ? 'image' : fichier.type.startsWith('audio/') ? 'audio' : 'fichier';   // v82 : la voix
   if (kind === 'video' && fichier.size > LIMITE_VIDEO) throw new Error(t('Vidéo trop lourde (150 Mo maximum)'));
   if (kind === 'fichier' && fichier.size > LIMITE_VIDEO) throw new Error(t('Fichier trop lourd (150 Mo maximum)'));
   const k = cle();
   if (kind === 'image') { const { blob, w, h } = await reduireImage(fichier); await tx('readwrite', s => s.put(blob, k)); return { cle: k, kind, nom: fichier.name, w, h }; }
-  await tx('readwrite', s => s.put(fichier, k)); return { cle: k, kind, nom: fichier.name };
+  await tx('readwrite', s => s.put(fichier, k)); return { cle: k, kind, nom: fichier.name, ...(fichier.duree ? { duree: fichier.duree } : {}) };
 }
 export async function url(k) {
   if (urls.has(k)) return urls.get(k);

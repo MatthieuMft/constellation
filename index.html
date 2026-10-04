@@ -18,7 +18,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1406957"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1411412"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -118,6 +118,7 @@
         <button type="button" role="menuitem" data-bloc="citation"><b class="bm-i">❝</b>Citation</button>
         <button type="button" role="menuitem" data-bloc="separateur"><b class="bm-i">—</b>Séparateur</button>
         <p class="bm-tete">Médias</p>
+        <button type="button" role="menuitem" data-bloc="voix"><b class="bm-i"><svg viewBox="0 0 20 20"><rect x="7.5" y="2.5" width="5" height="9" rx="2.5"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5"/></svg></b>Voix</button>
         <button type="button" role="menuitem" data-bloc="image"><b class="bm-i"><svg viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12"/><path d="M2.5 13l4-4 3.5 3.5 2.5-2.5 5 5"/><circle cx="13.5" cy="7.5" r="1.3"/></svg></b>Image</button>
         <button type="button" role="menuitem" data-bloc="video"><b class="bm-i"><svg viewBox="0 0 20 20"><rect x="2.5" y="5" width="11" height="10"/><path d="M13.5 9l4-2.5v7l-4-2.5"/></svg></b>Vidéo</button>
         <button type="button" role="menuitem" data-bloc="fichier"><b class="bm-i"><svg viewBox="0 0 20 20"><path d="M5 2.5h7l3 3v12H5z M12 2.5v3h3"/></svg></b>Fichier</button>
@@ -126,7 +127,7 @@
     <button id="coup-pouce" class="lien coup-pouce" type="button" hidden>Un coup de pouce ?</button>
     <div id="editeur" class="editeur" aria-label="Texte de l’entrée"></div>
     <div id="zone-media">
-      <div class="rang-media"><button id="dicter" type="button" aria-pressed="false" title="Dicter à la voix" class="ajout-media">Dicter</button><button type="button" id="choisir-media" class="ajout-media">+ Ajouter un média</button></div>
+      <div class="rang-media"><button id="dicter" type="button" aria-pressed="false" title="Dicter à la voix" class="ajout-media">Dicter</button><button type="button" id="voix" class="ajout-media">Ma voix</button><button type="button" id="choisir-media" class="ajout-media">+ Ajouter un média</button></div>
       <input id="fichiers-media" type="file" accept="image/*,video/*" multiple hidden>
       <input id="fichiers-autres" type="file" multiple hidden>
       <div id="vignettes-ecrire"></div>
@@ -283,6 +284,7 @@
   <button type="button" data-bloc="citation" aria-label="Citation">❝</button>
   <button type="button" data-bloc="separateur" aria-label="Séparateur">—</button>
   <button type="button" data-bloc="image" aria-label="Image"><svg viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12"/><path d="M2.5 13l4-4 3.5 3.5 2.5-2.5 5 5"/><circle cx="13.5" cy="7.5" r="1.3"/></svg></button>
+  <button type="button" data-bloc="voix" aria-label="Voix"><svg viewBox="0 0 20 20"><rect x="7.5" y="2.5" width="5" height="9" rx="2.5"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v2.5"/></svg></button>
   <button type="button" data-bloc="video" aria-label="Vidéo"><svg viewBox="0 0 20 20"><rect x="2.5" y="5" width="11" height="10"/><path d="M13.5 9l4-2.5v7l-4-2.5"/></svg></button>
   <button type="button" data-bloc="fichier" aria-label="Fichier"><svg viewBox="0 0 20 20"><path d="M5 2.5h7l3 3v12H5z M12 2.5v3h3"/></svg></button>
   <button type="button" data-barre="valider" class="bc-valider" aria-label="Cristalliser"><svg viewBox="0 0 20 20"><path d="M4 10.5l4 4 8-9"/></svg></button>

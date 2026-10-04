@@ -1,6 +1,7 @@
 // v60 : relire comme un livre. Une page par jour écrit, en plein écran ; on glisse vers la gauche ou la droite pour changer de jour.
 // Sous chaque journée : « Ce jour-là » (il y a une semaine, un mois, un an), quand ces jours-là ont été écrits.
 import { t, LOC } from './langue.js';
+import { lecteur } from './voix.js';
 import { blocs } from './jour.js';
 import { dateDeCle, cleJour } from './store.js';
 
@@ -16,7 +17,7 @@ export function creerLecture(ctx) {
   const fermer = () => { if (tour) { tour.mort = true; cancelAnimationFrame(tour.raf); tour = null; } if (ecran) ecran.remove(); ecran = null; };
   function medias(item) {
     const l = (item.medias || []).concat(item.media ? [item.media] : []); if (!l.length) return null;
-    return el('div', { class: 'lec-medias' }, l.map(m => { const b = el('button', { type: 'button', class: 'vignette', onclick: () => ctx.voirMedia(item, m) });
+    return el('div', { class: 'lec-medias' }, l.map(m => { if (m.kind === 'audio') { const f = el('div', { class: 'voix-fig' }); ctx.mediaUrl(m.cle).then(u => { if (u) f.append(lecteur(u, m.duree, m.nom)); }); return f; } const b = el('button', { type: 'button', class: 'vignette', onclick: () => ctx.voirMedia(item, m) });
       ctx.mediaUrl(m.cle).then(u => { if (!u) return; if (m.kind === 'fichier') { b.append(el('span', {}, m.nom || t('Fichier'))); return; } b.append(m.kind === 'video' ? el('video', { src: u, muted: true, preload: 'metadata', playsinline: true }) : el('img', { src: u, alt: '' })); if (m.kind === 'video') b.append(el('i', { class: 'lecture' }, '▶')); });
       return b; }));
   }

@@ -1313,7 +1313,17 @@ export const EN = {
 "Arrêter l’essai": "Stop trying",
 "Il te manque ✦{n}": "You need ✦{n} more",
 "Acheter ✦{n}": "Buy ✦{n}",
-"À l’essai · un exemple": "Trying on · an example"
+"À l’essai · un exemple": "Trying on · an example",
+// v82 : la voix
+"Voix": "Voice",
+"Ma voix": "My voice",
+"Je t’écoute…": "I’m listening…",
+"Terminer": "Done",
+"Écouter": "Listen",
+"Pause": "Pause",
+"Ton navigateur ne sait pas enregistrer le son.": "Your browser can’t record sound.",
+"Le micro n’est pas autorisé. Autorise-le dans les réglages du navigateur.": "The microphone isn’t allowed. Allow it in your browser settings.",
+"Ta voix est prête. Elle sera gardée avec ton entrée.": "Your voice is ready. It will be kept with your entry."
 };
 
 export const EN_HTML = {

@@ -1,6 +1,7 @@
 // L'intérieur d'une étoile : la journée, avec son humeur et ses entrées de journal (photos et vidéos comprises).
 // Les anciennes notes, tâches et médias s'affichent dans le même fil, comme du journal : rien n'est perdu.
 import { MOODS, dateDeCle, cleJour } from './store.js';
+import { lecteur } from './voix.js';
 import { t, tn, LOC } from './langue.js';
 
 const el = (tag, attrs = {}, ...enfants) => {
@@ -70,6 +71,7 @@ export function monterJour(zone, ctx) {
   function grilleMedias(item, medias) {
     const grille = el('div', { class: 'vignettes' });
     medias.forEach(m => {
+      if (m.kind === 'audio') { const f = el('figure', { class: 'voix-fig' }); ctx.mediaUrl(m.cle).then(u => f.append(u ? lecteur(u, m.duree, m.nom) : el('span', {}, t('introuvable')))); grille.append(f); return; }   // v82 : la voix se réécoute sur place
       const b = el('button', { class: 'vignette', 'aria-label': t('Ouvrir {nom}', { nom: m.nom || t('le média') }), onclick: () => ctx.voirMedia(item, m) });
       ctx.mediaUrl(m.cle).then(u => {
         if (!u) { b.textContent = t('introuvable'); return; }

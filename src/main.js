@@ -39,6 +39,7 @@ import { verrou } from './verrou.js';
 import { creerFigures, lendemain, dernierJour, constellationDe, offerts } from './figures.js';
 import { dessinerSemaine, envoyer } from './partage.js';
 import { creerLivre } from './livre.js';
+import { enregistrer as enregistrerVoix, lecteur } from './voix.js';
 import { el, ouvrirEspace, fermerEspace, espaceOuvert, titreSection, rangee, groupe } from './espace.js';
 import { PICTOS } from './pictos.js';
 import { creerTrouvailles } from './trouvailles.js';
@@ -731,6 +732,7 @@ async function supprimerItem(item) {
 // visionneuse de médias
 async function voirMedia(item, med = item.media) {
   const u = await media.url(med.cle); if (!u) return;
+  if (med.kind === 'audio') return;   // v82 : lue sur place
   if (med.kind === 'fichier') { Object.assign(document.createElement('a'), { href: u, download: med.nom || 'fichier' }).click(); return; }
   const c = $('vis-contenu'); c.replaceChildren();
   const m = med.kind === 'video' ? Object.assign(document.createElement('video'), { src: u, controls: true, autoplay: true, playsInline: true }) : Object.assign(document.createElement('img'), { src: u, alt: item.legende || '' });
@@ -979,7 +981,7 @@ function garderBrouillon() {
 function lireBrouillon() { try { return JSON.parse(localStorage.getItem(CLE_BROUILLON)); } catch (e) { return null; } }
 function effacerBrouillon() { try { localStorage.removeItem(CLE_BROUILLON); } catch (e) {} }
 $('texte').addEventListener('input', () => { $('interim').textContent = ''; garderBrouillon(); });
-function fermerEcrire() { fermerBlocs(); montrerBarre(false); garderBrouillon(); creature.finEcriture(); arreterDictee(); edition = null; fichiersEnAttente = []; document.body.classList.remove('ecriture'); $('ecrire').hidden = true; $('texte').value = ''; $('note-titre').value = ''; $('nbc').textContent = '0'; accueil.surEcrireFerme(); }
+function fermerEcrire() { if (enregistrement) enregistrement.annuler(); fermerBlocs(); montrerBarre(false); garderBrouillon(); creature.finEcriture(); arreterDictee(); edition = null; fichiersEnAttente = []; document.body.classList.remove('ecriture'); $('ecrire').hidden = true; $('texte').value = ''; $('note-titre').value = ''; $('nbc').textContent = '0'; accueil.surEcrireFerme(); }
 // « + » : ouvre directement le journal
 $('nouveau').addEventListener('click', () => { fermerMenu(); if ($('ecrire').hidden) ouvrirEcrire(); else fermerEcrire(); });
 $('voile-menu').addEventListener('click', () => fermerMenu());
@@ -1019,13 +1021,14 @@ function poserQuestion(now, ta) {
   const ok = creature.dire(q, { duree: 12000, priorite: true, clic: () => { const v = ta.value.replace(/\s+$/, ''); ta.value = (v ? v + '\n\n' : '') + '> ' + q + '\n'; ta.dispatchEvent(new Event('input')); ed.finir(); } });
   if (ok !== false) { questionsPosees++; derniereQuestion = now; }
 }
-const ENTREES = { image: ['fichiers-media', 'image/*'], video: ['fichiers-media', 'video/*'], fichier: ['fichiers-autres', ''] };
+const ENTREES = { voix: null, image: ['fichiers-media', 'image/*'], video: ['fichiers-media', 'video/*'], fichier: ['fichiers-autres', ''] };
 let blocSlash = false;                                                   // menu ouvert par un « / » tapé, à effacer quand on choisit
 function ouvrirBlocs(slash = false) { blocSlash = slash; $('bloc-menu').hidden = false; $('bloc-plus').setAttribute('aria-expanded', 'true'); requestAnimationFrame(() => $('bloc-menu').scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
 function fermerBlocs() { blocSlash = false; $('bloc-menu').hidden = true; $('bloc-plus').setAttribute('aria-expanded', 'false'); }
 function poserBloc(k) {
   if (blocSlash) ed.retirerSlash();
   fermerBlocs();
+  if (k === 'voix') { demarrerVoix(); return; }
   if (ENTREES[k]) { const [id, acc] = ENTREES[k], f = $(id); if (acc) f.accept = acc; f.click(); return; }
   ed.poser(k);
 }
@@ -1077,11 +1080,20 @@ function rendreVignettes() {
   fichiersEnAttente.forEach((f, i) => {
     const d = document.createElement('div'), u = URL.createObjectURL(f); d.className = 'mini';
     const sorte = f.type.startsWith('video/') ? 'video' : f.type.startsWith('image/') ? 'img' : null;
+    if (f.type.startsWith('audio/')) { d.classList.add('mini-voix'); d.append(lecteur(u, f.duree, f.name)); } else
     d.append(sorte ? Object.assign(document.createElement(sorte), { src: u, muted: true }) : Object.assign(document.createElement('span'), { className: 'mini-fichier', textContent: f.name || t('Fichier') }));
     const x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', t('Retirer')); x.addEventListener('click', () => { fichiersEnAttente.splice(i, 1); rendreVignettes(); }); d.append(x); z.append(d);
   });
 }
-$('choisir-media').addEventListener('click', () => $('fichiers-media').click());       // sur téléphone, le choix propose aussi l'appareil photo
+$('choisir-media').addEventListener('click', () => $('fichiers-media').click());
+// v82 : enregistrer sa voix ; la note vocale rejoint les médias en attente de l'entrée
+let enregistrement = null;
+function demarrerVoix() {
+  if (enregistrement) return; arreterDictee(); $('editeur').blur(); montrerBarre(false);
+  enregistrement = enregistrerVoix({ surFin: f => { enregistrement = null; fichiersEnAttente.push(f); rendreVignettes(); statutTemporaire(t('Ta voix est prête. Elle sera gardée avec ton entrée.')); },
+    surErreur: m => { enregistrement = null; statutTemporaire(m, 6000); }, surFermer: () => { enregistrement = null; } });
+}
+$('voix').addEventListener('click', demarrerVoix);       // sur téléphone, le choix propose aussi l'appareil photo
 for (const id of ['fichiers-media', 'fichiers-autres']) $(id).addEventListener('change', ev => { fichiersEnAttente.push(...ev.target.files); ev.target.value = ''; rendreVignettes(); });
 
 addEventListener('keydown', e => {
@@ -1550,7 +1562,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => g.action()) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: true }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v81'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v82'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
