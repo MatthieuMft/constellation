@@ -1033,3 +1033,38 @@ body.joy-on #joystick { display: grid; right: 24px; bottom: calc(84px + var(--sa
 .vitrine .vit-grille button { position: relative; min-width: 0; width: 100%; overflow: hidden; aspect-ratio: 1; padding: 0; border: 1px solid var(--line); background: transparent; display: grid; place-items: center; cursor: pointer; }
 .vitrine .vit-grille button canvas { position: absolute; inset: 0; width: 100%; height: 100%; } .vitrine .vit-grille button.on { border-color: var(--soft); }
 .vitrine .vit-grille button.vide { color: var(--line); font-size: .9rem; cursor: default; }
+/* v60 : personnes et lieux, albums, lecture comme un livre */
+button.nom-lien { display: inline; border: 0; padding: 0; min-height: 0; background: none; backdrop-filter: none; font: inherit; letter-spacing: inherit; color: inherit; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; cursor: pointer; }
+button.nom-lien:hover { background: none; text-decoration-color: var(--ink); }
+.vignettes figcaption { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-top: 4px; font: 11px var(--mono); }
+.vignettes figcaption button.nom-lien { color: var(--soft); }
+button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font: 11px var(--mono); color: var(--soft); text-decoration: underline; text-decoration-color: var(--line); }
+#f-lire { display: grid; place-items: center; } #f-lire svg { width: 20px; height: 20px; }
+.album-ecran, .lecture-ecran { position: fixed; inset: 0; z-index: 9; background: color-mix(in srgb, var(--bg) 94%, transparent); backdrop-filter: blur(10px); display: flex; flex-direction: column; }
+.album-tete { display: flex; align-items: center; gap: 12px; padding: calc(14px + env(safe-area-inset-top)) 16px 12px; border-bottom: 1px solid var(--line); }
+.album-tete > div { flex: 1; min-width: 0; } .album-tete strong { display: block; font-size: 1.3rem; font-weight: 400; } .album-tete small { color: var(--soft); font-style: italic; }
+.album-corps { flex: 1; overflow-y: auto; padding: 14px 16px calc(24px + env(safe-area-inset-bottom)); }
+.album-lab { font: 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--soft); margin: 18px 0 8px; }
+.album-ciel { width: 100%; }
+.album-galerie { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.album-galerie .vignette, .lec-medias .vignette { position: relative; aspect-ratio: 1; width: 100%; padding: 0; border: 0; overflow: hidden; background: color-mix(in srgb, var(--ink) 6%, transparent); }
+.album-galerie img, .album-galerie video, .lec-medias img, .lec-medias video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.album-galerie .lecture, .lec-medias .lecture { position: absolute; inset: 0; display: grid; place-items: center; font-style: normal; color: #fff; text-shadow: 0 0 8px #000; }
+.album-etoiles { display: flex; flex-direction: column; gap: 8px; }
+.album-etoile { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left; padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--c, var(--line)); font: 15px/1.45 var(--serif); letter-spacing: 0; text-transform: none; }
+.album-etoile time { font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
+.album-noms { display: flex; flex-wrap: wrap; gap: 8px; } .album-noms button { display: inline-flex; gap: 8px; align-items: baseline; font: 15px var(--serif); letter-spacing: 0; text-transform: none; }
+.album-noms button small { font: 10px var(--mono); color: var(--soft); } .album-noms.petits { margin-top: 12px; } .album-noms.petits button { font-size: 13px; padding: 6px 10px; min-height: 0; }
+.album-vide { color: var(--soft); font-style: italic; }
+.lec-tete { display: flex; align-items: center; gap: 6px; padding: calc(10px + env(safe-area-inset-top)) 10px 10px; border-bottom: 1px solid var(--line); box-shadow: inset 0 -2px 0 var(--c); }
+.lec-date { flex: 1; text-align: center; } .lec-date small { display: block; color: var(--soft); font-style: italic; } .lec-date strong { font-weight: 400; font-size: 1.15rem; }
+.lec-corps { flex: 1; overflow-y: auto; padding: 18px 22px 30px; touch-action: pan-y; }
+.lec-corps.vers-g { animation: lecG .32s ease-out; } .lec-corps.vers-d { animation: lecD .32s ease-out; }
+@keyframes lecG { from { opacity: 0; transform: translateX(40px); } } @keyframes lecD { from { opacity: 0; transform: translateX(-40px); } }
+.lec-entree { max-width: 620px; margin: 0 auto 26px; font-size: 1.08rem; line-height: 1.65; }
+.lec-entree time { font: 10px var(--mono); letter-spacing: .12em; color: var(--soft); } .lec-entree h3 { font-weight: 400; font-size: 1.3rem; margin: 6px 0; }
+.lec-medias { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-top: 10px; }
+.lec-echos { max-width: 620px; margin: 10px auto 0; border-top: 1px solid var(--line); }
+.lec-echos button { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--line); padding: 10px 0; font: 15px/1.4 var(--serif); letter-spacing: 0; text-transform: none; }
+.lec-echos small { font: 10px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--soft); }
+.lec-pied { display: flex; justify-content: space-between; align-items: center; padding: 10px 18px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); font: 11px var(--mono); color: var(--soft); }

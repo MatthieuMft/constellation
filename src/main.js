@@ -39,6 +39,8 @@ import { verrou } from './verrou.js';
 import { creerFigures, lendemain, dernierJour, constellationDe } from './figures.js';
 import { PICTOS } from './pictos.js';
 import { creerTrouvailles } from './trouvailles.js';
+import { creerNoms } from './noms.js';
+import { creerLecture } from './lecture.js';
 import { creerAmitie, PALIERS } from './amitie.js';
 import { son } from './son.js';
 import { monterActivites, ACTIVITES, nomActivite } from './activites.js';
@@ -611,13 +613,26 @@ function voler(position, dist = DIST.jour, vue = null) {     // vue (facultatif)
 const fmtDate = ms => new Date(ms).toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const itemsDuJour = cle => items.filter(i => i.jour === cle);
 
+// v60 : personnes et lieux (@Léa, #parc), et relire comme un livre
+const couleurItem = i => i && i.mood ? (i.color || cm(i.mood)) : null;
+const couleurJourCle = cle => { const h = humeurDuJour(cle, items, meta); return h ? (h.color || cm(h.mood)) : null; };
+function surligner(js, libelle) {
+  if (!js.size) return; jetonRecherche++; tagActif = libelle; surbrillance = new Map([...js].map(j => [j, 1]));
+  if (selection) fermerFiche();
+  const b = $('filtre'); b.hidden = false; b.textContent = libelle + ' · ' + js.size + ' ×';
+  const dernier = [...js].sort().pop(); if (dernier) voler(posDuJour(dernier), DIST.mois);
+}
+const personnes = creerNoms({ items: () => items, couleur: couleurItem, mediaUrl: k => media.url(k), voirMedia: (item, m) => voirMedia(item, m),
+  ouvrirJour: cle => { lecture.fermer(); choisir(cle); }, surligner, sauver: () => sauverTout(), rafraichir: () => { if (selection) panneauJour.rendre(); } });
+const lecture = creerLecture({ jours: () => [...new Set(items.filter(i => !i.sample || items.every(x => x.sample)).map(i => i.jour))].filter(k => k <= aujourdhui()).sort(), items: itemsDuJour, couleurJour: couleurJourCle,
+  mediaUrl: k => media.url(k), voirMedia: (item, m) => voirMedia(item, m), album: (k, n) => personnes.album(k, n), ouvrirJour: cle => choisir(cle) });
 const panneauJour = monterJour($('f-contenu'), {
   items: itemsDuJour, humeur: cle => humeurDuJour(cle, items, meta), couleur: cm, aujourdhui: aujourdhui(),
   setHumeur: async (cle, mood, couleur) => { creature.imiter(mood, couleur || cm(mood), 6000); meta[cle] = { ...(meta[cle] || {}), humeur: mood, couleur: couleur || undefined }; sauverTout(); await recalculer(); },
   ajouter: cle => ouvrirEcrire({ jour: cle }), modifier: item => ouvrirEcrire({ item }),
   supprimer: item => supprimerItem(item), basculerFait: (item, fait) => { item.fait = fait; item.touched = Date.now(); sauverTout(); },
   voirMedia: (item, med) => voirMedia(item, med), mediaUrl: k => media.url(k),
-  tagsDe, filtrer: t => filtrerPar(t), datesDuJour, editerDate: (cle, d) => ouvrirDate(cle, d),
+  tagsDe, filtrer: t => filtrerPar(t), nomsDe: i => personnes.nomsDe(i), album: (k, n) => personnes.album(k, n), taguer: (item, m) => personnes.taguer(item, m), datesDuJour, editerDate: (cle, d) => ouvrirDate(cle, d),
 });
 
 // ───────────── Étiquettes (#mot dans le texte) ─────────────
@@ -649,6 +664,7 @@ $('dateqc-ok').addEventListener('click', async () => {
 $('dateqc-suppr').addEventListener('click', async () => { if (dqEdition && dqEdition.id) mesDates = mesDates.filter(x => x.id !== dqEdition.id); fermerDate(); await appliquerDates(); });
 $('dateqc-annuler').addEventListener('click', fermerDate);
 $('dateqc-titre').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $('dateqc-ok').click(); } if (e.key === 'Escape') { e.preventDefault(); fermerDate(); } e.stopPropagation(); });
+$('f-lire').innerHTML = PICTOS.carnet; $('f-lire').addEventListener('click', () => { if (selection) lecture.ouvrir(selection); });   // v60 : relire comme un livre, depuis ce jour
 $('f-date').addEventListener('click', () => { if (!selection) return; const l = datesDuJour(selection); ouvrirDate(selection, l[0] || null); });
 
 // ───────────── Phrases de la lueur (série, dates, saison) ─────────────
@@ -893,10 +909,10 @@ function configurer(type) {
 }
 // étiquettes déjà utilisées : un appui pour les réinsérer dans le texte
 function majSugg() {
-  const z = $('tags-sugg'), liste = [...tousLesTags()].sort((a, b) => b[1].n - a[1].n).slice(0, 6);
+  const z = $('tags-sugg'), liste = [...personnes.index().values()].sort((a, b) => b.jours.size - a.jours.size).slice(0, 8).map(o => o.k + o.nom);   // v60 : @personnes et #lieux déjà utilisés
   z.replaceChildren(); z.hidden = !liste.length || typeEdite() === 'media';
-  liste.forEach(([t]) => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tag'; b.textContent = '#' + t; b.addEventListener('click', () => {
-    const ta = $('texte'), v = ta.value, avant = v && !/\s$/.test(v) ? ' ' : ''; ta.value = v + avant + '#' + t + ' '; ta.dispatchEvent(new Event('input')); ta.focus(); }); z.append(b); });
+  liste.forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tag'; b.textContent = x; b.addEventListener('click', () => {
+    const ta = $('texte'), v = ta.value, avant = v && !/\s$/.test(v) ? ' ' : ''; ta.value = v + avant + x + ' '; ta.dispatchEvent(new Event('input')); ta.focus(); }); z.append(b); });
 }
 
 function jourParDefaut() {
@@ -1371,6 +1387,8 @@ function lignesMenu() {
       if (s) l.push({ ic: 'bilan', nom: t('Bilan de ta dernière semaine'), sous: figures.vraiNom(s), action: () => ouvrirBilan(s) });
       return l;
     } },
+    { ic: 'souvenir', titre: t('Relire mon journal'), sous: t('Page par page, comme un livre'), action: () => { if (!lecture.ouvrir()) statutTemporaire(t('Rien à relire pour l’instant.')); } },   // v60
+    { ic: 'nom', titre: t('Personnes et lieux'), sous: (() => { const n = personnes.index().size; return n ? tn(n, '{n} album', '{n} albums') : t('Écris @Léa ou #parc dans une note'); })(), action: () => personnes.page() },
     { ic: 'lueur', titre: t('Ma lueur'), sous: t('Personnaliser, trouvailles, amitié'), items: () => [
       { ic: 'lueur', nom: t('Personnaliser ma lueur'), sous: t('Ce que tu as débloqué dans la boutique'), action: () => ouvrirPerso() },
       { ic: 'nom', nom: t('Renommer'), sous: creature.nom() || null, action: ouvrirNommer },
@@ -1418,7 +1436,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v59'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v60'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1918,5 +1936,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };
