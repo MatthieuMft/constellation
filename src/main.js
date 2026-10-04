@@ -1096,6 +1096,8 @@ async function valider() {
     if (gain) setTimeout(() => toast(t('+ ✦{n} poussière d’étoiles', { n: gain })), 1500);
   }
   creature.enregistre(!accueil.ecrireEnCours());
+  // v62 : la 7e étoile vient de s'allumer (jours écrits ou offerts) : la constellation naît tout de suite, sans attendre dimanche 18 h
+  if (!accueil.ecrireEnCours() && figures.finies().some(k => !figures.annoncee(k))) setTimeout(() => { if ($('ecrire').hidden && !voyageEnCours) proposerFigure(); else setTimeout(() => { if ($('ecrire').hidden) proposerFigure(); }, 8000); }, gain ? 11000 : 3500);
   const v = visuels.get(jour); if (v) { v.pulse = 1; setTimeout(() => creature.celebrer(jour), 1800); }
   if (type === 'journal') motsMagiques(texte, 2600);
 }
@@ -1451,7 +1453,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v62'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v63'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
