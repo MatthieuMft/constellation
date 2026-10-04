@@ -943,7 +943,7 @@ function ouvrirEcrire({ jour = null, item = null } = {}) {
   $('note-titre').value = item && item.titre ? item.titre : '';
   // v65 (Matthieu) : une note par jour, écrite le jour même. Une nouvelle note est toujours pour aujourd'hui ; plus de date à choisir.
   // Une note déjà écrite se modifie, mais reste sur son jour.
-  const d = $('ecrire-date'); d.max = aujourdhui(); d.value = item ? item.jour : aujourdhui(); d.disabled = true; d.closest('label').style.display = 'none';
+  const d = $('ecrire-date'); d.max = aujourdhui(); d.value = item ? item.jour : aujourdhui(); d.min = d.max; d.disabled = true;   // v66 : la date reste affichée, mais ne se change pas
   if (item && item.type === 'journal') choisirHumeur(item.mood || 'calme', item.color || null); else if (!item) { const h = humeurDuJour(d.value, items, meta); choisirHumeur(h ? h.mood : 'calme', h && h.color ? h.color : null); }
   activites.ecrire((meta[d.value] || {}).activites || []);
   configurer(ty);
@@ -1455,7 +1455,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v65'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v66'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));

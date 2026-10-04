@@ -1095,3 +1095,6 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .barre-clavier .bc-nom.lieu { color: #8fd8ff; }
 @keyframes bc-nom { from { transform: translateY(6px); } to { transform: none; } }
 @media (max-width: 720px) { body.barre-on #ecrire #activites, body.barre-on #ecrire .ligne-date { display: none; } }
+/* v66 : la date de la note est affichée mais figée (pas de jour passé ni futur) */
+.ligne-date input:disabled { opacity: 1; color: var(--soft); cursor: default; -webkit-text-fill-color: var(--soft); }
+.ligne-date input:disabled::-webkit-calendar-picker-indicator { display: none; }
