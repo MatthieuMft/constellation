@@ -52,7 +52,7 @@ export function creerVoyage({ scene, camera, melange, texHalo, posJour, particul
     ligne.computeLineDistances(); ligne.renderOrder = 2; ligne.frustumCulled = false; g.add(ligne);
     const bornes = P.map((p, i) => {
       const don = !ecrits.has(i) && offre.has(i), fait = ecrits.has(i) || don, s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: don ? new THREE.Color(clair ? encre : BLANC_OFFERT) : fait ? or : (clair ? new THREE.Color(encre) : new THREE.Color('#c9d3ff')), transparent: true, depthTest: false, depthWrite: false, blending: melange(), opacity: 0 }));
-      s.position.copy(p); s.scale.setScalar(don ? 1.15 : fait ? 1.5 : .9); s.userData = { fait, base: don ? .55 : fait ? .8 : .35 }; s.renderOrder = 3; g.add(s); return s;
+      s.position.copy(p); s.scale.setScalar(fait ? 1.5 : .9); s.userData = { fait, base: don ? .75 : fait ? .8 : .35 }; s.renderOrder = 3; g.add(s); return s;
     });
     objets = { g, ligne, bornes, c: centreSemaine(cleS) };
   }

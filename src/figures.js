@@ -109,7 +109,9 @@ export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, e
       const c = centreSemaine(s), P = pointsSemaine(s, c);
       // traits : pâles partout, lumineux entre deux étoiles allumées
       const faibles = [], forts = [];
-      for (const i of offre) if (!allume.has(i)) allume.set(i, null);
+      // v61 (demande de Matthieu) : à la fin de la semaine, la constellation se dessine TOUJOURS en entier. Un jour raté n'est pas puni :
+      // son étoile brille d'un blanc doux, un peu plus petite ; les jours écrits gardent la couleur de leur humeur.
+      const rate = new Set(); for (let i = 0; i < 7; i++) if (!allume.has(i)) { allume.set(i, null); if (!offre.has(i)) rate.add(i); }
       for (const [a, b] of C.t) (allume.has(a) && allume.has(b) ? forts : faibles).push(P[a].x, P[a].y, P[a].z, P[b].x, P[b].y, P[b].z);
       const traits = (pos, op) => { if (!pos.length) return null; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         const l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: pale, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: melange() })); l.userData = { op, trait: true }; l.renderOrder = 2; l.frustumCulled = false; g.add(l); return l; };
@@ -117,8 +119,8 @@ export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, e
       // étoiles : petites et pâles, ou allumées à la couleur du jour
       C.e.forEach(([, , eclat], i) => {
         const on = allume.has(i), cj = allume.get(i), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: on ? (cj ? new THREE.Color(cj).lerp(new THREE.Color('#ffffff'), .35) : new THREE.Color(clair ? encre : BLANC_OFFERT)) : pale, transparent: true, depthTest: false, depthWrite: false, blending: melange(), opacity: 0, fog: false }));
-        const taille = (on ? (cj ? 2.6 : 1.9) : 1.1) * (.7 + .5 * eclat);
-        sp.position.copy(P[i]); sp.scale.setScalar(taille); sp.userData = { op: on ? (cj ? 1 : .75) : (clair ? .55 : .5), on, ph: i * 1.7, i, taille }; sp.renderOrder = 3; g.add(sp);
+        const taille = (on ? (cj ? 2.6 : rate.has(i) ? 1.5 : 1.9) : 1.1) * (.7 + .5 * eclat);
+        sp.position.copy(P[i]); sp.scale.setScalar(taille); sp.userData = { op: on ? (cj ? 1 : rate.has(i) ? .6 : .75) : (clair ? .55 : .5), on, ph: i * 1.7, i, taille }; sp.renderOrder = 3; g.add(sp);
       });
       // noms au-dessus : le tien (s'il existe), et le vrai nom en petit
       const haut = c.clone().addScaledVector(HAUT, FORME * .5 + 4.5);

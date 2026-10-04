@@ -1095,6 +1095,3 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .barre-clavier .bc-nom.lieu { color: #8fd8ff; }
 @keyframes bc-nom { from { transform: translateY(6px); } to { transform: none; } }
 @media (max-width: 720px) { body.barre-on #ecrire #activites, body.barre-on #ecrire .ligne-date { display: none; } }
-/* v61 : la lueur se pose à droite du titre « Journal » : l'en-tête lui laisse la place, le texte commence en dessous */
-#ecrire .p-tete { min-height: calc(62px + env(safe-area-inset-top, 0px)); }
-@media (max-width: 720px) { body.barre-on #ecrire .p-tete { min-height: calc(62px + env(safe-area-inset-top, 0px)); } }

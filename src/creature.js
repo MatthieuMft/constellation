@@ -183,7 +183,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   function base() { camera.updateMatrixWorld(); _r.setFromMatrixColumn(camera.matrixWorld, 0); _u.setFromMatrixColumn(camera.matrixWorld, 1); camera.getWorldDirection(_f); }
   const ndcPoint = (x, y, d, out) => out.set(x, y, .5).unproject(camera).sub(camera.position).normalize().multiplyScalar(d).add(camera.position);
   const distRef = () => clamp(camera.position.distanceTo(controls.target), 14, 2400) * .8;
-  const proj = p => { _p.copy(p).project(camera); return { x: (_p.x + 1) / 2 * innerWidth, y: (1 - _p.y) / 2 * innerHeight, vu: _p.z < 1 && Math.abs(_p.x) < .96 && Math.abs(_p.y) < .96 }; };
+  let hVue = innerHeight;   // v61 : hauteur du ciel dessiné (plus grande que l'écran visible quand le clavier est ouvert)
+  const proj = p => { _p.copy(p).project(camera); return { x: (_p.x + 1) / 2 * innerWidth, y: (1 - _p.y) / 2 * hVue, vu: _p.z < 1 && Math.abs(_p.x) < .96 && Math.abs(_p.y) < .96 }; };
   const posEtoile = id => { const v = etoiles().get(id); return v ? v.groupe.position : null; };
   function plusProcheEtoile(p) { let best = null, d0 = 1e9; for (const v of etoiles().values()) { const d = v.groupe.position.distanceToSquared(p); if (d < d0) { d0 = d; best = v; } } return best; }
 
@@ -289,9 +290,10 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       case 'guide': cible.copy(ctx.guide).addScaledVector(_u, 2.2); raideur = 3.2; vmax = 22; break;
       case 'ecrit': {                                                    // elle flotte juste au-dessus de l'éditeur, devant le texte
         const r = ctx.rectEcriture; if (!r) { ndcPoint(0, .2, d * .7, cible); break; }
-        // v61 : en haut, juste à droite du titre « Journal » : elle te regarde taper, et sa bulle s'ouvre sous elle (Matthieu ne la voyait plus en bas, clavier ouvert)
-        const tt = ctx.rectTitre, tx = tt && tt.width ? Math.min(tt.right + 46, r.right - 90) : r.left + r.width * .45, ty = tt && tt.height ? tt.top + tt.height / 2 + 2 : r.top + 30;
-        const [nx, ny] = ndcDe(tx + Math.sin(etatT * .5) * 5, ty + Math.sin(etatT * .8) * 3);
+        // v61 : en bas à droite, juste au-dessus de la barre du clavier (Matthieu : c'est là qu'elle a le plus de place, sa bulle ne cache pas le texte qu'on tape).
+        // Clavier fermé : à hauteur de « Ajouter un média ». La hauteur vient du ciel dessiné (ctx.H), sinon elle se retrouvait sous le clavier.
+        const m = ctx.rectMedia, yMedia = m && m.height ? m.top + m.height / 2 : r.bottom - 120, yClavier = Math.min(r.bottom, ctx.basVue || r.bottom) - 64;
+        const [nx, ny] = ndcDe(r.right - 52 + Math.sin(etatT * .5) * 5, (ctx.clavier ? yClavier : yMedia) + Math.sin(etatT * .8) * 3);
         ndcPoint(nx, ny, d * .62, cible); raideur = 2.8; vmax = 18; break; }
       case 'curieux': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(clamp(nx + .12, -.82, .82), clamp(ny + .16, -.7, .75), d * .9, cible); raideur = 1.5; vmax = 9; break; }
       case 'calin': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx, ny, d * .7, cible); raideur = 4; vmax = 20; break; }
@@ -348,7 +350,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   // ───── mise à jour ─────
   function update(dt, t, ctx) {
     if (!montree || !sauve.visible) { corps.visible = false; if (!bulle.hidden) { bulle.hidden = true; bulle.classList.remove('visible'); } return; }
-    apparition = Math.min(1, apparition + dt * .8);
+    apparition = Math.min(1, apparition + dt * .8); if (ctx.H) hVue = ctx.H;
     tProfil += dt; if (tProfil > 4) { tProfil = 0; const r = majProfil(); if (r.retour) { joie = 4; dire('Tu m’avais manqué.', { priorite: true }); } }
     etatT += dt; peur = Math.max(0, peur - dt); joie = Math.max(0, joie - dt); evolue = Math.max(0, evolue - dt); surprise = Math.max(0, surprise - dt); etire = Math.max(0, etire - dt);
     hoche = Math.max(0, hoche - dt); tournis = Math.max(0, tournis - dt); baille = Math.max(0, baille - dt);
@@ -536,7 +538,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     if (tenue.sx && sx === -tenue.sx) tenue.inv.push(now); tenue.sx = sx; tenue.inv = tenue.inv.filter(t0 => now - t0 < 1300);
     if (tenue.inv.length >= 5 && now > rireLibre && !tournis) { tenue.inv = []; rire = 2.4; rireLibre = now + 4500; joie = 3; dire(choix(['Hahaha ! Arrête !', 'Hihihi, ça chatouille !', 'Hahaha !']), { priorite: true, duree: 2200 }); }
   }
-  function lacher(W = innerWidth, H = innerHeight) {
+  function lacher(W = innerWidth, H = hVue) {
     if (!tenue) return; const h = tenue.hist, a = h[0], b = h[h.length - 1], dt = Math.max(.016, (b.t - a.t) / 1000);
     const vx = (b.x - a.x) / dt, vy = (b.y - a.y) / dt, v = Math.hypot(vx, vy), d = tenue.d; tenue = null;
     if (performance.now() - b.t < 120 && v > 900) {                    // un geste vif : elle file, puis revient
@@ -559,7 +561,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   function attraper(x, y, surPrise) {
     if (!montree || sauve.visible === false || cache || tenue) return false;
     if (etat === 'dort') { dire('Zzz… pas maintenant…', { priorite: true, duree: 1800 }); return false; }
-    base(); const p = ndcPoint(x / innerWidth * 2 - 1, 1 - y / innerHeight * 2, camera.position.distanceTo(pos), new THREE.Vector3());
+    base(); const p = ndcPoint(x / innerWidth * 2 - 1, 1 - y / hVue * 2, camera.position.distanceTo(pos), new THREE.Vector3());
     particules.burst(p, doree, 16, .7, true); surprise = .8; souvenir = null;
     forceCible = { point: p, vite: true, jusqu: performance.now() + 3500, surArrivee: () => {
       particules.burst(p, doree, 34, 1.4, true); joie = 4; bond = 0; jeux.attrapes = (jeux.attrapes || 0) + 1; sauverJeux();
@@ -570,7 +572,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     if (!montree || sauve.visible === false || cache || tenue) return false;
     if (etat === 'dort') { dire(couchee ? 'Zzz… demain…' : 'Mmh… plus tard…', { priorite: true, duree: 1800 }); return false; }
     if (e && e.text) { dire(choix(['Oh, cette étoile-là ?', 'Je vais voir !']), { priorite: true, duree: 1600 }); setTimeout(() => { prochainSouvenir = rnd(70, 130); demarrerSouvenir(e); }, 700); return true; }
-    base(); const nx = clamp(x / innerWidth * 2 - 1, -.82, .82), ny = clamp(1 - y / innerHeight * 2, -.68, .72), p = ndcPoint(nx, ny, distRef(), new THREE.Vector3());
+    base(); const nx = clamp(x / innerWidth * 2 - 1, -.82, .82), ny = clamp(1 - y / hVue * 2, -.68, .72), p = ndcPoint(nx, ny, distRef(), new THREE.Vector3());
     dire(choix(['J’arrive !', 'Là-bas ?', 'On va voir !']), { priorite: true, duree: 1400 });
     forceCible = { point: p, jusqu: performance.now() + 6000, surArrivee: () => { maison.x = nx; maison.y = ny; poseeJusqu = performance.now() + 15000;
       dire(choix(['Rien ici… juste du ciel.', 'C’est joli, par ici.', 'Un jour, il y aura une étoile ici.', 'Je reste un peu là.']), { priorite: true, duree: 2600 }); } };
