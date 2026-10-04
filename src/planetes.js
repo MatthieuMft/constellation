@@ -5,7 +5,8 @@
 //
 // Données : localStorage 'constellation.planetes.v1' = { liste: [planète], migre: bool } (clé à part : rien d'autre n'est touché).
 //   planète = { id, nom, type: 'solide'|'gazeuse', palette, couleurs: { ocean?, terre?, sable?, b1?, b2? }, graine,
-//               nuages, arbres: null|'cerisier'|'sapin', maisons, anneaux: null|'fin'|'large'|'penche', double, tempete, allumee }
+//               nuages, arbres: null|'cerisier'|'sapin'|'cristal', maisons, anneaux: null|'fin'|'large'|'penche', double, tempete, allumee,
+//               lune, aurores }   (v55 : cristaux, petite lune, aurores polaires)
 //
 // API :
 //   liste() · planete(id) · creer(type) → planète · maj(id, patch) · MAX · PALETTES · OPTIONS (option → clé de la boutique)
@@ -25,7 +26,8 @@ const etat = Object.assign({ liste: [], migre: false }, lire() || {});
 const ecrire = () => { try { localStorage.setItem(CLE, JSON.stringify(etat)); } catch (e) {} };
 
 // option de la planète → article de la boutique
-export const OPTIONS = { nuages: 'pl-nuages', cerisier: 'pl-cerisiers', sapin: 'pl-sapins', maisons: 'pl-maisons', anneaux: 'pl-anneaux', double: 'pl-anneau-double', couleurs: 'pl-couleurs' };
+export const OPTIONS = { nuages: 'pl-nuages', cerisier: 'pl-cerisiers', sapin: 'pl-sapins', maisons: 'pl-maisons', anneaux: 'pl-anneaux', double: 'pl-anneau-double', couleurs: 'pl-couleurs',
+  cristal: 'pl-cristaux', lune: 'pl-lune', aurores: 'pl-aurores' };   // v55
 
 // les palettes, gratuites ; « Couleurs libres » permet ensuite de changer l'océan, la terre, le sable, ou les deux bandes
 export const PALETTES = {
@@ -36,6 +38,9 @@ export const PALETTES = {
     dune:    { nom: t('Désert'), ocean: '#8ff0e0', profond: '#5cc8d0', sable: '#fff0cc', terre: '#ffdca0', haute: '#ffc48a', neige: '#fff6e6', niveau: .4, calotte: .95, atmo: '#ffe2b8', fleurs: '#ffd0e0', sapin: '#a8e6a0', murs: '#fffaf2', toit: '#8fd8e0' },
     lavande: { nom: t('Lavande'), ocean: '#c9b8ff', profond: '#9a86f0', sable: '#fff0f6', terre: '#f6c8e6', haute: '#e6a8d8', neige: '#ffffff', atmo: '#e6d8ff', fleurs: '#fff0fa', sapin: '#b0e0d8', murs: '#fff8fc', toit: '#b9a0ff' },
     menthe:  { nom: t('Menthe'), ocean: '#a8f0e0', profond: '#6cd0c8', sable: '#fffbe8', terre: '#c8f0b0', haute: '#9adca0', neige: '#ffffff', atmo: '#d0fff0', fleurs: '#ffe6f0', sapin: '#7ccfb0', murs: '#fffdf4', toit: '#ffb0a0' },
+    // v55 : deux palettes de plus (gratuites)
+    corail:  { nom: t('Corail'), ocean: '#ffb8c8', profond: '#f08aa8', sable: '#fff2e0', terre: '#ffe6a8', haute: '#ffc890', neige: '#ffffff', atmo: '#ffd6e0', fleurs: '#ffffff', sapin: '#9fe0c0', murs: '#fffaf4', toit: '#ff9f8a' },
+    nebula:  { nom: t('Nébuleuse'), ocean: '#b48cff', profond: '#7a5ce0', sable: '#ffe6f6', terre: '#ff9fd0', haute: '#e07ac0', neige: '#fff4ff', atmo: '#e0c8ff', fleurs: '#ffe0f4', sapin: '#a0d8f0', murs: '#fff8ff', toit: '#8fd0ff', cristal: '#8fe6ff' },
   },
   gazeuse: {
     oree:   { nom: t('Or'), bandes: ['#fff0d6', '#ffc98f', '#fffaf0'], atmo: '#ffe8c4', anneau: ['#ffe6b8', '#ffc9a8'] },
@@ -44,6 +49,8 @@ export const PALETTES = {
     braise: { nom: t('Braise'), bandes: ['#ffd2b8', '#f08a6a', '#fff0e0'], atmo: '#ffc8a8', anneau: ['#ffd8b0', '#ff9f8a'] },
     lilas:  { nom: t('Lilas'), bandes: ['#ece0ff', '#b9a0f0', '#fbf6ff'], atmo: '#e0d4ff', anneau: ['#f0e0ff', '#c8d8ff'] },
     menthe: { nom: t('Menthe'), bandes: ['#d8fff0', '#8fdcc8', '#f4fffb'], atmo: '#d0fff0', anneau: ['#e0fff4', '#c0e8ff'] },
+    aurore: { nom: t('Aurore'), bandes: ['#c8ffe8', '#7fd8c8', '#e8d8ff'], atmo: '#c8ffe0', anneau: ['#d8fff0', '#d8c8ff'] },   // v55
+    nuit:   { nom: t('Nuit'), bandes: ['#a8b8ff', '#6670d0', '#e4e8ff'], atmo: '#b8c4ff', anneau: ['#e0e6ff', '#c8b8ff'] },
   },
 };
 const NOMS = ['Astra', 'Orée', 'Glacia', 'Aqua', 'Dune', 'Lyra', 'Nova', 'Vega'];
@@ -69,7 +76,8 @@ export function effective(p) {
   const a = k => E.possede(OPTIONS[k]);
   return { ...p, nuages: p.type === 'solide' && p.nuages && a('nuages'), arbres: p.type === 'solide' && p.arbres && a(p.arbres) ? p.arbres : null,
     maisons: p.type === 'solide' && p.maisons && a('maisons'), anneaux: p.anneaux && a('anneaux') ? p.anneaux : null,
-    double: !!p.anneaux && p.double && a('anneaux') && a('double'), couleurs: a('couleurs') ? p.couleurs || {} : {}, tempete: p.type === 'gazeuse' && p.tempete };
+    double: !!p.anneaux && p.double && a('anneaux') && a('double'), couleurs: a('couleurs') ? p.couleurs || {} : {}, tempete: p.type === 'gazeuse' && p.tempete,
+    lune: !!p.lune && a('lune'), aurores: !!p.aurores && a('aurores') };
 }
 export const visibles = () => etat.liste.map((p, place) => ({ ...effective(p), place })).filter(p => p.allumee);
 
@@ -223,16 +231,22 @@ function solide(o) {
     ms.forEach(m => m.count = k);
   }
   if (o.arbres) {
-    const n = o.arbres === 'sapin' ? 45 : 55, mat = new THREE.Matrix4(), mats = [];
-    mats.push(inst(new THREE.CylinderGeometry(.08, .12, .9, 8).translate(0, .45, 0), doux({ couleur: '#b98a78', em: .15, rim: .3 }), n));
-    if (o.arbres === 'sapin') {
+    const n = o.arbres === 'sapin' ? 45 : o.arbres === 'cristal' ? 32 : 55, mat = new THREE.Matrix4(), mats = [];
+    if (o.arbres !== 'cristal') mats.push(inst(new THREE.CylinderGeometry(.08, .12, .9, 8).translate(0, .45, 0), doux({ couleur: '#b98a78', em: .15, rim: .3 }), n));
+    if (o.arbres === 'cristal') {             // v55 : des grappes de cristaux de lumière (un grand, deux petits penchés), couleur de l'atmosphère
+      const prof = [[0, -.1], [.28, -.05], [.31, .62], [0, 1.08]].map(([x, y]) => new THREE.Vector2(x, y)), cr = doux({ couleur: pal.cristal || pal.atmo, atmo: '#ffffff', em: .7, rim: .9, spec: .5 });
+      mats.push(inst(new THREE.LatheGeometry(prof, 6), cr, n));
+      mats.push(inst(new THREE.LatheGeometry(prof, 6).scale(.6, .6, .6).rotateZ(.55).translate(.22, 0, .05), cr, n));
+      mats.push(inst(new THREE.LatheGeometry(prof, 6).scale(.5, .5, .5).rotateZ(-.6).rotateY(.8).translate(-.16, 0, .14), cr, n));
+    } else if (o.arbres === 'sapin') {
       const prof = []; for (let i = 0; i <= 16; i++) { const k = i / 16; prof.push(new THREE.Vector2(Math.sin(Math.PI * Math.pow(k, .7)) * .5 * (1 - k * .55), .6 + k * 1.3)); }
       mats.push(inst(new THREE.LatheGeometry(prof, 16), doux({ couleur: pal.sapin, atmo: '#ffffff', em: .3, rim: .6 }), n));
     } else {
       for (const [x, y, z, r] of [[0, 1.15, 0, .55], [.35, .95, .15, .38], [-.32, 1, -.12, .4]])
         mats.push(inst(new THREE.SphereGeometry(r, 16, 12).translate(x, y, z), doux({ couleur: pal.fleurs, atmo: '#ffffff', em: .2, rim: .6 }), n));
     }
-    let k = 0; poser(n, p => { orienter(mat, p, .05 + R() * .02, R() * 6.28); mats.forEach(m => m.setMatrixAt(k, mat)); k++; });
+    const t0 = o.arbres === 'cristal' ? .08 : .05, t1 = o.arbres === 'cristal' ? .04 : .02;   // v55 : les cristaux, un peu plus grands pour se voir
+    let k = 0; poser(n, p => { orienter(mat, p, t0 + R() * t1, R() * 6.28); mats.forEach(m => m.setMatrixAt(k, mat)); k++; });
     mats.forEach(m => m.count = k);
   }
   if (o.nuages) g.add(nuages(seed));
@@ -264,6 +278,25 @@ function gazeuse(o) {
   g.add(atmosphere(o.atmo, 1.08, .4));
   return g;
 }
+// v55 : aurores polaires : un rideau de lumière ouvert autour du pôle nord, évasé vers le haut, qui ondule (vert d'eau en bas, lilas en haut) ;
+//   ajouté à la lumière ; effacé là où on le voit de profil (pas d'arête), si bien qu'on voit surtout le rideau du fond, au-dessus du pôle
+function auroreP() {
+  const g = new THREE.Group(), uT = { value: 0 };
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(.92, .62, .46, 96, 1, true).translate(0, 1.03, 0), new THREE.ShaderMaterial({ ...ADD, side: THREE.DoubleSide,
+    uniforms: { uT },
+    vertexShader: `varying vec3 vO; varying float vH; varying vec3 vN; varying vec3 vV; void main(){ vO = position; vH = clamp((position.y - .8)/.46, 0., 1.);
+      vec4 mv = modelViewMatrix*vec4(position, 1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+    fragmentShader: `uniform float uT; varying vec3 vO; varying float vH; varying vec3 vN; varying vec3 vV;
+      void main(){ float a = atan(vO.z, vO.x);
+        float r = .5 + .5*sin(a*7. + sin(a*3. + uT*.6)*1.4 + uT*.35), r2 = .55 + .45*pow(.5 + .5*sin(a*31. + r*3. - uT*.5), 2.);
+        float h = vH + .08*sin(a*5. + uT*.4);
+        float f = smoothstep(0., .1, h)*pow(clamp(1. - h, 0., 1.), 1.8)*(.3 + .7*r*r)*r2;
+        vec3 c = mix(vec3(.25, 1., .6), vec3(.7, .42, 1.), smoothstep(.15, .8, h));
+        gl_FragColor = vec4(c, f*.95*smoothstep(.08, .5, abs(dot(vN, vV))));
+        #include <colorspace_fragment>
+      }` })));
+  g.userData.uT = uT; return g;
+}
 const fonce = (hex, k) => '#' + C(hex).multiplyScalar(k).getHexString();
 
 // la planète en 3D, prête à poser dans une scène ; K : demi-côté du cadre (en rayons de planète) pour la voir en entier
@@ -284,14 +317,24 @@ export function construire(p, o = {}) {
   }
   if (p.anneaux) tout.add(anneaux({ ...ANNEAUX[p.anneaux], couleur: anneau[0], couleur2: anneau[1], second: p.double }));
   tout.add(halo(atmo, 3.6, .1));
-  const K = p.anneaux ? (p.double ? 2.75 : p.anneaux === 'large' ? 2.45 : 2.25) : 1.5;
-  tout.userData = { pl, K, atmo };
+  let K = p.anneaux ? (p.double ? 2.75 : p.anneaux === 'large' ? 2.45 : 2.25) : 1.5, lune = null, rL = 0, aurore = null;
+  if (p.aurores) { aurore = auroreP(); pl.add(aurore); }
+  if (p.lune) {               // v55 : une petite lune qui tourne autour, au-delà des anneaux
+    rL = p.anneaux ? ANNEAUX[p.anneaux].r1 + (p.double ? .6 : .35) : 1.75;
+    const orb = new THREE.Group(); orb.rotation.set(.32, 0, -.18); tout.add(orb);
+    lune = new THREE.Group(); lune.add(new THREE.Mesh(new THREE.SphereGeometry(.2, 32, 20), doux({ couleur: '#eeeaf8', atmo, em: .18, rim: .7, spec: .1 })), halo(atmo, .9, .12)); orb.add(lune);
+    K = Math.max(K, rL * .97 + .3);
+  }
+  tout.userData = { pl, K, atmo, lune, rL, aurore };
   return { groupe: tout, K, atmo };
 }
 export function tourner(groupe, temps) {                // temps en secondes
   const pl = groupe.userData.pl; if (!pl) return;
   pl.rotation.y = -.6 + temps * .05;
   pl.children[0].children.forEach(c => { if (c.userData.tourne) c.rotation.y = temps * .02; });
+  const { lune, rL, aurore } = groupe.userData;
+  if (lune) { const a = 2.2 + temps * .22; lune.position.set(Math.cos(a) * rL, 0, Math.sin(a) * rL); }
+  if (aurore) aurore.userData.uT.value = temps;
 }
 export function liberer(groupe) {
   groupe.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach(m => m.dispose()); });
@@ -309,6 +352,9 @@ export const EXEMPLES = {
   'pl-anneaux': { type: 'gazeuse', palette: 'peche', graine: 4, couleurs: {}, anneaux: 'large' },
   'pl-anneau-double': { type: 'gazeuse', palette: 'aqua', graine: 5, couleurs: {}, anneaux: 'fin', double: true, tempete: true },
   'pl-couleurs': { ...AS, palette: 'lavande', graine: 12, couleurs: { ocean: '#ffb0c8', terre: '#fff0a0' } },
+  'pl-cristaux': { ...AS, palette: 'nebula', graine: 9, arbres: 'cristal' },                  // v55
+  'pl-lune': { ...AS, palette: 'peche', graine: 6, nuages: true, lune: true },
+  'pl-aurores': { ...AS, palette: 'glacia', graine: 8, aurores: true },
 };
 
 // ───────── photos (aperçus fixes) : rendues dans un coin de l'écran juste avant le ciel, puis recopiées ─────────

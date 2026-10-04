@@ -74,6 +74,7 @@ export function monterCielPerso({ zone, corps, ctx }) {
       const el2 = [option(t('Nuages'), 'nuages', !!p.nuages, () => changer({ nuages: !p.nuages })),
         option(t('Cerisiers'), 'cerisier', p.arbres === 'cerisier', () => changer({ arbres: p.arbres === 'cerisier' ? null : 'cerisier' })),
         option(t('Sapins'), 'sapin', p.arbres === 'sapin', () => changer({ arbres: p.arbres === 'sapin' ? null : 'sapin' })),
+        option(t('Cristaux'), 'cristal', p.arbres === 'cristal', () => changer({ arbres: p.arbres === 'cristal' ? null : 'cristal' })),   // v55
         option(t('Maisonnettes'), 'maisons', !!p.maisons, () => changer({ maisons: !p.maisons }))].filter(Boolean);
       if (el2.length) blocs.push(section(t('Éléments'), 'pl-elements', el('div', { class: 'choix' }, el2)));
     }
@@ -85,6 +86,10 @@ export function monterCielPerso({ zone, corps, ctx }) {
       if (p.anneaux) anneaux.push(option(t('Double anneau'), 'double', !!p.double, () => changer({ double: !p.double })));
       blocs.push(section(t('Anneaux'), 'pl-anneaux', el('div', { class: 'choix' }, anneaux)));
     }
+    // v55 : autour d'elle (petite lune, aurores polaires), pour les deux types
+    const autour = [option(t('Petite lune'), 'lune', !!p.lune, () => changer({ lune: !p.lune })),
+      option(t('Aurores polaires'), 'aurores', !!p.aurores, () => changer({ aurores: !p.aurores }))].filter(Boolean);
+    if (autour.length) blocs.push(section(t('Autour d’elle'), 'pl-autour', el('div', { class: 'choix' }, autour)));
     blocs.push(section(t('Dans ton ciel'), 'pl-ciel', el('div', { class: 'choix' },
       el('button', { 'aria-pressed': !!p.allumee, onclick: () => changer({ allumee: !p.allumee }, !p.allumee) }, p.allumee ? t('Visible') : t('Rangée')))));
     if (pasAchete) blocs.push(el('p', { class: 'reg-note' }, tn(pasAchete, 'Encore {n} chose à débloquer pour tes planètes.', 'Encore {n} choses à débloquer pour tes planètes.')),

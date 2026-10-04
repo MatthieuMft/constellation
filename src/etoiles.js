@@ -61,6 +61,8 @@ export const ARTICLES = [
   choix(L, 'matiere', 'texture-cosmos',     t('Espace profond'), t('Un bout de nuit semé de minuscules étoiles.'), 110, 'perso', 'texture', 'cosmos'),
   choix(L, 'matiere', 'texture-soleil',     t('Soleil'),        t('Une surface qui bouillonne de lumière.'),        120, 'perso', 'texture', 'soleil'),
   choix(L, 'matiere', 'texture-nebuleuse',  t('Nébuleuse'),  t('Un petit ciel qui tourbillonne à l’intérieur.'), 100, 'perso', 'texture', 'nebuleuse'),
+  choix(L, 'matiere', 'texture-galaxie',    t('Galaxie'),    t('Une galaxie spirale qui tourne doucement en elle.'), 130, 'perso', 'texture', 'galaxie'),   // v55
+  choix(L, 'matiere', 'texture-lune',       t('Pierre de lune'), t('Une surface nacrée semée de petits cratères.'), 90, 'perso', 'texture', 'lune'),       // v55
   regl(L, 'matiere', 'couleur-lueur', t('Couleur de la lueur'), t('Choisis sa teinte, ou laisse-la suivre ton humeur.'), 30, 'perso', { couleur: null }),
   choix(L, 'expression', 'expression-rieuse',     t('Rieuse'),     t('Des yeux plissés de bonheur.'),                30, 'perso', 'expression', 'rieuse'),
   choix(L, 'expression', 'expression-reveuse',    t('Rêveuse'),    t('Un regard doux, à demi fermé.'),               30, 'perso', 'expression', 'reveuse'),
@@ -80,6 +82,8 @@ export const ARTICLES = [
   choix(L, 'accessoire', 'acc-saturne',   t('Anneaux de planète'), t('Deux anneaux inclinés autour d’elle, comme Saturne.'), 120, 'perso', 'acc', 6),   // v39
   choix(L, 'accessoire', 'acc-lune',      t('Petite lune'),        t('Une lune qui tourne autour d’elle.'),                   90, 'perso', 'acc', 7),
   choix(L, 'accessoire', 'acc-satellite', t('Satellite'),          t('Il fait le tour d’elle, son feu clignote.'),           100, 'perso', 'acc', 8),
+  choix(L, 'accessoire', 'acc-comete',    t('Petite comète'),      t('Une comète apprivoisée qui file autour d’elle.'),      110, 'perso', 'acc', 9),    // v55
+  choix(L, 'accessoire', 'acc-croissant', t('Croissant de lune'),  t('Un croissant de lune qui flotte au-dessus de sa tête.'), 70, 'perso', 'acc', 10),  // v55
   regl(L, 'accessoire', 'couleur-accessoire', t('Couleur de l’accessoire'), t('Pour l’accessoire que tu portes.'), 20, 'perso', { accCouleur: '#ffd98a' }),
   choix(L, 'habit', 'habit-echarpe', t('Écharpe'),       t('Une écharpe douce nouée sous le visage.'),       60, 'perso', 'habit', 1),
   choix(L, 'habit', 'habit-noeud',   t('Nœud papillon'), t('Un petit nœud bien mis.'),                       50, 'perso', 'habit', 2),
@@ -97,9 +101,13 @@ export const ARTICLES = [
   choix(C, 'ambiance', 'theme-aube',   t('Ciel Aube'),   t('Un ciel rose et violet, comme au petit matin.'), 60,  'reglage', 'theme', 'aube'),
   choix(C, 'ambiance', 'theme-ocean',  t('Ciel Océan'),  t('Un ciel bleu profond, comme sous la mer.'),      80,  'reglage', 'theme', 'ocean'),
   choix(C, 'ambiance', 'theme-papier', t('Ciel Papier'), t('Un ciel clair, comme une page de carnet.'),      100, 'reglage', 'theme', 'papier'),
+  choix(C, 'ambiance', 'theme-crepuscule', t('Ciel Crépuscule'), t('Le bas du ciel garde un reste de soleil couchant.'), 80, 'reglage', 'theme', 'crepuscule'),   // v55
+  choix(C, 'ambiance', 'theme-boreal',     t('Ciel Boréal'),     t('Un ciel du Grand Nord, vert profond.'),               90, 'reglage', 'theme', 'boreal'),
+  choix(C, 'ambiance', 'theme-nebuleuse',  t('Ciel Nébuleuse'),  t('Tout ton ciel baigne dans une nébuleuse rose et violette.'), 120, 'reglage', 'theme', 'nebuleuse'),
   regl(C, 'matiere', 'couleurs-humeurs', t('Couleurs des humeurs'), t('Choisis la couleur de chaque humeur.'), 50, 'reglage', { humeurs: {} }),
   inter(C, 'astres', 'lune',            t('La Lune'),           t('La vraie lune du jour, avec sa phase.'),       70),
   inter(C, 'astres', 'lactee',          t('Voie lactée'),       t('Une grande bande de lumière au loin.'),        250),
+  inter(C, 'astres', 'nebuleuses-loin', t('Nébuleuses lointaines'), t('De grands nuages de couleur, tout au fond du ciel.'), 180),   // v55
   // v40 : tes planètes (planetes.js). « nouvelle » s'achète autant de fois qu'on veut (une planète de plus, jusqu'à six) ;
   // les options s'achètent une fois et valent pour toutes les planètes (on les active sur chacune dans « Mes planètes »)
   { cle: 'planete-solide', cat: C, groupe: 'planetes', type: 'nouvelle', nom: t('Planète solide'), sous: t('Des océans et des continents, à nommer et à personnaliser.'), prix: 150, planete: 'solide' },
@@ -110,11 +118,15 @@ export const ARTICLES = [
   regl(C, 'planetes', 'pl-maisons',       t('Maisonnettes'),     t('Des petites maisons rondes, la fenêtre allumée.'),    80, 'planete', {}),
   regl(C, 'planetes', 'pl-anneaux',       t('Anneaux'),          t('Fins, larges ou penchés, autour de tes planètes.'),   100, 'planete', {}),
   regl(C, 'planetes', 'pl-anneau-double', t('Double anneau'),    t('Un second anneau, plus loin.'),                       60, 'planete', {}),
+  regl(C, 'planetes', 'pl-cristaux',      t('Cristaux'),         t('Des cristaux de lumière qui poussent sur les terres.'), 70, 'planete', {}),   // v55
+  regl(C, 'planetes', 'pl-lune',          t('Petite lune'),      t('Une petite lune qui tourne autour de ta planète.'),   90, 'planete', {}),
+  regl(C, 'planetes', 'pl-aurores',       t('Aurores polaires'), t('Un voile de lumière qui danse au-dessus du pôle.'),   80, 'planete', {}),
   regl(C, 'planetes', 'pl-couleurs',      t('Couleurs libres'),  t('Choisis toi-même la couleur des océans, des terres, des bandes.'), 50, 'planete', {}),
   inter(C, 'animations', 'croix',       t('Croix de lumière'),    t('Tes étoiles brillent avec de longues branches.'),             10),
   inter(C, 'animations', 'filantes-or', t('Filantes dorées'),     t('Des étoiles filantes dorées, plus souvent.'),                 10),
   inter(C, 'animations', 'poussiere',   t('Poussière d’étoiles'), t('Un voile de poussière qui traverse le ciel.'),                30),
   inter(C, 'animations', 'filantes',    t('Étoiles filantes'),    t('Elles traversent ton ciel de temps en temps.'),               40),
+  inter(C, 'animations', 'pluie-meteores', t('Pluie de météores'), t('De temps en temps, une averse d’étoiles filantes.'),  90),   // v55
   inter(C, 'animations', 'satellites',  t('Satellites'),          t('Un petit point qui clignote et passe.'),                      50),
   inter(C, 'animations', 'lucioles',    t('Lucioles'),            t('De petites étincelles qui tournent autour de tes étoiles.'), 60),
   inter(C, 'animations', 'cometes',     t('Comètes'),             t('Une longue queue de lumière, de temps en temps.'),            120),

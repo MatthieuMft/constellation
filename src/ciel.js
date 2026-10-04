@@ -5,7 +5,7 @@
 //     meteores.update(dt, frequence)   frequence 0 : plus aucun départ, celles en vol finissent leur course (≤ 1,4 s) puis plus rien.
 //     meteores.dorees(on, part = 1)    objet « Filantes dorées » : part = proportion d'étoiles filantes dorées parmi les départs.
 //                                      Seul : frequence = anim × 2,5 et part 1 ; avec « Étoiles filantes » aussi : part ≈ .6 (l'or reste rare et précieux).
-//     meteores.regler(clair, melange, encre) · rafale(n) · vives()
+//     meteores.regler(clair, melange, encre) · rafale(n) · pluie(n) (v55 : n départs étalés, tous dans le même sens) · vives()
 //   const poussiere = creerPoussiere(scene, pr, N)
 //     poussiere.update(t, anim, centre, dist, presence)   presence 0/1 (objet « Poussière d'étoiles ») : fondu de ~1,5 s, puis plus rien n'est dessiné.
 //     poussiere.regler(clair, melange, couleur)
@@ -13,7 +13,7 @@ import * as THREE from 'three';
 
 // Étoiles filantes : bandes lumineuses (tête vive, queue qui s'efface) tirées dans le champ de la caméra.
 export function creerEtoilesFilantes(scene, camera) {
-  const N = 6, V = N * 4;
+  const N = 10, V = N * 4;
   const pos = new Float32Array(V * 3), tete = new Float32Array(V * 3), queue = new Float32Array(V * 3);
   const cote = new Float32Array(V), t = new Float32Array(V), al = new Float32Array(V), idx = [];
   for (let m = 0; m < N; m++) {
@@ -46,18 +46,24 @@ export function creerEtoilesFilantes(scene, camera) {
   const _d = new THREE.Vector3(), _r = new THREE.Vector3(), _h = new THREE.Vector3(), _q = new THREE.Vector3();
   let attente = 1.5;
 
-  function lancer(v) {
+  function lancer(v, sensP, aP) {
     camera.updateMatrixWorld();
     _d.set(Math.random() * 1.7 - .85, Math.random() * .9 + .05, .5).unproject(camera).sub(camera.position).normalize();
     v.tete.copy(camera.position).addScaledVector(_d, 70 + Math.random() * 90);
     _r.setFromMatrixColumn(camera.matrixWorld, 0); _h.setFromMatrixColumn(camera.matrixWorld, 1);
-    const sens = Math.random() < .5 ? -1 : 1, a = .35 + Math.random() * .5, vitesse = 30 + Math.random() * 30;
+    const sens = sensP ?? (Math.random() < .5 ? -1 : 1), a = aP ?? .35 + Math.random() * .5, vitesse = 30 + Math.random() * 30;
     v.vit.copy(_r).multiplyScalar(Math.cos(a) * sens).addScaledVector(_h, -Math.sin(a)).multiplyScalar(vitesse);
     v.long = vitesse * (.25 + Math.random() * .12); v.vie = .8 + Math.random() * .6; v.age = 0; v.vivant = true;
     v.or = or && Math.random() < partOr ? 1 : 0;
   }
+  let file = 0, prochaine = 0, sensPluie = 1, aPluie = .5;
+  function pluie(n = 12) { file = n; prochaine = 0; sensPluie = Math.random() < .5 ? -1 : 1; aPluie = .4 + Math.random() * .35; }
   function update(dt, frequence) {
     attente -= dt;
+    if (file > 0 && (prochaine -= dt) <= 0) {         // pluie de météores : une averse, toutes dans le même sens
+      const libre = vies.find(v => !v.vivant); if (libre) { lancer(libre, sensPluie, aPluie + (Math.random() - .5) * .1); file--; }
+      prochaine = .12 + Math.random() * .32;
+    }
     if (frequence > 0 && attente <= 0) {
       const libre = vies.find(v => !v.vivant); if (libre) { lancer(libre); if (Math.random() < .18) { const l2 = vies.find(v => !v.vivant); if (l2) lancer(l2); } }
       attente = (2.2 + Math.random() * 5) / frequence;
@@ -81,7 +87,7 @@ export function creerEtoilesFilantes(scene, camera) {
   function dorees(on, part = 1) { on = !!on; if (on !== or || part !== partOr) vies.forEach(v => { if (v.vivant) v.or = on && Math.random() < part ? 1 : 0; }); or = on; partOr = part; }
   function rafale(n) { for (let k = 0; k < n; k++) { const libre = vies.find(v => !v.vivant); if (libre) lancer(libre); } }
   const vives = () => vies.filter(v => v.vivant).map(v => v.tete);
-  return { update, regler, rafale, vives, dorees };
+  return { update, regler, rafale, pluie, vives, dorees };
 }
 
 // Poussière cosmique : points qui dérivent lentement autour de la galaxie (mouvement calculé sur le GPU).

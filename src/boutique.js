@@ -282,6 +282,12 @@ const DESSINS = {
   'theme-aube': x => themeV(x, THEMES.aube),
   'theme-ocean': x => themeV(x, THEMES.ocean),
   'theme-papier': x => themeV(x, THEMES.papier),
+  'theme-crepuscule': x => themeV(x, THEMES.crepuscule), 'theme-boreal': x => themeV(x, THEMES.boreal), 'theme-nebuleuse': x => themeV(x, THEMES.nebuleuse),   // v55
+  'nebuleuses-loin': x => { fond(x, 12, 170); add(x);
+    for (const [px, py, r, c, a] of [[48, 56, 50, '#ff7ac0', .32], [70, 44, 34, '#b47aff', .3], [118, 112, 54, '#4fd8d0', .28], [100, 124, 30, '#7a8cff', .3], [128, 40, 26, '#ff9ad8', .22]]) voile(x, c, px, py, r, a);
+    point(x, '#ffffff', 60, 52, 4); point(x, '#ffffff', 112, 116, 3.5); },
+  'pluie-meteores': x => { fond(x, 10, 180); add(x);
+    for (const [a, b, l] of [[150, 18, 46], [124, 30, 34], [138, 64, 52], [100, 50, 28], [112, 90, 40], [80, 22, 24], [70, 76, 30]]) { trait(x, a, b, a - l, b + l * .62, '#d8ecff', 1.6, .95); point(x, '#eef6ff', a, b, 5); } },
   'brume': x => { fond(x, 10, 9); for (const [px, py, r, c, a] of [[40, 92, 52, '#8f7cff', .5], [92, 80, 58, '#6fa8ff', .45], [122, 104, 46, '#ff8fc0', .4], [70, 116, 44, '#b9a0ff', .45], [104, 60, 36, '#cfd8ff', .3]]) voile(x, c, px, py, r, a);
     point(x, '#ffffff', 52, 46, 7); point(x, '#ffffff', 118, 36, 5); },
   'scintillement': x => { fond(x, 8, 12); const P = [[46, 52, 15], [112, 44, 10], [86, 96, 19], [36, 118, 8], [128, 116, 12], [70, 30, 6]];
@@ -368,6 +374,9 @@ const LUEUR3D = {
   'texture-aurore': { perso: { texture: 'aurore' } }, 'texture-cosmos': { perso: { texture: 'cosmos' } }, 'texture-soleil': { perso: { texture: 'soleil' } },
   'expression-emerveillee': { perso: { expression: 'emerveillee' }, az: -.3 }, 'expression-curieuse': { perso: { expression: 'curieuse' }, az: -.3 }, 'expression-ensommeillee': { perso: { expression: 'ensommeillee' }, az: -.3 },
   'acc-saturne': { perso: { acc: 6 }, el: .3 }, 'acc-lune': { perso: { acc: 7 } }, 'acc-satellite': { perso: { acc: 8 } },
+  // v55
+  'texture-galaxie': { perso: { texture: 'galaxie' } }, 'texture-lune': { perso: { texture: 'lune', couleur: '#cfd8ff' } },
+  'acc-comete': { perso: { acc: 9 }, R: 24, cx: 78, cy: 86, el: .2 }, 'acc-croissant': { perso: { acc: 10 } },
   'orbite': { cx: 80, cy: 80, R: 24, apres: x => { add(x); for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283, px = 80 + Math.cos(a) * 52, py = 80 + Math.sin(a) * 15; i % 3 ? point(x, '#fff3d6', px, py, 3.5, Math.sin(a) > 0 ? .95 : .4) : scintille(x, px, py, 6, '#fff3d6', Math.sin(a) > 0 ? .95 : .45); } } },
   'traine': { cx: 108, cy: 62, R: 22, apres: x => { add(x); const r = graine(7); for (let i = 0; i < 14; i++) { const k = i / 13, px = 88 - k * 70 + (r() - .5) * 10, py = 72 + k * 56 + (r() - .5) * 10; point(x, i % 2 ? '#ffe9a8' : '#ffffff', px, py, 4 - k * 2, .9 - k * .6); } } },
   'poudre': { cx: 80, cy: 60, R: 24, apres: x => { add(x); const r = graine(9); for (let i = 0; i < 16; i++) { const px = 80 + (r() - .5) * 60, py = 96 + r() * 50; point(x, '#ffd98a', px, py, 2 + r() * 2.5, .9 - (py - 96) / 70); } } },

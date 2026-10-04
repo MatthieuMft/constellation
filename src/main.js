@@ -186,6 +186,29 @@ const lactee = (() => {
   const pts = new THREE.Points(g, m); pts.frustumCulled = false; pts.visible = false; pts.userData.ax = ax; scene.add(pts); return pts;
 })();
 
+// ───────────── v55 : nébuleuses lointaines (article du ciel) : quelques grands nuages de couleur tout au fond, très doux, qui bougent à peine ─────────────
+const nebuleusesLoin = (() => {
+  const grp = new THREE.Group(), uT = { value: 0 }, uA = { value: 0 }, geo = new THREE.PlaneGeometry(1, 1); grp.visible = false;
+  const vert = `uniform float uTaille; varying vec2 vQ; void main(){ vQ = position.xy*2.; vec4 mv = modelViewMatrix*vec4(0., 0., 0., 1.); mv.xy += position.xy*uTaille; gl_Position = projectionMatrix*mv; }`;
+  const frag = `uniform vec3 uC, uC2; uniform float uT, uA, uS; varying vec2 vQ;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
+    float vn(vec2 p){ vec2 i = floor(p), f = fract(p); f = f*f*(3. - 2.*f); return mix(mix(h(i), h(i + vec2(1., 0.)), f.x), mix(h(i + vec2(0., 1.)), h(i + vec2(1., 1.)), f.x), f.y); }
+    float fbm(vec2 p){ float a = .5, s = 0.; for (int k = 0; k < 5; k++){ s += a*vn(p); p = p*2.03 + 1.7; a *= .5; } return s; }
+    void main(){ float r = length(vQ); if (r > 1.) discard;
+      vec2 q = vQ*2.2 + uS, w = vec2(fbm(q + uT*.012), fbm(q + 5.2 - uT*.009));
+      float n = fbm(q + w*1.9), d = smoothstep(.36, .82, n)*smoothstep(1., .2, r);
+      vec3 c = mix(uC, uC2, smoothstep(.4, .75, w.x));
+      gl_FragColor = vec4(c, d*.3*uA); }`;
+  // [direction, taille, couleur, seconde couleur]
+  for (const [x, y, z, ta, c1, c2] of [[.55, .3, -1, 1500, '#ff7ac0', '#8a6bff'], [-.8, .12, -.75, 1300, '#4fd8d0', '#7a8cff'], [.05, .62, -.8, 1100, '#b47aff', '#ff9ad8'],
+    [-.3, -.25, -1, 1200, '#ff9f7a', '#d86bff'], [1, .05, .1, 1400, '#6bb8ff', '#8affd8'], [-1, .4, .3, 1250, '#ff8ab0', '#ffd08a'], [.2, .15, 1, 1500, '#9a7aff', '#4fc8ff']]) {
+    const m = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, vertexShader: vert, fragmentShader: frag,
+      uniforms: { uT, uA, uTaille: { value: ta }, uS: { value: grp.children.length * 7.3 }, uC: { value: new THREE.Color(c1) }, uC2: { value: new THREE.Color(c2) } } });
+    const me = new THREE.Mesh(geo, m); me.position.set(x, y, z).normalize().multiplyScalar(2900); me.frustumCulled = false; grp.add(me);
+  }
+  grp.userData = { uT, uA }; scene.add(grp); return grp;
+})();
+
 // ───────────── Étoiles : une par jour ─────────────
 // Cœur vif, halo, branches de diffraction (4, 6 ou 8 selon la richesse de la journée) et scintillement propre.
 const geoQuad = new THREE.PlaneGeometry(1, 1), geoSphere = new THREE.SphereGeometry(1, 12, 8);
@@ -429,6 +452,7 @@ function animerIntro(now) {
 const horloge = new THREE.Clock();
 let fonduEtiq = 0;                                // les noms de dates arrivent en douceur après l'entrée
 let survole = null, eclatDans = 3;                 // étoile sous le curseur, minuteur d'éclats
+let pluieDans = 25;                                     // v55 : la prochaine pluie de météores (s)
 const meteores = creerEtoilesFilantes(scene, camera), poussiere = creerPoussiere(scene, renderer.getPixelRatio(), mobile ? 450 : 900);
 
 // secousse d'écran (éclair, supernova) : décalage de la projection, qui ne s'accumule jamais
@@ -486,7 +510,7 @@ const _fondEcr = new THREE.Color(), _ccEcr = new THREE.Color();
 function boucle() {
   const dt = Math.min(horloge.getDelta(), .05), t = horloge.elapsedTime, now = performance.now();
   if (!document.hidden) regulerResolution(now);
-  scene.userData.etoiles.uniforms.uT.value = t; lactee.material.uniforms.uT.value = t;
+  scene.userData.etoiles.uniforms.uT.value = t; lactee.material.uniforms.uT.value = t; nebuleusesLoin.userData.uT.value = t;
 
   visuelsVisibles.clear();
   for (const v of visuels.values()) {
@@ -513,6 +537,8 @@ function boucle() {
   meteores.update(dt, etoiles.actif('filantes-or') ? R.animation * 2.5 : etoiles.actif('filantes') ? R.animation : 0);
   poussiere.update(t, R.animation, controls.target, camera.position.distanceTo(controls.target), etoiles.actif('poussiere') ? 1 : 0);
   lactee.material.uniforms.uA.value += ((etoiles.actif('lactee') ? 1 : 0) - lactee.material.uniforms.uA.value) * Math.min(1, dt * 1.2); lactee.visible = lactee.material.uniforms.uA.value > .01;
+  { const u = nebuleusesLoin.userData.uA; u.value += ((etoiles.actif('nebuleuses-loin') && !T().clair ? 1 : 0) - u.value) * Math.min(1, dt * .8); nebuleusesLoin.visible = u.value > .01; }   // v55
+  if (etoiles.actif('pluie-meteores') && R.animation > 0 && (pluieDans -= dt) <= 0) { meteores.pluie(10 + Math.floor(Math.random() * 6)); pluieDans = (70 + Math.random() * 80) / R.animation; }
   fonduEtiq = intro.actif ? 0 : Math.min(1, fonduEtiq + dt * .8); monde.fonduEtiquettes(fonduEtiq * fonduEtiq);
   monde.update(niveau);
   majNiveau(now);
@@ -1326,7 +1352,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v54'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v55'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1707,6 +1733,7 @@ function montrerDansLeCiel(cle) {
     voler(controls.target.clone(), d0, decale(v)); return;
   }
   if (cle === 'filantes-or' || cle === 'filantes') { meteores.rafale(3); return; }
+  if (cle === 'pluie-meteores') { meteores.pluie(14); pluieDans = 60; return; }   // v55
   const ev = { aurores: 'aurore', cometes: 'comete', baleine: 'baleine', dessins: 'dessin', satellites: 'satellite', lune: 'lune' }[cle];
   if (ev) { if (camera.position.distanceTo(controls.target) < d0 - 1) voler(controls.target.clone(), d0); setTimeout(() => evenements.declencher(ev), ev === 'lune' ? 400 : 1300); return; }
   if (cle === 'croix' || cle === 'lucioles') voler(posDuJour(aujourdhui()), DIST.semaine);

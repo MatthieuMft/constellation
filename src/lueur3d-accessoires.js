@@ -1,8 +1,8 @@
-// Lueur 3D — accessoires : 1 anneau, 2 antenne, 3 lunettes, 4 couronne d'étoiles, 5 chapeau de magicien, 6 anneaux de planète, 7 petite lune, 8 satellite (couleur : U.uAccCol = accCouleur).
+// Lueur 3D — accessoires : 1 anneau, 2 antenne, 3 lunettes, 4 couronne d'étoiles, 5 chapeau de magicien, 6 anneaux de planète, 7 petite lune, 8 satellite, 9 petite comète, 10 croissant de lune (couleur : U.uAccCol = accCouleur).
 // N'importe rien (pas même three : tout arrive par ctx) ; lueur3d.js l'importe et crée chaque accessoire UNE fois, au chargement, invisible.
 //
 // ═══ CONTRAT (recopié de lueur3d.js, qui fait foi ; lisez son en-tête pour le détail de ctx, U, GLSL, ORDRE) ═══
-// ACCESSOIRES[n] = { nom, creer(ctx) → inst }   (n = valeur de perso.acc : 1..5)
+// ACCESSOIRES[n] = { nom, creer(ctx) → inst }   (n = valeur de perso.acc : 1..10)
 //   inst = { objet: THREE.Object3D, maj?(dt, t, etat, presence), placer?(ctx), encombrement?: { haut, bas, cote }, liberer?() }
 //   - objet : ajouté au pivot du corps (repère du corps : rayon ≈ 1, +Z = visage, +Y = haut) ; il suit l'écrasement et le penché.
 //   - presence 0..1 (porté / retiré, lissé) ; objet.visible est géré par lueur3d.js. Servez-vous de presence pour un fondu (uOpacite) ou une pousse (échelle).
@@ -171,6 +171,16 @@ function geoTige(THREE, courbe, r0, r1, n = 28, rs = 8) {
   const g = new THREE.TubeGeometry(courbe, n, r0, rs, false), P = g.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3();
   for (let i = 0; i <= n; i++) { courbe.getPointAt(i / n, c); const k = 1 + (r1 / r0 - 1) * i / n; for (let j = 0; j <= rs; j++) { const q = i * (rs + 1) + j; v.fromBufferAttribute(P, q).sub(c).multiplyScalar(k).add(c); P.setXYZ(q, v.x, v.y, v.z); } }
   P.needsUpdate = true; return g;
+}
+
+// croissant de lune bombé (v55) : un arc de tube qui s'affine vers les pointes (le dos est le plus épais), pointes tournées vers +X, aplati selon Z
+function geoCroissant(THREE, R = .34, ep = .135, ouv = 2.25, n = 48, rs = 14) {
+  const a0 = Math.PI - ouv, pts = [];
+  for (let i = 0; i <= 16; i++) { const a = a0 + 2 * ouv * i / 16; pts.push(new THREE.Vector3(Math.cos(a) * R, Math.sin(a) * R, 0)); }
+  const courbe = new THREE.CatmullRomCurve3(pts), g = new THREE.TubeGeometry(courbe, n, ep, rs, false), P = g.attributes.position, c = new THREE.Vector3(), v = new THREE.Vector3();
+  for (let i = 0; i <= n; i++) { courbe.getPointAt(i / n, c); const k = Math.max(.07, Math.pow(Math.sin(Math.PI * i / n), .7));
+    for (let j = 0; j <= rs; j++) { const q = i * (rs + 1) + j; v.fromBufferAttribute(P, q).sub(c).multiplyScalar(k); v.z *= .72; v.add(c); P.setXYZ(q, v.x, v.y, v.z); } }
+  P.needsUpdate = true; g.computeVertexNormals(); return g;
 }
 
 // place libre autour de l'axe vertical à la hauteur y (jusqu'à la première partie de la silhouette : oreilles du chat…)
@@ -350,5 +360,46 @@ export const ACCESSOIRES = {
       maj(dt, t, etat, presence) { const e = lisse(presence); pres.value = e; profondeur(mats, e);
         const a = -t * .4 + 2.4; sat.position.set(Math.sin(a) * r0, 0, Math.cos(a) * r0); sat.rotation.set(.3, a + Math.PI / 2, t * .3); sat.scale.setScalar(1.35 * (.7 + .3 * e));
         orbite.rotation.set(.18, 0, .5); feu.value = e * (Math.sin(t * 4) > .6 ? 1 : .15); } };
+  } },
+
+  // 9 — petite comète (v55) : une tête brillante qui file autour d'elle sur une orbite penchée, suivie d'une chevelure de lumière qui s'effile
+  9: { nom: 'comete', creer(ctx) {
+    const { THREE } = ctx, pres = { value: 0 }, enc = { haut: 1.35 }, objet = new THREE.Group(), orbite = new THREE.Group(), bras = new THREE.Group(); objet.name = 'acc-comete';
+    objet.add(orbite); orbite.add(bras);
+    const tete = new THREE.Mesh(new THREE.SphereGeometry(.12, 20, 14), matObjet(ctx, { pres, eclat: 1.2, blanc: .8, lisere: .5, douceur: .2, spec: .4 }));
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), matLueur(ctx, { pres, taille: .48, force: .8, rayons: .45, blanc: .75 }));
+    const astre = new THREE.Group(); astre.add(tete, halo); bras.add(astre);
+    const coeur = new THREE.Mesh(new THREE.BufferGeometry(), matObjet(ctx, { pres, eclat: 1.1, blanc: .6, lisere: .3, douceur: .6, fondu: [0, 1], ecrit: false }));
+    const voile = new THREE.Mesh(new THREE.BufferGeometry(), matLueur(ctx, { pres, coque: 1, force: .85, blanc: .55 }));
+    bras.add(voile, coeur); ctx.preparer(objet);
+    let r0 = 0;
+    function chevelure(r) {                                             // un arc derrière la tête, sur l'orbite (rare : à chaque silhouette)
+      const pts = []; for (let i = 0; i <= 12; i++) { const a = -i / 12 * 1.05; pts.push(new THREE.Vector3(Math.sin(a) * r, 0, Math.cos(a) * r)); }
+      const c = new THREE.CatmullRomCurve3(pts); coeur.geometry.dispose(); voile.geometry.dispose();
+      coeur.geometry = geoTige(THREE, c, .07, .008, 40, 10); voile.geometry = geoTige(THREE, c, .2, .03, 40, 12); r0 = r;
+    }
+    return { objet, encombrement: enc,
+      placer(ctx) { const R = ctx.forme.reperes, r = Math.max(Math.abs(R.droite.x), Math.abs(R.gauche.x), 1) + .5; if (Math.abs(r - r0) > .01) chevelure(r);
+        astre.position.set(0, 0, r); objet.position.set(0, .2, 0); enc.haut = .2 + r * Math.sin(.4) + .25; enc.cote = r + .3; },
+      maj(dt, t, etat, presence) { const e = lisse(presence); pres.value = e; tete.material.depthWrite = e > .97;
+        bras.rotation.y = t * .75; bras.scale.setScalar(.85 + .15 * e); astre.scale.setScalar(.6 + .4 * e);
+        orbite.rotation.set(.28, 0, .38); } };
+  } },
+
+  // 10 — croissant de lune (v55) : un croissant bombé qui flotte au-dessus de la tête, toujours tourné vers nous, avec une toute petite étoile entre ses pointes
+  10: { nom: 'croissant', creer(ctx) {
+    const { THREE } = ctx, pres = { value: 0 }, enc = { haut: 1.5 }, objet = new THREE.Group(), face = new THREE.Group(); objet.name = 'acc-croissant'; objet.add(face);
+    const croissant = new THREE.Mesh(geoCroissant(THREE), matObjet(ctx, { pres, eclat: 1.08, blanc: .45, lisere: .5, douceur: .3, spec: .35 }));
+    const etoile = new THREE.Mesh(geoEtoile(THREE, 1, .5, .48), matObjet(ctx, { pres, eclat: 1.12, blanc: .6, lisere: .5, douceur: .25, spec: .3 })); etoile.scale.setScalar(.08); etoile.position.set(.19, .03, .02);
+    const halo = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), matLueur(ctx, { pres, taille: .55, force: .26, rayons: 0, blanc: .35 }));
+    const halo2 = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), matLueur(ctx, { pres, taille: .16, force: .45, rayons: .35, blanc: .6 })); halo2.position.copy(etoile.position);
+    face.add(halo, croissant, etoile, halo2); ctx.preparer(objet); const mats = [croissant.material, etoile.material];
+    let y0 = 1.3;
+    return { objet, encombrement: enc,
+      placer(ctx) { const R = ctx.forme.reperes; y0 = R.sommet.y + .4; objet.position.set(R.haut.x, y0, R.haut.z); enc.haut = y0 + .47; },
+      maj(dt, t, etat, presence) { const e = lisse(presence); pres.value = e; objet.scale.setScalar(.7 + .3 * e); profondeur(mats, e);
+        objet.position.y = y0 + Math.sin(t * 1.2) * .03 + (1 - e) * .12;
+        versCamera(face, ctx.U.uCamL.value, .4, .25, t, .5); face.rotation.z = .5 + Math.sin(t * .9) * .06;
+        etoile.rotation.z = Math.sin(t * 1.7) * .15; } };
   } },
 };

@@ -1,4 +1,4 @@
-// Lueur 3D — silhouettes (rond, chat, fantome, coeur, etoile, comete) et matières (lisse, nacre, givre, paillettes, nebuleuse, aurore, cosmos, soleil).
+// Lueur 3D — silhouettes (rond, chat, fantome, coeur, etoile, comete) et matières (lisse, nacre, givre, paillettes, nebuleuse, aurore, cosmos, soleil, galaxie, lune).
 // Ce fichier ne contient QUE des données : du GLSL (compilé une seule fois avec le corps, choisi par uniforms) et de petites fonctions JS.
 // Il n'importe rien (pas même three : creer(ctx) reçoit ctx.THREE) ; lueur3d.js l'importe et assemble tout au chargement.
 //
@@ -25,7 +25,7 @@
 // }
 //
 // MATIERES[nom] = {
-//   id: entier unique (lisse 0, nacre 1, givre 2, paillettes 3, nebuleuse 4) → uniform uTex.
+//   id: entier unique (lisse 0, nacre 1, givre 2, paillettes 3, nebuleuse 4, aurore 5, cosmos 6, soleil 7, galaxie 8, lune 9) → uniform uTex.
 //   fn: 'matNacre'             (facultatif) `void matNacre(inout Gaz g)` : retouche le gaz après la couleur de base et deco (lisse = rien).
 //   glsl: `…`                  son code GLSL (fonctions privées préfixées : nacreIri…). Compilé dans le corps seulement.
 //   grains: { brume, poussiere, etincelles, teinte, part, scint, taille }   (facultatif) réglages des grains de lumière, par uniforms
@@ -329,5 +329,49 @@ export const MATIERES = {
     g.E *= 1.06;
   }`,
     grains: { brume: 1.2, poussiere: .8, etincelles: 1.3, teinte: [1, 1, 1], part: 0, scint: 1, taille: 1.05 },
+  },
+
+  // galaxie (v55) : une galaxie spirale à deux bras qui tourne lentement à l'intérieur (de face, un peu penchée), un bulbe doré au centre, des étoiles dans les bras
+  galaxie: {
+    id: 8, fn: 'matGalaxie',
+    glsl: `
+  float galaxieBras(vec3 q){ q.yz = rot2(.45)*q.yz; float r = length(q.xy), a = atan(q.y, q.x);
+    float s = pow(.5 + .5*cos(2.*a - r*4.6 + uT*.22), 1.7);
+    return s*smoothstep(1.2, .25, r)*exp(-q.z*q.z*3.)*(.75 + .5*n3(q*3.4 + vec3(0., 0., uT*.03))); }
+  void matGalaxie(inout Gaz g){
+    float pe = matPeau(g), cv = matFace(g), L = max(g.ep, .25)*.5;
+    float b = (galaxieBras(g.p - g.rd*L) + galaxieBras(g.p + g.rd*L))*.5;
+    vec3 q = g.p; q.yz = rot2(.45)*q.yz; float r = length(q.xy);
+    vec3 bras = mix(g.vif, vec3(.92, .86, 1.), .35);
+    float k = clamp(b*1.9, 0., 1.);
+    vec3 col = mix(g.vif*.26, bras, k);
+    col = mix(col, mix(g.coeur, vec3(1., .96, .88), .45), smoothstep(.3, 0., r)*.8);   // le bulbe
+    g.c = mix(g.c, col, .92*smoothstep(.05, .35, g.D));
+    g.brille += bras*k*k*.16*smoothstep(.2, .6, g.D)*(1. - .5*uClair);                 // les bras luisent (au-delà du plafond du cœur)
+    float e = matEclat(g.p*10. - g.rd*.4, .7, 1.5, .1)*(.25 + b*1.8) + matEclat(g.p*17. + 1.7, .82, 2.1, .08)*b;
+    g.brille += vec3(1., .96, .9)*e*.8*smoothstep(.2, .6, g.D)*(1. - .5*uClair);
+    g.brille += mix(g.vif, vec3(1.), .5)*pow(1. - cv, 3.)*.2*pe*(1. - .4*uClair);
+  }`,
+    grains: { brume: 1.15, poussiere: 1.3, etincelles: 1.1, teinte: [1, .95, 1], part: .3, scint: 1.2, taille: .9 },
+  },
+
+  // pierre de lune (v55) : une pierre nacrée, claire, semée de petits cratères doux (creux à peine plus sombre, bord plus clair) ; reflets bleutés et rosés au bord
+  lune: {
+    id: 9, fn: 'matLune',
+    glsl: `
+  vec2 luneCratere(vec3 q){ vec3 i = floor(q), f = fract(q) - .5, h = h3(i + 5.); f -= (h.yzx - .5)*.35;
+    float d = length(f)/(.16 + .14*h.z); return step(.42, h.x)*vec2(smoothstep(.95, .35, d), exp(-(d - 1.)*(d - 1.)*18.)); }
+  void matLune(inout Gaz g){
+    float pe = matPeau(g), cv = matFace(g);
+    vec2 k = luneCratere(g.pa*2.3) + luneCratere(g.pa*4.4 + 2.7)*.7;
+    float mers = smoothstep(.4, .6, n3(g.pa*1.5 + 4.)), gr = n3(g.pa*18.)*.5 + n3(g.pa*37.)*.5;   // grandes « mers » plus grises, grain fin
+    vec3 pierre = mix(vec3(.9, .91, .97), g.vif, .3)*(.9 + .12*gr)*(1. - .2*mers)*(1. - .32*min(k.x, 1.));
+    g.c = mix(g.c, pierre, .8*pe);
+    g.c = mix(g.c, vec3(1., .99, .97), min(k.y, 1.)*.35*pe);
+    float t = dot(g.n, vec3(.4, .7, .3))*.6 + cv*.8 + uT*.015;
+    vec3 iri = mix(vec3(.82, .87, 1.), vec3(1., .86, .95), .5 + .5*sin(t*6.2832));
+    g.brille += iri*(pow(1. - cv, 2.2)*.26 + min(k.y, 1.)*.05*cv)*pe*(1. - .4*uClair);
+  }`,
+    grains: { brume: .8, poussiere: .8, etincelles: .9, teinte: [.92, .94, 1], part: .35, scint: .7, taille: .95 },
   },
 };
