@@ -1439,7 +1439,7 @@ function carteSemaine(action) {
   const s = figures.semaineDe(aujourdhui()), C = constellationDe(s), jds = cle => (dateDeCle(cle).getDay() + 6) % 7;
   const tous = []; for (let d = dateDeCle(dernierJour(s)); figures.semaineDe(cleJour(d)) === s; d = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1)) tous.unshift(cleJour(d));
   const couleurs = new Map(jours.filter(j => !j.sample && figures.semaineDe(j.id) === s).map(j => [jds(j.id), '#' + couleurPour(j).couleur.getHexString()]));
-  const W = 92, H = 56, P = C.e.map(([x, y]) => [x * W, (1 - y) * H]);
+  const W = 92, H = 56, P = C.e.map(([x, y]) => [(W - H) / 2 + x * H, (1 - y) * H]);   // v67 : sans déformer la vraie forme
   let svg = ''; for (const [a, b2] of C.t) { const on = couleurs.has(a) && couleurs.has(b2); svg += `<line x1="${P[a][0]}" y1="${P[a][1]}" x2="${P[b2][0]}" y2="${P[b2][1]}" stroke="${on ? 'rgba(255,240,210,.85)' : 'rgba(201,211,255,.35)'}" stroke-width="1" stroke-dasharray="${on ? '' : '3 4'}"/>`; }
   P.forEach(([x, y], i) => { const c = couleurs.get(i); svg += c ? `<circle cx="${x}" cy="${y}" r="7" fill="${c}" opacity=".2"/><circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>` : `<circle cx="${x}" cy="${y}" r="1.6" fill="rgba(201,211,255,.55)"/>`; });
   const n = tous.filter(c => couleurs.has(jds(c))).length, e = voyage.etat();
@@ -1455,7 +1455,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v66'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v67'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));

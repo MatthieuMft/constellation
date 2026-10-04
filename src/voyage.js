@@ -46,7 +46,7 @@ export function creerVoyage({ scene, camera, melange, texHalo, posJour, particul
     if ('clair' in o) clair = o.clair; if (o.encre) encre = o.encre; vider();
     let cleS = semaineDe(aujourdhui()); if (estFinie(cleS)) cleS = semaineDe(lendemain(dernierJour(cleS)));   // v65 : semaine finie, sa constellation est née : le chemin de la semaine suivante (lundi) attend déjà
     const tous = joursEcrits(), premier = tous.length ? tous.reduce((a, k) => k < a ? k : a) : aujourdhui();
-    const P = pointsDe(cleS), ecrits = new Set(tous.filter(k => semaineDe(k) === cleS).map(jds)), offre = offerts(cleS, premier), g = new THREE.Group(); groupe.add(g);
+    const P = pointsDe(cleS).slice(0, 7), ecrits = new Set(tous.filter(k => semaineDe(k) === cleS).map(jds)), offre = offerts(cleS, premier), g = new THREE.Group(); groupe.add(g);
     const courbe = new THREE.CatmullRomCurve3(P, false, 'centripetal', .4), geo = new THREE.BufferGeometry().setFromPoints(courbe.getPoints(160));
     const ligne = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: clair ? encre : '#e8dcc0', dashSize: .45, gapSize: .55, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: melange() }));
     ligne.computeLineDistances(); ligne.renderOrder = 2; ligne.frustumCulled = false; g.add(ligne);

@@ -16,6 +16,7 @@
 //   figures.figure(cleSemaine) -> { cle, jours, nom, vraiNom } | null   (null : moins de 3 jours écrits)
 //   figures.nommer(cleSemaine, nom) · figures.centre(cleSemaine) -> Vector3 | null
 import * as THREE from 'three';
+import { CIEL_REEL } from './ciel-reel.js';
 
 const CLE = 'constellation.figures.v1', MIN = 3;
 // v49 : la constellation se dessine SUR la semaine, à la place du chemin pointillé de la lueur. Ses 7 points sont posés
@@ -24,7 +25,7 @@ const CLE = 'constellation.figures.v1', MIN = 3;
 const VUE = new THREE.Vector3(.15, .55, .82).normalize(), DROITE = new THREE.Vector3().crossVectors(VUE.clone().negate(), new THREE.Vector3(0, 1, 0)).normalize(), HAUT = new THREE.Vector3().crossVectors(DROITE, VUE.clone().negate()).normalize();
 const FORME = 17, PROFONDEUR = [0, 2.6, -2.2, 1.4, -3, 3.2, -1.2];
 export function pointsSemaine(cleS, centre) {
-  return constellationDe(cleS).e.map(([x, y], i) => centre.clone().addScaledVector(DROITE, (x - .5) * FORME).addScaledVector(HAUT, (y - .5) * FORME + 2.5).addScaledVector(VUE, PROFONDEUR[i]));
+  return constellationDe(cleS).e.map(([x, y], i) => centre.clone().addScaledVector(DROITE, (x - .5) * FORME).addScaledVector(HAUT, (y - .5) * FORME + 2.5).addScaledVector(VUE, i < 7 ? PROFONDEUR[i] : PROFONDEUR[i % 7] * .35 + ((i * 7) % 5 - 2) * .25));   // v67 : 7 étoiles des jours, puis le reste de la figure
 }
 export const ordreChemin = cleS => constellationDe(cleS).ordre || [0, 1, 2, 3, 4, 5, 6];
 export const lendemain = cle => { const [y, m, d] = cle.split('-').map(Number); return cleJ(new Date(y, m - 1, d + 1)); };
@@ -77,7 +78,18 @@ export function offerts(cleS, premier = null) {
 }
 export const BLANC_OFFERT = '#e6e9ff';
 const jourDeSemaine = cle => { const [y, m, d] = cle.split('-').map(Number); return (new Date(y, m - 1, d).getDay() + 6) % 7; };   // lundi = 0
-export const constellationDe = cleS => { const [y, m, sw] = cleS.split('-'), i = (+y * 12 + +m) * 5 + +sw.slice(1); return CONSTELLATIONS[((i % 7) + 7) % 7]; };   // semaines voisines : constellations différentes
+const constellationAncienne = cleS => { const [y, m, sw] = cleS.split('-'), i = (+y * 12 + +m) * 5 + +sw.slice(1); return CONSTELLATIONS[((i % 7) + 7) % 7]; };
+// v67 (Matthieu : « chaque constellation unique ») : à partir de la semaine du 5 octobre 2026, chaque semaine reçoit une VRAIE constellation,
+// toutes différentes : d'abord les officielles, puis les chinoises anciennes (plus de deux ans), puis le cycle recommence.
+// Les semaines d'avant gardent la leur (les étoiles déjà posées ne bougent pas, Cassiopée reste Cassiopée).
+const nbSegments = (y, m) => +semaineDe(`${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`).split('-s')[1] + 1;
+export function rangSemaine(cleS) {
+  const [y, m, sw] = cleS.split('-'), Y = +y, M = +m, w = +sw.slice(1);
+  if (Y * 12 + M < 2026 * 12 + 10 || (Y === 2026 && M === 10 && w < 1)) return -1;
+  let n = -1; for (let a = 2026, b = 10; a * 12 + b < Y * 12 + M; b === 12 ? (a++, b = 1) : b++) n += nbSegments(a, b);
+  return n + w;
+}
+export const constellationDe = cleS => { const r = rangSemaine(cleS); return r < 0 ? constellationAncienne(cleS) : CIEL_REEL[r % CIEL_REEL.length]; };
 
 function texteSprite(txt, hauteur, encre, clair, italique = true) {
   const H = 160, police = (italique ? 'italic ' : '') + '92px Georgia, serif', m = document.createElement('canvas').getContext('2d'); m.font = police;
@@ -117,6 +129,7 @@ export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, e
       // v61 (demande de Matthieu) : à la fin de la semaine, la constellation se dessine TOUJOURS en entier. Un jour raté n'est pas puni :
       // son étoile brille d'un blanc doux, un peu plus petite ; les jours écrits gardent la couleur de leur humeur.
       const rate = new Set(); for (let i = 0; i < 7; i++) if (!allume.has(i)) { allume.set(i, null); if (!offre.has(i)) rate.add(i); }
+      const fig = new Set(); for (let i = 7; i < C.e.length; i++) { allume.set(i, null); fig.add(i); }   // v67 : le reste de la vraie figure, en blanc, à la naissance
       for (const [a, b] of C.t) (allume.has(a) && allume.has(b) ? forts : faibles).push(P[a].x, P[a].y, P[a].z, P[b].x, P[b].y, P[b].z);
       const traits = (pos, op) => { if (!pos.length) return null; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         const l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: pale, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: melange() })); l.userData = { op, trait: true }; l.renderOrder = 2; l.frustumCulled = false; g.add(l); return l; };
@@ -124,8 +137,8 @@ export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, e
       // étoiles : petites et pâles, ou allumées à la couleur du jour
       C.e.forEach(([, , eclat], i) => {
         const on = allume.has(i), cj = allume.get(i), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: on ? (cj ? new THREE.Color(cj).lerp(new THREE.Color('#ffffff'), .35) : new THREE.Color(clair ? encre : BLANC_OFFERT)) : pale, transparent: true, depthTest: false, depthWrite: false, blending: melange(), opacity: 0, fog: false }));
-        const taille = (on ? (cj ? 2.6 : rate.has(i) ? 1.5 : 1.9) : 1.1) * (.7 + .5 * eclat);
-        sp.position.copy(P[i]); sp.scale.setScalar(taille); sp.userData = { op: on ? (cj ? 1 : rate.has(i) ? .6 : .75) : (clair ? .55 : .5), on, ph: i * 1.7, i, taille }; sp.renderOrder = 3; g.add(sp);
+        const taille = (fig.has(i) ? 1.2 : on ? (cj ? 2.6 : rate.has(i) ? 1.5 : 1.9) : 1.1) * (.7 + .5 * eclat);
+        sp.position.copy(P[i]); sp.scale.setScalar(taille); sp.userData = { op: fig.has(i) ? .55 : on ? (cj ? 1 : rate.has(i) ? .6 : .75) : (clair ? .55 : .5), on, ph: i * 1.7, i: Math.min(i, 7), taille }; sp.renderOrder = 3; g.add(sp);
       });
       // noms au-dessus : le tien (s'il existe), et le vrai nom en petit
       const haut = c.clone().addScaledVector(HAUT, FORME * .5 + 4.5);
