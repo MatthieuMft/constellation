@@ -60,7 +60,7 @@ export function dernierJour(cleS) {
 }
 export function finie(cleS, maintenant = new Date()) {
   const auj = cleJ(maintenant), der = dernierJour(cleS); if (!der) return false;
-  return der < auj || (der === auj && maintenant.getDay() === 0 && maintenant.getHours() >= 18);
+  return der < auj;                                                          // v64 : à minuit, dans la nuit de dimanche à lundi (avant : dimanche 18 h)
 }
 export function semaineDe(cle) {
   const [y, m, d] = cle.split('-').map(Number), w = Math.floor((d - 1 + ((new Date(y, m - 1, 1).getDay() + 6) % 7)) / 7);
