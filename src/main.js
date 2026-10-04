@@ -739,6 +739,22 @@ canvas.addEventListener('pointerdown', e => {
   if (s && s.type === 'creature') { calinFait = false; calinMinuteur = setTimeout(() => { calinFait = true; creature.calin(true); }, 550); return; }      // maintenir : câlin
   if (s && s.type === 'etoile' && R.animation > 0) { chargeId = s.id; chargeT0 = performance.now(); maintien = setTimeout(() => { superFaite = true; chargeId = null; supernovaDe(s.id); }, 800); }
 });
+// v56 : appuyer sur la lueur puis glisser : on la prend et on la promène (le ciel ne tourne pas pendant ce temps) ; un geste vif la lance
+let prise = null;
+addEventListener('pointerdown', e => {
+  if (e.target !== canvas || prise || intro.actif || !creature.touche(e.clientX, e.clientY)) return;
+  prise = { id: e.pointerId, x0: e.clientX, y0: e.clientY, tire: false }; controls.enabled = false;
+}, true);
+addEventListener('pointermove', e => {
+  if (!prise || e.pointerId !== prise.id) return;
+  if (!prise.tire && Math.hypot(e.clientX - prise.x0, e.clientY - prise.y0) > 9) {
+    clearTimeout(calinMinuteur); if (calinFait) { calinFait = false; creature.calin(false, true); }
+    prise.tire = creature.prendre(e.clientX, e.clientY);
+  }
+  if (prise.tire) creature.tirer(e.clientX, e.clientY);
+}, true);
+const lacherPrise = e => { if (!prise || e.pointerId !== prise.id) return; if (prise.tire) creature.lacher(); prise = null; controls.enabled = !intro.actif; };
+addEventListener('pointerup', lacherPrise, true); addEventListener('pointercancel', lacherPrise, true);
 canvas.addEventListener('pointerup', e => {
   annulerMaintien(); if (superFaite) { superFaite = false; return; }
   clearTimeout(calinMinuteur); if (calinFait) { calinFait = false; creature.calin(false); return; }
@@ -1352,7 +1368,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v55'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v56'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
