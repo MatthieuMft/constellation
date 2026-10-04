@@ -46,6 +46,8 @@ import { son } from './son.js';
 import { monterActivites, ACTIVITES, nomActivite } from './activites.js';
 import { creerVoyage } from './voyage.js';
 import { modeles, questionPour } from './questions.js';
+import { legende } from './legendes.js';
+import * as etAlors from './etalors.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
@@ -953,6 +955,15 @@ function ouvrirEcrire({ jour = null, item = null } = {}) {
   $('ecrire').hidden = false; document.body.classList.add('ecriture'); accueil.surPlus();
   $('editeur').dataset.ph = $('texte').placeholder;   // v22 : pas de clavier d'office, on touche le texte pour écrire
   ouvertureEcriture = performance.now(); dernierTexte = ouvertureEcriture; questionsPosees = 0; derniereQuestion = 0; majCoupPouce();
+  setTimeout(demanderEtAlors, 2600);
+}
+// v71 : « Et alors ? » une note parlait de demain, de ce soir, de samedi… Le bon jour, à l'ouverture du journal, la lueur demande une fois comment c'était.
+function demanderEtAlors() {
+  if ($('ecrire').hidden || $('humeurs').hidden || document.querySelector('.boite-figure')) return;
+  const c = etAlors.aDemander(items, aujourdhui()); if (!c) return;
+  const ta = $('texte');
+  const ok = creature.dire(c.phrase, { duree: 12000, priorite: true, clic: () => { const v = ta.value.replace(/\s+$/, ''); ta.value = (v ? v + '\n\n' : '') + '> ' + c.phrase + '\n'; ta.dispatchEvent(new Event('input')); ed.finir(); } });
+  if (ok !== false) { etAlors.marquer(c.id); questionsPosees++; derniereQuestion = performance.now(); }
 }
 const CLE_BROUILLON = 'constellation.brouillon';
 function garderBrouillon() {
@@ -1486,7 +1497,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v70'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v71'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1833,6 +1844,8 @@ function ouvrirBilan(s) {
   const boite = document.createElement('div'); boite.className = 'boite-figure bilan'; boite.setAttribute('role', 'dialog');
   const h = document.createElement('p'); h.className = 'lab'; h.textContent = t('Ta semaine · {vrai}', { vrai: f && f.nom ? f.nom : figures.vraiNom(s) });
   const sous = document.createElement('p'); sous.className = 'sous'; sous.textContent = t('Du {a} au {b}', { a: fmt(B.jrs[0].cle), b: fmt(B.jrs.at(-1).cle) });
+  const leg = legende(figures.nomFr(s)), lg = leg ? document.createElement('p') : null;   // v71 : sa légende, en deux phrases
+  if (lg) { lg.className = 'bilan-legende'; lg.textContent = leg; }
   const pastilles = document.createElement('div'); pastilles.className = 'bilan-jours';
   for (const j of B.jrs) { const p = document.createElement('span'); p.title = libelleJour(dateDeCle(j.cle)); if (j.ecrit) { p.className = 'on'; p.style.background = j.couleur || 'var(--ink)'; } pastilles.append(p); }
   const ligne = (txt, el) => { const l = document.createElement('p'); l.className = 'bilan-ligne'; if (el) l.append(el); l.append(document.createTextNode(txt)); return l; };
@@ -1847,7 +1860,7 @@ function ouvrirBilan(s) {
   const fermer = () => { boite.remove(); allerSemaineSuivante(s); };
   if (f && !f.nom) { const nom = document.createElement('button'); nom.type = 'button'; nom.textContent = t('Lui donner un nom'); nom.addEventListener('click', () => { boite.remove(); ouvrirNommerFigure(s); }); rang.append(nom); }
   const ok = document.createElement('button'); ok.type = 'button'; ok.className = f && !f.nom ? 'lien' : ''; ok.textContent = t('Semaine suivante'); ok.addEventListener('click', fermer); rang.append(ok);
-  boite.append(h, sous, pastilles, ...lignes, rang); document.body.append(boite);
+  boite.append(h, sous, ...(lg ? [lg] : []), pastilles, ...lignes, rang); document.body.append(boite);
 }
 // pour les tests (non affiché) : la semaine en cours se termine tout de suite
 function simulerFinSemaine() { const s = figures.semaineDe(aujourdhui()); figures.forcer(s); figures.annoncee(s, false); proposerFigure(true); }

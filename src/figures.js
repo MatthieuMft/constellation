@@ -179,6 +179,7 @@ export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, e
     finies: () => [...parSemaine.keys()].filter(estFinie).sort(),
     forcer(s) { forcees.add(s); reconstruire(); },
     vraiNom: s => { const C = constellationDe(s); return en ? C.en : C.nom; },
+    nomFr: s => constellationDe(s).nom,                                   // v71 : la clé de sa légende (legendes.js)
     annoncee(s, oui) { const o = lire(); o.vues = o.vues || []; if (oui === undefined) return o.vues.includes(s); if (!o.vues.includes(s)) o.vues.push(s); try { localStorage.setItem(CLE, JSON.stringify(o)); } catch (e) {} },
     figure(s) { const l = parSemaine.get(s); if (!l || l.length < MIN || !estFinie(s)) return null; const C = constellationDe(s);
       return { cle: s, jours: l.map(j => j.cle).sort(), nom: lire().noms[s] || '', vraiNom: en ? C.en : C.nom }; },

@@ -1126,3 +1126,6 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .pouce-liste { display: flex; flex-direction: column; gap: 8px; }
 .pouce-liste button { text-align: left; padding: 12px 14px; font: 1rem var(--serif); background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 0; }
 .pouce-liste button:active { background: rgba(255,255,255,.1); }
+
+/* v71 : la légende de la constellation, dans le bilan de la semaine */
+.bilan-legende { font: italic .95rem/1.5 var(--serif); color: var(--ink); opacity: .85; margin: -6px 0 14px; padding-left: 12px; border-left: 1px solid var(--line); }
