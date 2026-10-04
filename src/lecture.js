@@ -12,8 +12,8 @@ const el = (tag, attrs = {}, ...enfants) => {
 
 // ctx : { jours() → clés triées, items(cle), couleurJour(cle), mediaUrl(cle), voirMedia(item, m), album(k, n), ouvrirJour(cle) }
 export function creerLecture(ctx) {
-  let ecran = null, cle = null;
-  const fermer = () => { if (ecran) ecran.remove(); ecran = null; };
+  let ecran = null, cle = null, anim = null, finir = null;
+  const fermer = () => { if (anim) anim.cancel(); anim = finir = null; if (ecran) ecran.remove(); ecran = null; };
   function medias(item) {
     const l = (item.medias || []).concat(item.media ? [item.media] : []); if (!l.length) return null;
     return el('div', { class: 'lec-medias' }, l.map(m => { const b = el('button', { type: 'button', class: 'vignette', onclick: () => ctx.voirMedia(item, m) });
@@ -21,24 +21,50 @@ export function creerLecture(ctx) {
       return b; }));
   }
   function decale(c, { j = 0, m = 0, a = 0 }) { const d = dateDeCle(c); return cleJour(new Date(d.getFullYear() - a, d.getMonth() - m, d.getDate() - j, 12)); }
-  function page(sens = 0) {
-    const L = ctx.jours(), i = L.indexOf(cle), d = dateDeCle(cle), c = ctx.couleurJour(cle);
-    const liste = ctx.items(cle).slice().sort((a, b) => a.date - b.date);
-    const corps = ecran.querySelector('.lec-corps'), tete = ecran.querySelector('.lec-date');
+  function construire(k) {                                              // le contenu d'une page (une journée)
+    const L = ctx.jours(), liste = ctx.items(k).slice().sort((a, b) => a.date - b.date);
+    const contenu = liste.map(it => el('article', { class: 'lec-entree' },
+      el('time', {}, new Date(it.date).toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit' })),
+      it.titre ? el('h3', {}, it.titre) : null, it.texte ? blocs(it.texte, ctx.album) : null, it.legende ? el('p', {}, it.legende) : null, medias(it)));
+    const echos = [[{ j: 7 }, t('il y a une semaine')], [{ m: 1 }, t('il y a un mois')], [{ a: 1 }, t('il y a un an')]].map(([o, lab]) => [decale(k, o), lab]).filter(([x]) => L.includes(x));
+    const pied = echos.length ? el('div', { class: 'lec-echos' }, el('p', { class: 'album-lab' }, t('Ce jour-là')), echos.map(([x, lab]) => {
+      const it = ctx.items(x)[0], s = it ? ((it.titre ? it.titre + ' · ' : '') + (it.texte || '')).replace(/\s+/g, ' ').trim() : '';
+      return el('button', { type: 'button', onclick: () => aller(x, x < cle ? -1 : 1) }, el('small', {}, lab), el('span', {}, s.length > 90 ? s.slice(0, 88) + '…' : s));
+    })) : null;
+    return [...contenu, pied].filter(Boolean);
+  }
+  function entete() {
+    const L = ctx.jours(), i = L.indexOf(cle), d = dateDeCle(cle), c = ctx.couleurJour(cle), tete = ecran.querySelector('.lec-date');
     tete.replaceChildren(el('small', {}, d.toLocaleDateString(LOC, { weekday: 'long' })), el('strong', {}, d.toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' })));
     ecran.style.setProperty('--c', c || 'var(--line)');
     ecran.querySelector('.lec-prec').disabled = i <= 0; ecran.querySelector('.lec-suiv').disabled = i < 0 || i >= L.length - 1;
     ecran.querySelector('.lec-pos').textContent = i >= 0 ? (i + 1) + ' / ' + L.length : '';
-    const contenu = liste.map(it => el('article', { class: 'lec-entree' },
-      el('time', {}, new Date(it.date).toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit' })),
-      it.titre ? el('h3', {}, it.titre) : null, it.texte ? blocs(it.texte, ctx.album) : null, it.legende ? el('p', {}, it.legende) : null, medias(it)));
-    const echos = [[{ j: 7 }, t('il y a une semaine')], [{ m: 1 }, t('il y a un mois')], [{ a: 1 }, t('il y a un an')]].map(([o, lab]) => [decale(cle, o), lab]).filter(([k]) => L.includes(k));
-    const pied = echos.length ? el('div', { class: 'lec-echos' }, el('p', { class: 'album-lab' }, t('Ce jour-là')), echos.map(([k, lab]) => {
-      const it = ctx.items(k)[0], s = it ? ((it.titre ? it.titre + ' · ' : '') + (it.texte || '')).replace(/\s+/g, ' ').trim() : '';
-      return el('button', { type: 'button', onclick: () => aller(k, k < cle ? -1 : 1) }, el('small', {}, lab), el('span', {}, s.length > 90 ? s.slice(0, 88) + '…' : s));
-    })) : null;
-    corps.replaceChildren(...contenu, pied || ''); corps.scrollTop = 0;
-    if (sens) { corps.classList.remove('vers-g', 'vers-d'); void corps.offsetWidth; corps.classList.add(sens > 0 ? 'vers-g' : 'vers-d'); }
+  }
+  // v69 : on tourne les pages comme dans un livre. Vers l'avant, la page se soulève et se replie vers la reliure (à gauche) ;
+  // vers l'arrière, la page d'avant revient se poser par-dessus. Mouvement réduit demandé par le téléphone : on change simplement de page.
+
+  function page(sens = 0) {
+    entete();
+    const corps = ecran.querySelector('.lec-corps'), livre = ecran.querySelector('.lec-livre');
+    if (finir) { anim.cancel(); finir(); }                               // une page tournée pendant qu'une autre tourne encore : on termine la première d'un coup
+    const doux = !sens || !livre.animate || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (doux) { corps.replaceChildren(...construire(cle)); corps.scrollTop = 0; return; }
+    const recto = el('div', { class: 'lec-recto' }), feuille = el('div', { class: 'lec-feuille' }, recto, el('div', { class: 'lec-verso' }), el('i', { class: 'lec-pli' })), ombre = el('i', { class: 'lec-ombre' });
+    const temps = { duration: 780, easing: 'cubic-bezier(.45,.05,.3,1)' };
+    if (sens > 0) {
+      const haut = corps.scrollTop; recto.append(...corps.childNodes); livre.append(ombre, feuille); recto.scrollTop = haut;
+      corps.replaceChildren(...construire(cle)); corps.scrollTop = 0;
+      anim = feuille.animate([{ transform: 'rotateY(0deg)' }, { transform: 'rotateY(-180deg)' }], temps);
+      feuille.lastChild.animate([{ opacity: 0 }, { opacity: .8, offset: .45 }, { opacity: .2 }], temps);
+      ombre.animate([{ opacity: .7 }, { opacity: 0 }], temps);
+      finir = () => { feuille.remove(); ombre.remove(); anim = finir = null; }; anim.onfinish = () => finir && finir();
+    } else {
+      recto.append(...construire(cle)); livre.append(ombre, feuille);
+      anim = feuille.animate([{ transform: 'rotateY(-180deg)' }, { transform: 'rotateY(0deg)' }], temps);
+      feuille.lastChild.animate([{ opacity: .2 }, { opacity: .8, offset: .55 }, { opacity: 0 }], temps);
+      ombre.animate([{ opacity: 0 }, { opacity: .7 }], temps);
+      finir = () => { corps.replaceChildren(...recto.childNodes); corps.scrollTop = 0; feuille.remove(); ombre.remove(); anim = finir = null; }; anim.onfinish = () => finir && finir();
+    }
   }
   function aller(k, sens) { if (!k) return; cle = k; page(sens); }
   function voisin(delta) { const L = ctx.jours(), i = L.indexOf(cle); const k = L[i + delta]; if (k) aller(k, delta); }
@@ -51,7 +77,7 @@ export function creerLecture(ctx) {
         el('div', { class: 'lec-date' }),
         el('button', { type: 'button', class: 'lec-suiv nav-jour', 'aria-label': t('Jour suivant'), onclick: () => voisin(1) }, '›'),
         el('button', { type: 'button', class: 'fermer', 'aria-label': t('Fermer'), onclick: fermer }, '×')),
-      el('div', { class: 'lec-corps' }),
+      el('div', { class: 'lec-livre' }, el('div', { class: 'lec-corps' })),
       el('div', { class: 'lec-pied' }, el('span', { class: 'lec-pos' }), el('button', { type: 'button', class: 'lien', onclick: () => { const k = cle; fermer(); ctx.ouvrirJour(k); } }, t('Voir dans le ciel'))));
     // glisser d'un jour à l'autre
     const corps = ecran.querySelector('.lec-corps'); let g = null;

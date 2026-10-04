@@ -1058,9 +1058,7 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .album-vide { color: var(--soft); font-style: italic; }
 .lec-tete { display: flex; align-items: center; gap: 6px; padding: calc(10px + env(safe-area-inset-top)) 10px 10px; border-bottom: 1px solid var(--line); box-shadow: inset 0 -2px 0 var(--c); }
 .lec-date { flex: 1; text-align: center; } .lec-date small { display: block; color: var(--soft); font-style: italic; } .lec-date strong { font-weight: 400; font-size: 1.15rem; }
-.lec-corps { flex: 1; overflow-y: auto; padding: 18px 22px 30px; touch-action: pan-y; }
-.lec-corps.vers-g { animation: lecG .32s ease-out; } .lec-corps.vers-d { animation: lecD .32s ease-out; }
-@keyframes lecG { from { opacity: 0; transform: translateX(40px); } } @keyframes lecD { from { opacity: 0; transform: translateX(-40px); } }
+.lec-corps { position: absolute; inset: 0; overflow-y: auto; padding: 18px 22px 30px 30px; touch-action: pan-y; }
 .lec-entree { max-width: 620px; margin: 0 auto 26px; font-size: 1.08rem; line-height: 1.65; }
 .lec-entree time { font: 10px var(--mono); letter-spacing: .12em; color: var(--soft); } .lec-entree h3 { font-weight: 400; font-size: 1.3rem; margin: 6px 0; }
 .lec-medias { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; margin-top: 10px; }
@@ -1098,3 +1096,25 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 /* v66 : la date de la note est affichée mais figée (pas de jour passé ni futur) */
 .ligne-date input:disabled { opacity: 1; color: var(--soft); cursor: default; -webkit-text-fill-color: var(--soft); }
 .ligne-date input:disabled::-webkit-calendar-picker-indicator { display: none; }
+
+/* v69 : relire comme un livre. Une page de papier sombre, la reliure à gauche, la tranche des pages à droite ; on tourne les pages en 3D. */
+.lec-livre { --papier: color-mix(in srgb, var(--bg) 95%, var(--ink) 5%); position: relative; flex: 1; min-height: 0; overflow: hidden; perspective: 1500px; background: var(--papier); }
+.lec-livre::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 26px; background: linear-gradient(to right, rgba(0,0,0,.42), rgba(0,0,0,.12) 45%, transparent); pointer-events: none; z-index: 4; }
+.lec-livre::after { content: ""; position: absolute; top: 8px; bottom: 8px; right: 0; width: 6px; background: repeating-linear-gradient(to right, color-mix(in srgb, var(--ink) 22%, transparent) 0 1px, transparent 1px 2px); opacity: .45; pointer-events: none; z-index: 4; }
+.lec-feuille { position: absolute; inset: 0; transform-origin: left center; transform-style: preserve-3d; z-index: 3; will-change: transform; pointer-events: none; }
+.lec-recto, .lec-verso { position: absolute; inset: 0; background: var(--papier); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.lec-recto { overflow: hidden; padding: 18px 22px 30px 30px; box-shadow: 0 0 28px rgba(0,0,0,.45); }
+.lec-verso { transform: rotateY(180deg); background: linear-gradient(to left, color-mix(in srgb, var(--papier) 85%, #000), var(--papier)); }
+.lec-pli { position: absolute; inset: 0; transform: translateZ(1px); background: linear-gradient(to left, rgba(0,0,0,.55), rgba(0,0,0,.1) 55%, transparent); opacity: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.lec-ombre { position: absolute; inset: 0; z-index: 2; background: linear-gradient(to right, rgba(0,0,0,.5), transparent 70%); opacity: 0; pointer-events: none; }
+/* v69 : le texte d'une page se lit comme un livre : paragraphes aérés, titres, listes, citations, et un vrai espace autour du séparateur */
+.lec-entree p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 .75em; }
+.lec-entree h3 + p, .lec-entree time + p { margin-top: .3em; }
+.lec-entree h4 { font-weight: 400; line-height: 1.25; margin: 1.1em 0 .45em; overflow-wrap: anywhere; }
+.lec-entree h4.titre-1 { font-size: 1.5rem; } .lec-entree h4.titre-2 { font-size: 1.25rem; }
+.lec-entree h4.titre-3 { font-size: 1.02rem; letter-spacing: .04em; text-transform: uppercase; opacity: .85; } .lec-entree h4.titre-4 { font-size: .95rem; font-style: italic; opacity: .8; }
+.lec-entree ul, .lec-entree ol { margin: .2em 0 .85em; padding-left: 1.4em; }
+.lec-entree blockquote { margin: .6em 0 .9em; padding-left: 14px; border-left: 2px solid color-mix(in srgb, var(--ink) 45%, transparent); font-style: italic; white-space: pre-wrap; opacity: .9; }
+.lec-entree hr { border: 0; border-top: 1px solid var(--line); width: 40%; margin: 1.7em auto; }
+.carte hr { margin: 1.3em 0; }
+.editeur > hr { margin: 1.3em 0; }
