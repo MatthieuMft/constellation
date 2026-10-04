@@ -79,6 +79,11 @@ export function monterAnalyse(zone, ctx) {
       el('strong', {}, b.titre),
       el('button', { type: 'button', 'aria-label': t('Mois suivant'), onclick: () => { mois++; if (mois > 11) { mois = 0; annee++; } rendre(); } }, '›')));
     corps.querySelector('.nav-mois button:last-child').disabled = estCeMois;      // pas de mois à venir
+    if (ctx.mois) {                                                       // v78 : le même contenu que le bilan du mois (plus de doublon)
+      corps.append(el('div', { class: 'bilan ana-mois' }, ...ctx.mois(annee + '-' + String(mois + 1).padStart(2, '0'), () => { zone.hidden = true; })));
+      if (b.ids.length > 1) corps.append(el('button', { type: 'button', class: 'plein large', onclick: () => ctx.survoler(b.ids, t('Bilan') + ' · ' + b.titre) }, t('Survoler le mois')));
+      return;
+    }
     const jours = meteo(ctx.entries(), n, new Date(annee, mois, n)), cal = el('div', { class: 'calendrier' });
     t('L M M J V S D').split(' ').forEach(x => cal.append(el('span', { class: 'jsem' }, x)));
     const dec = (new Date(annee, mois, 1).getDay() + 6) % 7; for (let i = 0; i < dec; i++) cal.append(el('span'));

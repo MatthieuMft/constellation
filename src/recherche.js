@@ -54,7 +54,7 @@ export function creerRecherche(ctx) {
   }
   function rendre() {
     const q = ecran.querySelector('input').value, zone = ecran.querySelector('.cherche-res');
-    if (q.trim().length < 2) { zone.replaceChildren(el('p', { class: 'album-vide' }, t('Un mot, un @prénom ou un #lieu.'))); return; }
+    if (q.trim().length < 2) { zone.replaceChildren(...(ctx.accueil ? ctx.accueil(fermer) : [el('p', { class: 'album-vide' }, t('Un mot, un @prénom ou un #lieu.'))])); return; }   // v78 : sans recherche, l'accueil de Mon journal
     const { exacts, proches } = trouver(q);
     if (exacts.length) {
       const jours = new Set(exacts.map(r => r.item.jour));
@@ -65,15 +65,16 @@ export function creerRecherche(ctx) {
       zone.replaceChildren(el('p', { class: 'album-vide' }, t('Pas ce mot exact. Des notes qui s’en approchent :')), el('div', { class: 'album-etoiles' }, proches.map(ligne)));
     } else zone.replaceChildren(el('p', { class: 'album-vide' }, t('Rien trouvé dans ton journal.')));
   }
-  function ouvrir(q = '') {
+  // v78 : c'est aussi la page « Mon journal » (un des espaces du menu) : la recherche en haut, puis l'accueil quand le champ est vide
+  function ouvrir(q = '', { focus = !!q } = {}) {
     fermer();
-    const champ = el('input', { type: 'search', value: q, placeholder: t('Chercher dans mon journal'), 'aria-label': t('Chercher dans mon journal'), autocomplete: 'off', enterkeyhint: 'search' });
-    ecran = el('div', { class: 'album-ecran cherche-ecran', role: 'dialog', 'aria-label': t('Chercher dans mon journal') },
-      el('div', { class: 'album-tete' }, champ, el('button', { type: 'button', class: 'fermer', 'aria-label': t('Fermer'), onclick: fermer }, '×')),
-      el('div', { class: 'album-corps' }, el('div', { class: 'cherche-res' })));
+    const champ = el('input', { type: 'search', class: 'e-champ', value: q, placeholder: t('Chercher un mot, un @prénom, un #lieu'), 'aria-label': t('Chercher dans mon journal'), autocomplete: 'off', enterkeyhint: 'search' });
+    ecran = el('div', { class: 'album-ecran espace cherche-ecran', role: 'dialog', 'aria-label': t('Mon journal') },
+      el('div', { class: 'album-tete e-tete' }, el('div', {}, el('strong', {}, t('Mon journal')), el('small', {}, ctx.sous ? ctx.sous() : '')), el('button', { type: 'button', class: 'fermer', 'aria-label': t('Fermer'), onclick: fermer }, '×')),
+      el('div', { class: 'album-corps e-corps' }, champ, el('div', { class: 'cherche-res' })));
     champ.addEventListener('input', () => { clearTimeout(minuteur); minuteur = setTimeout(rendre, 160); });
     champ.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); fermer(); } if (e.key === 'Enter') { e.preventDefault(); champ.blur(); } e.stopPropagation(); });
-    document.body.append(ecran); rendre(); champ.focus();
+    document.body.append(ecran); rendre(); if (focus) champ.focus();
   }
   return { ouvrir, fermer, ouvert: () => !!ecran, trouver };
 }

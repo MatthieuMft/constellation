@@ -977,7 +977,7 @@ body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: 
 .bilan-point { width: 10px; height: 10px; border-radius: 50%; flex: none; }
 .bilan-acts span { display: inline-flex; align-items: center; gap: 5px; color: var(--soft); margin-right: 8px; }
 .bilan-acts svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
-.bilan .rang { margin-top: 14px; }
+.bilan .rang { margin-top: 14px; } .ana-mois .rang { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
 
 /* ── v52 : tout ce qu'on touche en bas (◎ aujourd'hui à gauche, + écrire au milieu, ☰ menu à droite) ; en haut, seulement où tu es ── */
 footer { padding-bottom: calc(16px + var(--safe-b, env(safe-area-inset-bottom))); }
@@ -1128,7 +1128,7 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .bilan-mois-jours { display: grid; grid-template-columns: repeat(7, 14px); gap: 8px 10px; margin: 0 0 16px; }
 .bilan-mois-jours span { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line); }
 .bilan-mois-jours span.on { border-color: transparent; box-shadow: 0 0 8px currentColor; }
-.boite-figure.bilan .lien-ligne { background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; border: 0; border-radius: 0; padding: 0; height: auto; min-height: 0; color: var(--ink); font: 1rem/1.4 var(--serif); letter-spacing: 0; text-transform: none; text-align: left; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; cursor: pointer; }
+.boite-figure.bilan .lien-ligne, .ana-mois .lien-ligne { background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; border: 0; border-radius: 0; padding: 0; height: auto; min-height: 0; color: var(--ink); font: 1rem/1.4 var(--serif); letter-spacing: 0; text-transform: none; text-align: left; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; cursor: pointer; }
 
 
 /* v73 : la page souple (une feuille découpée le long d'un pli qui bouge, son dos ombré, l'ombre sur la page de dessous) */
@@ -1197,3 +1197,29 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
   .livre-page:last-child { break-after: auto; page-break-after: auto; }
   .livre-photos img, .livre-cons figure { break-inside: avoid; }
 }
+
+/* ── v78 : le menu en 5 espaces, une seule mise en page (espace.js) ── */
+.album-ecran.espace .e-corps { padding-top: 6px; }
+.album-ecran.espace .album-lab { margin: 24px 0 8px; }
+.e-carte + .e-groupe { margin-top: 12px; }
+.e-champ::placeholder { color: var(--soft); }
+.e-groupe { border: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.e-groupe .e-ligne:last-child { border-bottom: 0; }
+.e-ligne { padding: 12px 14px; }
+.m-semaine.e-carte { margin: 12px 0 0; width: 100%; padding: 16px 14px; }
+.m-semaine.e-carte svg { width: 110px; height: 66px; }
+.e-cons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.e-cons button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 8px 10px; border: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 3%, transparent); font: 400 15px var(--serif); letter-spacing: 0; text-transform: none; text-align: center; min-width: 0; }
+.e-cons-svg svg { width: 100%; max-width: 130px; height: 74px; display: block; overflow: visible; }
+.e-cons strong { font-weight: 400; overflow-wrap: anywhere; }
+.e-cons small { font-size: 12px; color: var(--soft); font-style: italic; }
+.e-champ { width: 100%; background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--ink); border: 1px solid var(--line); border-radius: 0; font: 1.1rem var(--serif); padding: 12px 14px; margin: 12px 0 4px; }
+.e-raccourcis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+.e-raccourci { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 6px 12px; border: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 3%, transparent); font: 400 14px/1.25 var(--serif); letter-spacing: 0; text-transform: none; text-align: center; }
+.e-raccourci .m-ic { color: var(--soft); display: grid; place-items: center; }
+.e-boutique { margin-top: 28px; border: 1px solid var(--line); }
+.e-boutique .e-ligne { border-bottom: 0; }
+.e-boutique .m-d { color: #ffd98a; }
+/* Suivi : même en-tête que les autres espaces */
+#analyse .p-titre { font-size: 1.3rem; }
+#analyse .ana-mois { margin-top: 4px; }

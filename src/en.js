@@ -1293,6 +1293,21 @@ export const EN = {
 "Enregistrer en PDF": "Save as PDF",
 "Un coup de pouce ?": "Need a nudge?",
 "Un début de page, pour ne pas partir de rien.": "A start of a page, so you don’t begin from nothing.",
+// v78 : le menu en 5 espaces
+"Relire, chercher, personnes et lieux, livre du mois": "Reread, search, people and places, book of the month",
+"Ma lueur et mon ciel": "My glow and my sky",
+"Personnaliser, trouvailles, amitié, ambiance": "Customise, finds, friendship, mood",
+"Ta première constellation naîtra à la fin de la semaine.": "Your first constellation will be born at the end of the week.",
+"{n} constellation née": "{n} constellation born",
+"{n} constellations nées": "{n} constellations born",
+"(photo seulement)": "(photo only)",
+"Relire": "Reread",
+"Rien à relire pour l’instant.": "Nothing to reread yet.",
+"Personnes et lieux": "People and places",
+"Livre du mois": "Book of the month",
+"Derniers jours": "Latest days",
+"Voir dans le ciel": "See in the sky",
+"Chercher un mot, un @prénom, un #lieu": "Search a word, a @name, a #place"
 };
 
 export const EN_HTML = {
