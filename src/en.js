@@ -1259,6 +1259,12 @@ export const EN = {
 "Un mois de plus dans ton ciel.": "One more month in your sky.",
 "Un mois de plus dans ton ciel !": "One more month in your sky!",
 "Quel mois ! Je suis fière de toi.": "What a month! I’m proud of you.",
+"Chercher dans mon journal": "Search my journal",
+"Un mot, un @prénom, un #lieu": "A word, a @name, a #place",
+"Un mot, un @prénom ou un #lieu.": "A word, a @name or a #place.",
+"Pas ce mot exact. Des notes qui s’en approchent :": "Not this exact word. Entries that come close:",
+"Rien trouvé dans ton journal.": "Nothing found in your journal.",
+"Chercher « {q} » dans mon journal": "Search “{q}” in my journal",
 "Un coup de pouce ?": "Need a nudge?",
 "Un début de page, pour ne pas partir de rien.": "A start of a page, so you don’t begin from nothing.",
 };

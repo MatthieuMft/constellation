@@ -48,6 +48,7 @@ import { creerVoyage } from './voyage.js';
 import { modeles, questionPour } from './questions.js';
 import { legende } from './legendes.js';
 import * as etAlors from './etalors.js';
+import { creerRecherche } from './recherche.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
@@ -629,6 +630,7 @@ const personnes = creerNoms({ items: () => items, couleur: couleurItem, mediaUrl
   ouvrirJour: cle => { lecture.fermer(); choisir(cle); }, surligner, sauver: () => sauverTout(), rafraichir: () => { if (selection) panneauJour.rendre(); } });
 const lecture = creerLecture({ jours: () => [...new Set(items.filter(i => !i.sample || items.every(x => x.sample)).map(i => i.jour))].filter(k => k <= aujourdhui()).sort(), items: itemsDuJour, couleurJour: couleurJourCle,
   mediaUrl: k => media.url(k), voirMedia: (item, m) => voirMedia(item, m), album: (k, n) => personnes.album(k, n), ouvrirJour: cle => choisir(cle) });
+const recherche = creerRecherche({ items: () => items, couleur: couleurItem, ouvrirJour: cle => lecture.ouvrir(cle), surligner });   // v74
 const panneauJour = monterJour($('f-contenu'), {
   items: itemsDuJour, humeur: cle => humeurDuJour(cle, items, meta), couleur: cm, aujourdhui: aujourdhui(),
   setHumeur: async (cle, mood, couleur) => { creature.imiter(mood, couleur || cm(mood), 6000); meta[cle] = { ...(meta[cle] || {}), humeur: mood, couleur: couleur || undefined }; sauverTout(); await recalculer(); },
@@ -1394,7 +1396,7 @@ $('btn-reglages').addEventListener('click', () => { if (!$('reglages').hidden) $
 // Les anciens boutons existent toujours (cachés dans #outils) : la palette les déclenche, chacun garde sa logique.
 const clic = id => () => $(id).click();
 const palette = monterPalette($('palette'), {
-  rechercher: chercher, effacer: effacerRecherche,
+  rechercher: chercher, effacer: effacerRecherche, journal: q => recherche.ouvrir(q),
   commandes: () => {
     const l = [
       { nom: t('Écrire dans le journal'), mots: t('nouvelle pensee journal intime photo video'), raccourci: 'N', action: () => ouvrirEcrire() },
@@ -1449,6 +1451,7 @@ function lignesMenu() {
       return l;
     } },
     { ic: 'souvenir', titre: t('Relire mon journal'), sous: t('Page par page, comme un livre'), action: () => { if (!lecture.ouvrir()) statutTemporaire(t('Rien à relire pour l’instant.')); } },   // v60
+    { ic: 'recherche', titre: t('Chercher dans mon journal'), sous: t('Un mot, un @prénom, un #lieu'), action: () => recherche.ouvrir() },   // v74
     { ic: 'nom', titre: t('Personnes et lieux'), sous: (() => { const n = personnes.index().size; return n ? tn(n, '{n} album', '{n} albums') : t('Écris @Léa ou #parc dans une note'); })(), action: () => personnes.page() },
     { ic: 'lueur', titre: t('Ma lueur'), sous: t('Personnaliser, trouvailles, amitié'), items: () => [
       { ic: 'lueur', nom: t('Personnaliser ma lueur'), sous: t('Ce que tu as débloqué dans la boutique'), action: () => ouvrirPerso() },
@@ -1497,7 +1500,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v73'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v74'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -2084,5 +2087,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { recherche, proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };

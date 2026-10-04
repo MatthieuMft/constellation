@@ -10,7 +10,7 @@ export function monterPalette(el, ctx) {
   function filtrer() {
     const brut = champ.value.trim(), q = norm(brut), toutes = ctx.commandes();
     let res = q ? toutes.filter(c => q.split(/\s+/).every(t => norm(c.nom + ' ' + (c.mots || '')).includes(t))) : toutes;
-    if (brut.length >= 2) res = [...res, { nom: t('Chercher « {q} » dans mes pensées', { q: brut }), recherche: brut, etat: 'sens' }];
+    if (brut.length >= 2) res = [...res, { nom: t('Chercher « {q} » dans mon journal', { q: brut }), action: () => ctx.journal && ctx.journal(brut) }, { nom: t('Chercher « {q} » dans mes pensées', { q: brut }), recherche: brut, etat: 'sens' }];
     items = res; sel = 0; rendre();
   }
   function rendre() {

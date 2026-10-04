@@ -1142,3 +1142,8 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .lec-dos i { background: linear-gradient(to right, rgba(0,0,0,.32), rgba(255,255,255,.1) 10px, rgba(255,255,255,.04) calc(var(--o) * .45), rgba(0,0,0,.16) var(--o), rgba(0,0,0,.24) 1200px); }
 .lec-livre { touch-action: pan-y; user-select: none; -webkit-user-select: none; }
 .lec-livre img, .lec-livre video { -webkit-user-drag: none; }
+
+/* v74 : chercher dans mon journal */
+.cherche-ecran .album-tete input { flex: 1; min-width: 0; font: 1.15rem var(--serif); padding: 10px 12px; }
+.cherche-ecran mark { background: color-mix(in srgb, #ffd98a 32%, transparent); color: inherit; padding: 0 1px; }
+.cherche-ecran .album-ciel { margin-bottom: 12px; }
