@@ -6,6 +6,7 @@
 //     meteores.dorees(on, part = 1)    objet « Filantes dorées » : part = proportion d'étoiles filantes dorées parmi les départs.
 //                                      Seul : frequence = anim × 2,5 et part 1 ; avec « Étoiles filantes » aussi : part ≈ .6 (l'or reste rare et précieux).
 //     meteores.regler(clair, melange, encre) · rafale(n) · pluie(n) (v55 : n départs étalés, tous dans le même sens) · vives()
+//     meteores.proche(x, y, r) → indice de la filante la plus proche d'un toucher (tête ou queue, en px), -1 sinon · attraper(i) → sa tête (v57)
 //   const poussiere = creerPoussiere(scene, pr, N)
 //     poussiere.update(t, anim, centre, dist, presence)   presence 0/1 (objet « Poussière d'étoiles ») : fondu de ~1,5 s, puis plus rien n'est dessiné.
 //     poussiere.regler(clair, melange, couleur)
@@ -87,7 +88,18 @@ export function creerEtoilesFilantes(scene, camera) {
   function dorees(on, part = 1) { on = !!on; if (on !== or || part !== partOr) vies.forEach(v => { if (v.vivant) v.or = on && Math.random() < part ? 1 : 0; }); or = on; partOr = part; }
   function rafale(n) { for (let k = 0; k < n; k++) { const libre = vies.find(v => !v.vivant); if (libre) lancer(libre); } }
   const vives = () => vies.filter(v => v.vivant).map(v => v.tete);
-  return { update, regler, rafale, pluie, vives, dorees };
+  const _s1 = new THREE.Vector3(), _s2 = new THREE.Vector3();
+  function proche(x, y, r = 80) {                     // v57 : on touche une filante (sur sa tête ou le long de sa queue)
+    let best = -1, d0 = r * r; const W = innerWidth, H = innerHeight;
+    vies.forEach((v, i) => { if (!v.vivant) return;
+      _s1.copy(v.tete).project(camera); _s2.copy(v.vit).normalize().multiplyScalar(-v.long).add(v.tete).project(camera); if (_s1.z > 1 || _s2.z > 1) return;
+      const ax = (_s1.x + 1) / 2 * W, ay = (1 - _s1.y) / 2 * H, dx = (_s2.x + 1) / 2 * W - ax, dy = (1 - _s2.y) / 2 * H - ay, l2 = dx * dx + dy * dy;
+      const k = l2 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0, ex = ax + dx * k - x, ey = ay + dy * k - y, d = ex * ex + ey * ey;
+      if (d < d0) { d0 = d; best = i; } });
+    return best;
+  }
+  function attraper(i) { const v = vies[i]; if (!v || !v.vivant) return null; v.vivant = false; return v.tete.clone(); }
+  return { update, regler, rafale, pluie, vives, dorees, proche, attraper };
 }
 
 // Poussière cosmique : points qui dérivent lentement autour de la galaxie (mouvement calculé sur le GPU).

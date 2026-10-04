@@ -470,7 +470,7 @@ const scenes = creerScenes({ scene, camera, particules, meteores, melange, texHa
 // La petite lueur : un esprit de lumière qui vit dans la galaxie, dessiné nettement par-dessus les effets (voir creature.js).
 const creature = creerCreature({
   sceneUI, camera, controls, particules, texHalo, entrees: () => joursHumeur, couleurDe: e => new THREE.Color(e.color || cm(e.mood)), surMessage: t => statutTemporaire(t, 6500),
-  etoiles: () => visuelsVisibles, ouvrirPensee: id => choisir(id), mobile,
+  etoiles: () => visuelsVisibles, ouvrirPensee: id => choisir(id), mobile, jouer: k => { if (k === 'cache') jouerCache(); },
 });
 { const f = creature.fete; creature.fete = (...a) => { son.fete(); return f(...a); }; }   // v48 : un tintement aux moments de fête
 const pointeur = { x: 0, y: 0, t: -1e9 };
@@ -582,7 +582,8 @@ function boucle() {
       guide: parcours && parcours.courbe ? parcours.courbe.getPoint(Math.min(1, parcours.t + .07)) : null,
       curseur: pointeur, curseurActif: now - pointeur.t < 12000 && !intro.actif, curseurImmobile: (now - pointeur.t) / 1000, inactivite: (now - dernierGeste) / 1000,
       pose: persoUI.ouvert() ? persoUI.rect() : carteTuto(), phrases: phrasesLueur(),
-      nuit: (h >= 23 || h < 6) && !accueil.actif(), occupe, meteores: meteores.vives() }); }
+      nuit: (h >= 23 || h < 6) && !accueil.actif(), occupe, meteores: meteores.vives(), serie: serieInfo ? serieInfo.actuelle : 0 }); }
+  if (cacheJeu && now > cacheJeu.fin) { creature.sortir(false); cacheJeu = null; }   // v57 : cache-cache, au bout d'une minute elle sort
   if (tremble.dur) { const k = 1 - (now - tremble.t0) / tremble.dur; if (k > 0) { const a = tremble.amp * k * k, W = innerWidth, H = innerHeight; camera.setViewOffset(W, H, (Math.random() - .5) * 2 * a, (Math.random() - .5) * 2 * a, W, H); } else { camera.clearViewOffset(); tremble.dur = 0; } }
 
   // scène complète, puis flou de champ et lueur
@@ -739,6 +740,40 @@ canvas.addEventListener('pointerdown', e => {
   if (s && s.type === 'creature') { calinFait = false; calinMinuteur = setTimeout(() => { calinFait = true; creature.calin(true); }, 550); return; }      // maintenir : câlin
   if (s && s.type === 'etoile' && R.animation > 0) { chargeId = s.id; chargeT0 = performance.now(); maintien = setTimeout(() => { superFaite = true; chargeId = null; supernovaDe(s.id); }, 800); }
 });
+// ───────────── v57 : jeux avec la lueur (filantes, endroit montré, cache-cache) ─────────────
+let videTape = null, cacheJeu = null;
+const CLE_GAINS = 'constellation.jeux.v1', GAINS_MAX = 10;   // la poussière gagnée en jouant : 10 ✦ par jour au plus (écrire reste la vraie source)
+function gagnerJeu(n, quoi, type) {
+  let g = {}; try { g = JSON.parse(localStorage.getItem(CLE_GAINS)) || {}; } catch (e) {}
+  const j = aujourdhui(); if (g.jour !== j) g = { jour: j, gains: 0 };
+  const k = Math.max(0, Math.min(n, GAINS_MAX - g.gains)); g.gains += k; g[type] = (g[type] || 0) + 1;
+  try { localStorage.setItem(CLE_GAINS, JSON.stringify(g)); } catch (e) {}
+  if (k) { etoiles.donner(k); boutique.rendre && boutique.ouvert() && boutique.rendre(); }
+  toast(k ? quoi + ' · ✦ +' + k : quoi);
+}
+const ecranDe = p => { const v = _vEcran.copy(p).project(camera); return { x: (v.x + 1) / 2 * innerWidth, y: (1 - v.y) / 2 * innerHeight, vu: v.z < 1 }; };
+const _vEcran = new THREE.Vector3();
+function montrerEndroit(x, y) {
+  let best = null, d0 = 90 * 90;
+  for (const v of visuelsVisibles.values()) { const p = ecranDe(v.groupe.position); if (!p.vu) continue; const d = (p.x - x) ** 2 + (p.y - y) ** 2; if (d < d0) { d0 = d; best = v.id; } }
+  creature.allerIci(x, y, best ? joursHumeur.find(j => j.id === best) : null);
+}
+function jouerCache() {
+  const W = innerWidth, H = innerHeight, l = [...visuelsVisibles.values()].filter(v => { const p = ecranDe(v.groupe.position); return p.vu && p.x > 40 && p.x < W - 40 && p.y > 110 && p.y < H - 150; });
+  if (l.length < 3) { creature.dire('Il me faut plus d’étoiles autour pour me cacher…', { priorite: true, duree: 3000 }); return; }
+  const v = l[Math.floor(Math.random() * l.length)]; if (!creature.seCacher(v.id)) return;
+  cacheJeu = { id: v.id, essais: 0, fin: performance.now() + 60000 };
+  setTimeout(() => cacheJeu && toast(t('Touche les étoiles pour la trouver')), 1800);
+}
+function toucherCache(id) {
+  const c = cacheJeu, cible = visuels.get(c.id), v = visuels.get(id); if (!cible) { cacheJeu = null; creature.sortir(false); return; }
+  if (id === c.id) { cacheJeu = null; son.tinte(); creature.sortir(true); setTimeout(() => gagnerJeu(3, t('Trouvée !'), 'cache'), 600); return; }
+  c.essais++; if (v) v.pulse = Math.max(v.pulse, .5);
+  const a = ecranDe(cible.groupe.position), b = v ? ecranDe(v.groupe.position) : a, d = Math.hypot(a.x - b.x, a.y - b.y);
+  toast(d < 100 ? t('Chaud !') : d < 230 ? t('Tiède…') : t('Froid…'), 1600);
+  if (c.essais >= 3) cible.pulse = Math.max(cible.pulse, .7);       // après trois essais, son étoile scintille un peu
+}
+
 // v56 : appuyer sur la lueur puis glisser : on la prend et on la promène (le ciel ne tourne pas pendant ce temps) ; un geste vif la lance
 let prise = null;
 addEventListener('pointerdown', e => {
@@ -759,8 +794,14 @@ canvas.addEventListener('pointerup', e => {
   annulerMaintien(); if (superFaite) { superFaite = false; return; }
   clearTimeout(calinMinuteur); if (calinFait) { calinFait = false; creature.calin(false); return; }
   if (!bas || Math.hypot(e.clientX - bas[0], e.clientY - bas[1]) > 5) return;
+  { const m = meteores.proche(e.clientX, e.clientY, 80);   // v57 : on touche une étoile filante, la lueur file l'attraper
+    if (m >= 0 && creature.attraper(e.clientX, e.clientY, () => gagnerJeu(1, t('Étoile filante attrapée'), 'filante'))) { meteores.attraper(m); son.tinte(); return; } }
   const s = sous(e);
+  if (s && s.type === 'etoile' && cacheJeu) { toucherCache(s.id); return; }   // v57 : cache-cache, on cherche derrière les étoiles
   if (!s) {
+    { const now = performance.now();                    // v57 : deux tapes dans le ciel vide, elle va voir
+      if (videTape && now - videTape.t < 400 && Math.hypot(e.clientX - videTape.x, e.clientY - videTape.y) < 50) { videTape = null; montrerEndroit(e.clientX, e.clientY); return; }
+      videTape = { t: now, x: e.clientX, y: e.clientY }; }
     effacerRecherche(); if (selection) fermerFiche();
     if (R.animation > 0 && !intro.actif) scenes.onde(ray.ray.at(26, new THREE.Vector3()));          // une onde de lumière dans le vide
   }
@@ -1368,7 +1409,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v56'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v57'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1813,5 +1854,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };
