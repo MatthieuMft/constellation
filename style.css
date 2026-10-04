@@ -1153,3 +1153,9 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .act-liens.bienfaits .act-i { font: 15px var(--serif); font-style: normal; color: var(--soft); text-align: center; }
 .act-liens.bienfaits li.moins span { color: var(--soft); }
 .texte-ana + .ana-titre { margin-top: 26px; }
+
+/* v76 : l'image de la semaine à envoyer */
+.boite-figure.partage { z-index: 40; text-align: center; }
+.boite-figure.partage img { display: block; width: min(100%, 300px); aspect-ratio: 4 / 5; margin: 0 auto 10px; border: 1px solid var(--line); }
+.boite-figure.partage .sous { margin-bottom: 12px; }
+.boite-figure.partage .rang { justify-content: center; align-items: center; }

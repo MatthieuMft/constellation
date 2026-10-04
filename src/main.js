@@ -36,7 +36,8 @@ import { monterCielPerso } from './ciel-ui.js';
 import { creerDecor } from './decor.js';
 import * as PL from './planetes.js';
 import { verrou } from './verrou.js';
-import { creerFigures, lendemain, dernierJour, constellationDe } from './figures.js';
+import { creerFigures, lendemain, dernierJour, constellationDe, offerts } from './figures.js';
+import { dessinerSemaine, envoyer } from './partage.js';
 import { PICTOS } from './pictos.js';
 import { creerTrouvailles } from './trouvailles.js';
 import { creerNoms } from './noms.js';
@@ -1463,6 +1464,7 @@ function lignesMenu() {
       return l;
     } },
     { ic: 'souvenir', titre: t('Relire mon journal'), sous: t('Page par page, comme un livre'), action: () => { if (!lecture.ouvrir()) statutTemporaire(t('Rien à relire pour l’instant.')); } },   // v60
+    { ic: 'partage', titre: t('Envoyer ma constellation'), sous: t('Une image de ta semaine, sans aucun texte'), action: () => ouvrirPartage(derniereNee()) },   // v76
     { ic: 'recherche', titre: t('Chercher dans mon journal'), sous: t('Un mot, un @prénom, un #lieu'), action: () => recherche.ouvrir() },   // v74
     { ic: 'nom', titre: t('Personnes et lieux'), sous: (() => { const n = personnes.index().size; return n ? tn(n, '{n} album', '{n} albums') : t('Écris @Léa ou #parc dans une note'); })(), action: () => personnes.page() },
     { ic: 'lueur', titre: t('Ma lueur'), sous: t('Personnaliser, trouvailles, amitié'), items: () => [
@@ -1512,7 +1514,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v75'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v76'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1875,8 +1877,32 @@ function ouvrirBilan(s) {
   const fermer = () => { boite.remove(); allerSemaineSuivante(s); };
   if (f && !f.nom) { const nom = document.createElement('button'); nom.type = 'button'; nom.textContent = t('Lui donner un nom'); nom.addEventListener('click', () => { boite.remove(); ouvrirNommerFigure(s); }); rang.append(nom); }
   const ok = document.createElement('button'); ok.type = 'button'; ok.className = f && !f.nom ? 'lien' : ''; ok.textContent = t('Semaine suivante'); ok.addEventListener('click', fermer); rang.append(ok);
+  if (f) { const env = document.createElement('button'); env.type = 'button'; env.className = 'lien'; env.textContent = t('Envoyer l’image'); env.addEventListener('click', () => ouvrirPartage(s)); rang.append(env); }   // v76
   boite.append(h, sous, ...(lg ? [lg] : []), pastilles, ...lignes, rang); document.body.append(boite);
 }
+// ───────────── v76 : envoyer ma constellation ─────────────
+// Une image de la semaine (aucun texte du journal), montrée d'abord, puis envoyée par le partage du téléphone, ou téléchargée.
+function donneesPartage(s) {
+  const B = bilanSemaine(s), premier = joursEcrits().slice().sort()[0] || null, off = offerts(s, premier), f = figures.figure(s);
+  const jours = Array.from({ length: 7 }, (_, i) => ({ etat: off.has(i) ? 'offert' : 'rate' }));
+  for (const j of B.jrs) if (j.ecrit) jours[(dateDeCle(j.cle).getDay() + 6) % 7] = { etat: 'ecrit', couleur: j.couleur };
+  const fmt = c => dateDeCle(c).toLocaleDateString(LOC, { day: 'numeric', month: 'long' });
+  return { cle: s, figure: constellationDe(s), nom: f && f.nom ? f.nom : figures.vraiNom(s), periode: t('Du {a} au {b}', { a: fmt(B.jrs[0].cle), b: fmt(B.jrs.at(-1).cle) }), jours };
+}
+function ouvrirPartage(s) {
+  if (!s) { statutTemporaire(t('Pas encore de constellation née. Elle naît à la fin de la semaine.')); return; }
+  document.querySelector('.boite-figure')?.remove();
+  const o = donneesPartage(s), c = dessinerSemaine(o);
+  const boite = document.createElement('div'); boite.className = 'boite-figure partage'; boite.setAttribute('role', 'dialog');
+  const img = document.createElement('img'); img.src = c.toDataURL('image/png'); img.alt = o.nom;
+  const sous = document.createElement('p'); sous.className = 'sous'; sous.textContent = t('Aucun texte de ton journal n’apparaît sur l’image.');
+  const rang = document.createElement('div'); rang.className = 'rang';
+  const go = document.createElement('button'); go.type = 'button'; go.className = 'plein'; go.textContent = t('Envoyer');
+  go.addEventListener('click', async () => { const r = await envoyer(c, 'constellation-' + s + '.png', o.nom); if (r === 'telecharge') statutTemporaire(t('Image enregistrée dans tes téléchargements.')); if (r !== 'annule') boite.remove(); });
+  const non = document.createElement('button'); non.type = 'button'; non.className = 'lien'; non.textContent = t('Fermer'); non.addEventListener('click', () => boite.remove());
+  rang.append(go, non); boite.append(img, sous, rang); document.body.append(boite);
+}
+const derniereNee = () => figures.finies().filter(s => figures.figure(s)).at(-1) || null;
 // ───────────── v72 : le bilan du mois ─────────────
 // À la première ouverture après la fin d'un mois : jours écrits (une pastille par jour, à la couleur de son humeur), mots, humeur la plus présente,
 // personne et lieu les plus cités, note la plus longue (sa date, jamais son texte), constellations nées. Tout est recalculé depuis le journal ;
@@ -2100,5 +2126,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { proposerBienfait, donneesBienfaits, recherche, proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { ouvrirPartage, derniereNee, donneesPartage, proposerBienfait, donneesBienfaits, recherche, proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };

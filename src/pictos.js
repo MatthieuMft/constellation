@@ -19,6 +19,7 @@ export const PICTOS = {
   aide: S('<circle cx="11" cy="11" r="7.5"/><path d="M8.8 8.8a2.2 2.2 0 1 1 3 2c-.6.3-.8.8-.8 1.5 M11 14.8v.2"/>'),
   souvenir: S('<path d="M4 11a7 7 0 1 0 2-4.9 M4 4.5v3.2h3.2 M11 7.5V11l2.5 1.8"/>'),
   recherche: S('<circle cx="9.5" cy="9.5" r="5.5"/><path d="M13.6 13.6l4.4 4.4"/>'),   // v74
+  partage: S('<circle cx="6" cy="11" r="2"/><circle cx="16" cy="5.5" r="2"/><circle cx="16" cy="16.5" r="2"/><path d="M7.8 10l6.4-3.5 M7.8 12l6.4 3.5"/>'),   // v76
   nom: S('<path d="M5 17l2.6-.6 9-9a1.5 1.5 0 0 0-2-2l-9 9z M13.4 6.6l2 2"/>' + etoile(17.6, 15.4, 1.2)),
   bilan: S('<path d="M4 18V11 M9 18V7 M14 18v-5 M19 18V9" />' + etoile(9, 3.6, 1.1)),
   noms: S('<path d="M4 6h14 M4 11h9 M4 16h11"/>'),
