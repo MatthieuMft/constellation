@@ -37,10 +37,9 @@ export function monterCielPerso({ zone, corps, ctx }) {
     const p = PL.planete(id); if (!p) { edition = null; rendre(); return; }
     const a = k => E.possede(PL.OPTIONS[k]);
     const changer = (patch, montrer = false) => { PL.maj(id, patch); ctx.surPlanete(id, montrer); rendrePlanete(id); };
-    // une option pas encore achetée montre son prix et mène à la boutique
-    const option = (nom, k, presse, faire) => a(k)
-      ? el('button', { 'aria-pressed': presse, onclick: faire }, nom)
-      : el('button', { class: 'verrou', onclick: () => ctx.boutique(PL.OPTIONS[k]) }, el('i', { class: 'cadenas', 'aria-hidden': 'true' }), nom + ' · ✦ ' + E.article(PL.OPTIONS[k]).prix);
+    // v54 : on ne montre ici que ce qui est acheté (le reste est dans la boutique, demande de Matthieu)
+    const option = (nom, k, presse, faire) => a(k) ? el('button', { 'aria-pressed': presse, onclick: faire }, nom) : null;
+    const pasAchete = Object.values(PL.OPTIONS).filter(k => !E.possede(k)).length;
     const vue = el('canvas', { width: '480', height: '480', class: 'pl-vue', 'aria-hidden': 'true' }); ctx.photoPlanete(vue, PL.effective(p));
     const nom = el('input', { type: 'text', value: p.nom, maxlength: '18', 'aria-label': t('Nom de la planète') });
     nom.addEventListener('input', () => PL.maj(id, { nom: nom.value.trim() || p.nom }));
@@ -68,24 +67,28 @@ export function monterCielPerso({ zone, corps, ctx }) {
         c.addEventListener('change', () => changer({ couleurs: { ...(PL.planete(id).couleurs || {}), [k]: c.value } }));
         puces.append(el('label', { class: 'puce', title: n }, c, el('span', {}, n.toLowerCase()))); });
       libres.push(puces);
-    } else libres.push(el('div', { class: 'choix' }, option(t('Couleurs libres'), 'couleurs', false, null)));
+    }
     blocs.push(section(t('Couleurs'), 'pl-couleurs', tuiles, ...libres));
     // éléments
-    if (p.type === 'solide') blocs.push(section(t('Éléments'), 'pl-elements', el('div', { class: 'choix' },
-      option(t('Nuages'), 'nuages', !!p.nuages, () => changer({ nuages: !p.nuages })),
-      option(t('Cerisiers'), 'cerisier', p.arbres === 'cerisier', () => changer({ arbres: p.arbres === 'cerisier' ? null : 'cerisier' })),
-      option(t('Sapins'), 'sapin', p.arbres === 'sapin', () => changer({ arbres: p.arbres === 'sapin' ? null : 'sapin' })),
-      option(t('Maisonnettes'), 'maisons', !!p.maisons, () => changer({ maisons: !p.maisons })))));
+    if (p.type === 'solide') {
+      const el2 = [option(t('Nuages'), 'nuages', !!p.nuages, () => changer({ nuages: !p.nuages })),
+        option(t('Cerisiers'), 'cerisier', p.arbres === 'cerisier', () => changer({ arbres: p.arbres === 'cerisier' ? null : 'cerisier' })),
+        option(t('Sapins'), 'sapin', p.arbres === 'sapin', () => changer({ arbres: p.arbres === 'sapin' ? null : 'sapin' })),
+        option(t('Maisonnettes'), 'maisons', !!p.maisons, () => changer({ maisons: !p.maisons }))].filter(Boolean);
+      if (el2.length) blocs.push(section(t('Éléments'), 'pl-elements', el('div', { class: 'choix' }, el2)));
+    }
     else blocs.push(section(t('Éléments'), 'pl-elements', el('div', { class: 'choix' },
       el('button', { 'aria-pressed': !!p.tempete, onclick: () => changer({ tempete: !p.tempete }) }, t('Tempête')))));
     // anneaux
-    const anneaux = a('anneaux')
-      ? [[null, t('Aucun')], ['fin', t('Fin')], ['large', t('Large')], ['penche', t('Penché')]].map(([k, n]) => el('button', { 'aria-pressed': (p.anneaux || null) === k, onclick: () => changer({ anneaux: k }) }, n))
-      : [option(t('Anneaux'), 'anneaux', false, null)];
-    if (a('anneaux') && p.anneaux) anneaux.push(option(t('Double anneau'), 'double', !!p.double, () => changer({ double: !p.double })));
-    blocs.push(section(t('Anneaux'), 'pl-anneaux', el('div', { class: 'choix' }, anneaux)));
+    if (a('anneaux')) {
+      const anneaux = [[null, t('Aucun')], ['fin', t('Fin')], ['large', t('Large')], ['penche', t('Penché')]].map(([k, n]) => el('button', { 'aria-pressed': (p.anneaux || null) === k, onclick: () => changer({ anneaux: k }) }, n));
+      if (p.anneaux) anneaux.push(option(t('Double anneau'), 'double', !!p.double, () => changer({ double: !p.double })));
+      blocs.push(section(t('Anneaux'), 'pl-anneaux', el('div', { class: 'choix' }, anneaux)));
+    }
     blocs.push(section(t('Dans ton ciel'), 'pl-ciel', el('div', { class: 'choix' },
       el('button', { 'aria-pressed': !!p.allumee, onclick: () => changer({ allumee: !p.allumee }, !p.allumee) }, p.allumee ? t('Visible') : t('Rangée')))));
+    if (pasAchete) blocs.push(el('p', { class: 'reg-note' }, tn(pasAchete, 'Encore {n} chose à débloquer pour tes planètes.', 'Encore {n} choses à débloquer pour tes planètes.')),
+      el('div', { class: 'choix' }, el('button', { onclick: () => ctx.boutique('pl-nuages') }, t('Ouvrir la boutique'))));
     corps.replaceChildren(...blocs);
   }
 
@@ -97,7 +100,8 @@ export function monterCielPerso({ zone, corps, ctx }) {
     // ambiances : de vraies miniatures du dégradé et d'une étoile ; celles qui ne sont pas à toi montrent leur prix
     const tuiles = el('div', { class: 'tuiles' });
     Object.entries(ctx.themes).forEach(([k, th]) => {
-      const art = E.articles('ciel').find(x => x.champ === 'theme' && x.val === k), libre = !art || a(art.cle);
+      const art = E.articles('ciel').find(x => x.champ === 'theme' && x.val === k), libre = !art || !art.prix || a(art.cle);
+      if (!libre) return;                                   // v54 : seulement les ambiances à toi ; les autres sont dans la boutique
       const b = el('button', { class: 'tuile' + (libre ? '' : ' verrou'), 'data-cle': art ? art.cle : null, 'aria-pressed': libre ? k === R.theme : null,
         'aria-label': libre ? t('Ciel {nom}', { nom: th.nom }) : t('Ciel {nom}, à débloquer pour ✦{prix}', { nom: th.nom, prix: art.prix }),
         onclick: () => { if (!libre) { ctx.boutique(art.cle); return; } ctx.maj({ theme: k, humeurs: {} }); rendre(); } },

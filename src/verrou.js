@@ -21,7 +21,7 @@ function empreinte(code, sel) {                     // FNV-1a répété : rapide
 let ecranOuvert = null, oubli = null, cache = 0;
 
 function construire({ titre, sousTitre, surCode, annuler }) {
-  const fond = document.createElement('div'); fond.className = 'verrou'; fond.setAttribute('role', 'dialog'); fond.setAttribute('aria-modal', 'true');
+  const fond = document.createElement('div'); fond.className = 'ecran-verrou'; fond.setAttribute('role', 'dialog'); fond.setAttribute('aria-modal', 'true');
   const h = document.createElement('p'); h.className = 'verrou-titre'; h.textContent = titre;
   const st = document.createElement('p'); st.className = 'verrou-note'; st.textContent = sousTitre || '';
   const points = document.createElement('div'); points.className = 'verrou-points';

@@ -622,6 +622,8 @@ export const EN = {
 "Lumière": "Light",
 "Tout est débloqué pour ton ciel.": "Everything is unlocked for your sky.",
 "Encore {n} chose à débloquer pour ton ciel dans la boutique.": "{n} more thing to unlock for your sky in the shop.",
+"Encore {n} chose à débloquer pour tes planètes.": "{n} more thing to unlock for your planets.",
+"Encore {n} choses à débloquer pour tes planètes.": "{n} more things to unlock for your planets.",
 "Encore {n} choses à débloquer pour ton ciel dans la boutique.": "{n} more things to unlock for your sky in the shop.",
 "Tout est débloqué pour ta lueur.": "Everything is unlocked for your glow.",
 "Encore {n} chose à débloquer pour ta lueur dans la boutique.": "{n} more thing to unlock for your glow in the shop.",

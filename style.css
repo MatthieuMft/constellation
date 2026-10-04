@@ -929,7 +929,7 @@ body.ac-g3 #ecrire #valider, body.ac-g3 .barre-clavier .bc-valider { animation: 
 .m-version { margin: 18px 0 6px; font: 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--soft); text-align: center; opacity: .7; }
 
 /* v45 : verrou par code — plein écran, sobre, angles droits */
-.verrou { position: fixed; inset: 0; z-index: 9999; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+.ecran-verrou { position: fixed; inset: 0; z-index: 9999; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
   padding: calc(24px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom)); }
 .verrou-titre { font-size: 1.2rem; margin: 0; text-align: center; }
 .verrou-note { color: var(--soft); font-style: italic; min-height: 1.4em; margin: 0; text-align: center; font-size: .95rem; }
@@ -1022,3 +1022,6 @@ body.joy-on #joystick { display: grid; right: 24px; bottom: calc(84px + var(--sa
 
 /* v53 : plus de poignée grise en haut des panneaux (elle ne servait à rien, Matthieu) */
 .p-grip, .feuille:not(.tiroir) .p-grip { display: none !important; }
+/* v54 : la rangée de rubriques de la boutique se colle juste sous l'aperçu (plus de bande vide au-dessus où le contenu passait) */
+#boutique .bq-rubriques { top: -16px; margin: -16px -16px 14px; padding: 10px 16px; background: var(--bg); }
+@media (max-width: 720px) { #boutique .bq-rubriques { top: -14px; margin: -14px -14px 14px; padding: 10px 14px; } }
