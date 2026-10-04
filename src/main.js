@@ -941,11 +941,13 @@ function ouvrirEcrire({ jour = null, item = null } = {}) {
   const ty = item ? item.type : 'journal';
   $('texte').value = item ? item.texte || item.legende || '' : ''; $('nbc').textContent = $('texte').value.length + ' / 4000';
   $('note-titre').value = item && item.titre ? item.titre : '';
-  const d = $('ecrire-date'); d.max = aujourdhui(); d.value = item ? item.jour : (jour || jourParDefaut());
+  // v65 (Matthieu) : une note par jour, écrite le jour même. Une nouvelle note est toujours pour aujourd'hui ; plus de date à choisir.
+  // Une note déjà écrite se modifie, mais reste sur son jour.
+  const d = $('ecrire-date'); d.max = aujourdhui(); d.value = item ? item.jour : aujourdhui(); d.disabled = true; d.closest('label').style.display = 'none';
   if (item && item.type === 'journal') choisirHumeur(item.mood || 'calme', item.color || null); else if (!item) { const h = humeurDuJour(d.value, items, meta); choisirHumeur(h ? h.mood : 'calme', h && h.color ? h.color : null); }
   activites.ecrire((meta[d.value] || {}).activites || []);
   configurer(ty);
-  if (brouillon && (brouillon.texte || '').trim()) { $('texte').value = brouillon.texte || ''; $('nbc').textContent = $('texte').value.length + ' / 4000'; if (brouillon.jour && brouillon.jour <= aujourdhui() && !jour) d.value = brouillon.jour; $('interim').textContent = t('Brouillon retrouvé.'); }
+  if (brouillon && (brouillon.texte || '').trim()) { $('texte').value = brouillon.texte || ''; $('nbc').textContent = $('texte').value.length + ' / 4000';  $('interim').textContent = t('Brouillon retrouvé.'); }
   $('valider').textContent = item ? t('Enregistrer') : t('Cristalliser');
   $('ecrire').hidden = false; document.body.classList.add('ecriture'); accueil.surPlus();
   $('editeur').dataset.ph = $('texte').placeholder;   // v22 : pas de clavier d'office, on touche le texte pour écrire
@@ -1453,7 +1455,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v64'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v65'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1746,9 +1748,20 @@ function proposerFigure(forcer = false) {
     surEtoile: () => son.tinte(),
     surPaf: () => { son.fete(); particules.burst(c, new THREE.Color('#fff3d6'), 70, 4); },
   }), 1800);
-  setTimeout(() => creature.dire(t('Ta semaine est devenue {vrai} !', { vrai }), { priorite: true, duree: 5000 }), 5600);
+  setTimeout(() => creature.dire(phraseConstellation(s, vrai), { priorite: true, duree: 5600 }), 5600);
   setTimeout(() => ouvrirBilan(s), 8200);                                    // v50 : puis le bilan de la semaine
   return true;
+}
+// v65 : ce que dit la lueur quand la constellation naît (Matthieu voulait une banque de phrases, pas toujours la même)
+function phraseConstellation(s, vrai) {
+  const f = figures.figure(s), n = f ? f.jours.length : 0, p = amitie.prenom(), tous = figures.complete ? figures.complete(s) : false;
+  const l = [t('Ta semaine est devenue {vrai} !', { vrai }), t('Oh, regarde ! C’est {vrai} !', { vrai }), t('Tadaa ! {vrai}, rien que pour toi.', { vrai }),
+    t('Tu as dessiné {vrai} avec tes journées.', { vrai }), t('Regarde ce qu’on a fait : {vrai} !', { vrai }), t('{vrai} brille dans ton ciel maintenant.', { vrai }),
+    t('Des marins se guidaient avec {vrai}. Toi, tu l’as écrite.', { vrai }), t('Une constellation de plus : {vrai} !', { vrai })];
+  if (tous) l.push(t('Toutes tes étoiles sont allumées. Bravo !'), t('Pas un jour de raté. Je suis fière de toi !'), t('Une semaine complète : {vrai} brille de partout !', { vrai }));
+  else if (n) l.push(t('{vrai} est là, même avec quelques étoiles pâles.', { vrai }), t('Chaque jour écrit l’a fait briller un peu plus.'));
+  if (p) l.push(t('Bravo {p}, c’est {vrai} !', { p, vrai }), t('{p}, regarde : {vrai} !', { p, vrai }));
+  return l[Math.floor(Math.random() * l.length)];
 }
 // la lueur passe à la semaine d'après (le premier jour qui suit le dernier jour de celle-ci)
 function allerSemaineSuivante(s) { const n = centreDeSemaine(figures.semaineDe(lendemain(dernierJour(s)))); creature.allerVers(n, 6000); voler(n, DIST.semaine * 1.25, FACE); }

@@ -1,6 +1,6 @@
 // L'intérieur d'une étoile : la journée, avec son humeur et ses entrées de journal (photos et vidéos comprises).
 // Les anciennes notes, tâches et médias s'affichent dans le même fil, comme du journal : rien n'est perdu.
-import { MOODS, dateDeCle } from './store.js';
+import { MOODS, dateDeCle, cleJour } from './store.js';
 import { t, tn, LOC } from './langue.js';
 
 const el = (tag, attrs = {}, ...enfants) => {
@@ -123,7 +123,7 @@ export function monterJour(zone, ctx) {
       zone.append(i.type === 'media' ? carteMedia(i) : carteTexte(i));
     });
 
-    const pied = document.getElementById('f-ajout'); pied.replaceChildren(el('button', { onclick: () => ctx.ajouter(cle) }, t('+ Écrire')));
+    const pied = document.getElementById('f-ajout'); pied.replaceChildren(cle === cleJour(new Date()) ? el('button', { onclick: () => ctx.ajouter(cle) }, t('+ Écrire')) : '');   // v65 : on n'écrit que pour aujourd'hui
     zone.scrollTop = k ? 0 : gardeDefil;
   }
   return { rendre, cle: () => cle };

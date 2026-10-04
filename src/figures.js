@@ -162,7 +162,7 @@ export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, e
   function animer(s, rappels = {}) { anims.set(s, { t0: null, vus: new Set(), paf: false, ...rappels }); const o = objets.find(x => x.cle === s); if (o) o.anim = anims.get(s); }
   return {
     reconstruire, update, semaineDe, animer, _objets: () => objets,
-    estFinie,
+    estFinie, complete: s => completes.has(s),
     finies: () => [...parSemaine.keys()].filter(estFinie).sort(),
     forcer(s) { forcees.add(s); reconstruire(); },
     vraiNom: s => { const C = constellationDe(s); return en ? C.en : C.nom; },

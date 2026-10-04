@@ -13,7 +13,7 @@
 //   voyage.jourEcrit(cle) -> null | { etape, texte, point, fin, objet }   (null : jour déjà compté)
 //   voyage.etat() · voyage.voyageCourant() · voyage.point(i) · voyage.jouer(i)   (rejoue la scène de l'étape i, 1…7)
 import * as THREE from 'three';
-import { pointsSemaine, semaineDe, offerts, BLANC_OFFERT } from './figures.js';
+import { pointsSemaine, semaineDe, offerts, BLANC_OFFERT, lendemain, dernierJour } from './figures.js';
 
 const CLE = 'constellation.voyage.v1';
 export const VOYAGES = [
@@ -44,7 +44,7 @@ export function creerVoyage({ scene, camera, melange, texHalo, posJour, particul
   function vider() { if (objets) { groupe.remove(objets.g); objets.g.traverse(x => { if (x.geometry) x.geometry.dispose(); if (x.material) x.material.dispose(); }); objets = null; } }
   function reconstruire(o = {}) {
     if ('clair' in o) clair = o.clair; if (o.encre) encre = o.encre; vider();
-    const cleS = semaineDe(aujourdhui()); if (estFinie(cleS)) return;         // semaine finie : c'est la constellation qu'on voit
+    let cleS = semaineDe(aujourdhui()); if (estFinie(cleS)) cleS = semaineDe(lendemain(dernierJour(cleS)));   // v65 : semaine finie, sa constellation est née : le chemin de la semaine suivante (lundi) attend déjà
     const tous = joursEcrits(), premier = tous.length ? tous.reduce((a, k) => k < a ? k : a) : aujourdhui();
     const P = pointsDe(cleS), ecrits = new Set(tous.filter(k => semaineDe(k) === cleS).map(jds)), offre = offerts(cleS, premier), g = new THREE.Group(); groupe.add(g);
     const courbe = new THREE.CatmullRomCurve3(P, false, 'centripetal', .4), geo = new THREE.BufferGeometry().setFromPoints(courbe.getPoints(160));
