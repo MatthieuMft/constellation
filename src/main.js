@@ -1455,7 +1455,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v67'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v68'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1604,6 +1604,20 @@ function questionDuSoir(d = new Date()) {
 
 // ───────────── v59 : trouvailles, amitié, ciel selon l'humeur du jour ─────────────
 let trouvailleAMontrer = null;
+// v68 : un nom qui revient. Une fois par jour au plus, la lueur remarque une personne (@) ou un lieu (#) écrits plusieurs jours cette semaine.
+const CLE_REVIENT = 'constellation.revient.v1';
+function nomQuiRevient() {
+  let o = {}; try { o = JSON.parse(localStorage.getItem(CLE_REVIENT)) || {}; } catch (e) {}
+  if (o.jour === aujourdhui()) return;
+  const d0 = cleJour(new Date(Date.now() - 6 * 86400000)), cands = [...personnes.index().values()].map(x => ({ x, n: [...x.jours].filter(j => j >= d0 && j <= aujourdhui()).length })).filter(c => c.n >= 2 && c.x.k + c.x.nom !== o.nom);
+  o.jour = aujourdhui(); try { localStorage.setItem(CLE_REVIENT, JSON.stringify(o)); } catch (e) {}
+  if (!cands.length) return;
+  const c = cands.sort((a, b) => b.n - a.n)[0], n = c.x.k + c.x.nom, nb = c.n;
+  const l = c.x.k === '@' ? [t('Tu parles beaucoup de {n} en ce moment.', { n }), t('{n} revient souvent dans tes étoiles cette semaine.', { n }), t('{n}, {j} jours cette semaine. C’est quelqu’un d’important ?', { n, j: nb })]
+    : [t('{n} revient souvent cette semaine.', { n }), t('Tu es allé·e souvent à {n} ces jours-ci.', { n }), t('{n}, {j} fois cette semaine. Ton endroit préféré ?', { n, j: nb })];
+  if (!creature.dire(l[Math.floor(Math.random() * l.length)], { duree: 6500, clic: () => personnes.album(c.x.k, c.x.nom) })) { o.jour = null; try { localStorage.setItem(CLE_REVIENT, JSON.stringify(o)); } catch (e) {} return; }   // bulle occupée : on réessaie plus tard
+  o.nom = n; try { localStorage.setItem(CLE_REVIENT, JSON.stringify(o)); } catch (e) {}
+}
 const estLibre = () => !intro.actif && !accueil.actif() && $('ecrire').hidden && $('fiche').hidden && $('menu').hidden && boutique && !boutique.ouvert() && !voyageEnCours && !trouvailles.ouverte();
 function montrerTrouvaille(it) {                                   // v61 : l'objet sort de la lueur, tourne au-dessus d'elle, puis file se ranger dans le menu
   const d = creature.ecran(), b = $('btn-palette').getBoundingClientRect(), depuis = d && d.vu ? d : { x: innerWidth / 2, y: innerHeight * .62 };
@@ -1619,6 +1633,7 @@ function humeurCiel(dt, now) {
       consoleDite = aujourdhui(); creature.consoler(t(m === 'tempete' ? 'Je reste là pendant l’orage.' : 'Je reste près de toi, d’accord ?'));
     }
     if (trouvailleAMontrer && libre) { const it = trouvailleAMontrer; trouvailleAMontrer = null; montrerTrouvaille(it); }   // v61 : jamais ratée, même si on a ouvert l'éditeur entre-temps
+    if (libre && now > trouvailleApres - 15000 && !creature.occupee() && creature.etat().etat !== 'dort') nomQuiRevient();   // v68
     // une trouvaille : seulement les jours écrits, une seule par jour, quand rien d'autre ne se passe
     if (libre && now > trouvailleApres && trouvailles.dernier() !== aujourdhui() && jours.some(j => j.id === aujourdhui() && !j.sample) && !creature.occupee() && creature.etat().etat !== 'dort') {
       const it = trouvailles.tirer(aujourdhui());

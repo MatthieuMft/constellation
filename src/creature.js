@@ -140,7 +140,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   const tr = (x, v) => t(x, v);   // t est aussi le temps dans viser / update
   let chercheDemande = null;   // v59 : partir chercher une trouvaille
   const amiP = () => amitie ? amitie.palier() : 0, prenom = () => amitie ? amitie.prenom() : '';
-  let solo = null, eternue = 0, prochainEternue = rnd(120, 260), filR = null, filVue = 0;
+  let derniereFilante = -1e9, solo = null, eternue = 0, prochainEternue = rnd(120, 260), filR = null, filVue = 0;
   const balles = [0, 1, 2].map(() => { const m = new THREE.SpriteMaterial({ map: texHalo, color: new THREE.Color(1, .9, .6), blending: THREE.AdditiveBlending, depthTest: false, depthWrite: false, transparent: true, opacity: 0 }), b = new THREE.Sprite(m); b.renderOrder = 12; b.visible = false; sceneUI.add(b); return b; });
   const cleEtoile = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   function etoileDuJour() { const m = etoiles(), v = m.get(cleEtoile()); if (v) return v; let best = null; for (const w of m.values()) if (!best || String(w.id) > String(best.id)) best = w; return best; }   // pas encore écrit aujourd'hui : la plus récente
@@ -164,9 +164,11 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const t0 = performance.now();
     if ((jeux.attrapes || 0) < 3 && t0 - dernierSouhait > 90000 && etat !== 'dort' && etat !== 'sieste' && !cache) { dernierSouhait = t0; dire('Touche-la, je l’attrape !', { priorite: true }); }
     if (etat === 'dort' || etat === 'sieste' || cache || tenue || etat === 'ecrit' || etat === 'fete' || etat === 'souvenir' || etat === 'lancee' || etat === 'revient') return { type: 'ignore' };
-    if (SOLO[etat] && Math.random() < .6) return { type: 'ignore' };   // occupée : elle s'en fiche
+    if (SOLO[etat] || etat === 'visite' || etat === 'souvenir' || etat === 'cherche') return { type: 'ignore' };   // v68 : occupée, elle laisse filer (Matthieu : elle ne faisait plus que ça)
+    if (t0 - derniereFilante < 50000 || Math.random() < .35) return { type: 'ignore' };   // v68 : au plus une réaction toutes les 50 s, et pas à chaque fois
+    derniereFilante = t0;
     const libre = ['flotte', 'regarde', 'joue', 'danse', 'visite', 'attend', 'curieux'].includes(etat) && !ctx.ecriture;
-    const r = Math.random(), type = r < .28 ? 'voeu' : r < .5 ? 'suit' : r < .7 ? 'bouche' : libre ? 'court' : 'suit';
+    const r = Math.random(), type = r < .3 ? 'voeu' : r < .58 ? 'suit' : r < .85 ? 'bouche' : libre ? 'court' : 'suit';   // v68 : courir après, plus rare
     if (type === 'voeu' && Math.random() < .45) dire(choix(['Je fais un vœu…', 'Un vœu pour toi.', 'Chut, je fais un vœu.']), { duree: 2600 });
     else if (type === 'bouche' && Math.random() < .4) dire(choix(['Ooooh…', 'Waouh…', 'Tu as vu ?']), { duree: 2000 });
     else if (type === 'suit' && Math.random() < .25) dire(choix(['Elle file !', 'Regarde-la filer.']), { duree: 2000 });
@@ -248,7 +250,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       etat = n; etatT = 0; arrivee = false;
       if (etat === 'regarde') regardT = 0;
       if (etat === 'visite') { const vs = [...etoiles().values()]; visiteId = vs[Math.floor(Math.random() * vs.length)]; prochainChangement = rnd(8, 13); }
-      if (etat === 'flotte') { prochainChangement = rnd(10, 22); animSuivante = choix(['visite', 'visite', 'joue', 'danse', 'regarde', 'joue', 'croque', 'croque', 'orbite', 'orbite', 'planche', 'jongle', 'jongle', 'polit', 'sieste', 'coeur', 'coeur']); }
+      if (etat === 'flotte') { prochainChangement = rnd(7, 14); animSuivante = choix(['visite', 'joue', 'danse', 'croque', 'croque', 'orbite', 'orbite', 'planche', 'planche', 'jongle', 'jongle', 'polit', 'polit', 'sieste', 'coeur', 'coeur']); }   // v68 : plus de scènes en solo, plus souvent
       if (etat === 'danse') dire(choix(['Lalala~', 'Tu danses avec moi ?', '♪']), { duree: 2600 });
       if (etat === 'joue') joie = Math.max(joie, 2.5);
       if (etat === 'dort') visiteId = plusProcheEtoile(pos);
@@ -274,8 +276,9 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
         break; }
       case 'souvenir': {
         const sp = souvenir && posEtoile(souvenir.id); if (!sp) { souvenir = null; break; }
-        cible.copy(sp).addScaledVector(_f, -3.8).addScaledVector(_u, 1.6).addScaledVector(_r, -2.2); raideur = 2.2; vmax = 12; regardCible = sp;
-        if (!arrivee && pos.distanceTo(cible) < 3.5) { arrivee = true; const v = etoiles().get(souvenir.id); if (v) v.pulse = Math.max(v.pulse, .9); souvenir.arrive(); } break; }
+        const a = etatT * 1.05, ro = 3.2;                                // v68 : elle fait le tour de ton étoile (avant, elle lisait le début de la note)
+        cible.copy(sp).addScaledVector(_r, Math.cos(a) * ro).addScaledVector(_f, Math.sin(a) * ro).addScaledVector(_u, 1.1 + Math.sin(a * 2) * .4); raideur = 2.6; vmax = 14; regardCible = sp;
+        if (!arrivee && pos.distanceTo(sp) < 5) { arrivee = true; const v = etoiles().get(souvenir.id); if (v) v.pulse = Math.max(v.pulse, .9); souvenir.arrive(); } break; }
       case 'fete': {
         const sp = forceCible.id ? posEtoile(forceCible.id) : forceCible.point; if (!sp) break;
         if (forceCible.vite) { cible.copy(sp); raideur = 7; vmax = 48; } else { cible.copy(sp).addScaledVector(_f, -3.8).addScaledVector(_u, 1.6); raideur = 2.4; vmax = 14; } regardCible = sp;   // v57 : vite = attraper une filante
@@ -362,7 +365,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     const now = performance.now(); if (fx.expr && now > fx.jusqu) fx.expr = null;
     if (ctx.eclair) peur = 4;
     prochainSouvenir -= dt;
-    if (prochainSouvenir <= 0 && etat !== 'dort' && !SOLO[etat] && !ctx.occupe && !ctx.ecriture && !souvenir) { prochainSouvenir = rnd(70, 130); lancerSouvenir(); }
+    if (prochainSouvenir <= 0 && etat !== 'dort' && !SOLO[etat] && !ctx.occupe && !ctx.ecriture && !souvenir) { prochainSouvenir = rnd(150, 260); lancerSouvenir(); }
     choisirEtat(dt, ctx);
     { // bavardage : de temps en temps, un mot sur la journée, la série, une date qui compte
       chat -= dt;
@@ -627,12 +630,30 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     cand.forEach(c => { c.p = (1 + Math.min(120, (now - (c.e.touched || c.e.date)) / 86400000)) * rnd(.5, 1.5); });
     demarrerSouvenir(cand.sort((a, b) => b.p - a.p)[0].e);
   }
+  // v68 : un commentaire sur ce que tu as écrit (personnes, lieux, mots, humeur), plutôt que de relire ta phrase : tu écris de toi à toi
+  function commentaire(e, quand) {
+    const tx = e.text || '', l = [], noms = [...tx.matchAll(/(^|[^\p{L}\d_])([@#])([\p{L}\d_-]{2,30})/gu)].map(m => [m[2], m[3]]);
+    const p = noms.find(x => x[0] === '@'), lieu = noms.find(x => x[0] === '#');
+    if (p) l.push(t('Tu parlais de {n} ici. Ça m’a fait sourire.', { n: p[1] }), t('{n} était là ce jour-là.', { n: p[1] }), t('J’aime bien quand tu parles de {n}.', { n: p[1] }));
+    if (lieu) l.push(t('{n}… tu y retournes bientôt ?', { n: lieu[1] }), t('Ah, {n}. Je m’en souviens.', { n: lieu[1] }));
+    const mots = tx.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(/[^a-z]+/);
+    const r = LEXIQUE.find(x => mots.some(m => x.re.test(m)));
+    if (r && r.expr === 'joie') l.push(t('Il y avait de la joie dans cette étoile.'), t('Cette note sent le bonheur.'));
+    if (r && r.expr === 'triste') l.push(t('Ce jour-là pesait un peu. Regarde le chemin depuis.'), t('Tu as traversé ça. Je suis fière de toi.'));
+    if (r && (r.expr === 'leve' || r.expr === 'wow')) l.push(t('Il y avait du ciel dans ce que tu as écrit.'));
+    const hum = { joie: [t('Quelle belle journée c’était !'), t('Cette étoile brille plus que les autres, non ?')], calme: [t('Une journée douce. J’aime bien cette étoile.'), t('Elle est paisible, celle-là.')],
+      elan: [t('Tu avais plein d’énergie ce jour-là !'), t('Celle-ci pétille encore.')], melancolie: [t('Une étoile un peu bleue. Elle compte aussi.'), t('Même les jours gris font de belles étoiles.')],
+      tempete: [t('Un jour d’orage… et pourtant, elle brille.'), t('Tu as tenu bon ce jour-là.')] }[e.mood] || [t('Je tourne autour de tes souvenirs.')];
+    l.push(...hum);
+    if (tx.length > 500) l.push(t('Tu avais beaucoup à dire ce jour-là.'));
+    const c = choix(l); return quand ? quand.charAt(0).toUpperCase() + quand.slice(1) + '… ' + c : c;
+  }
   function demarrerSouvenir(e, quandImpose = null) {   // v45 : quandImpose (« Il y a un an, ce jour-là ») pour l'anniversaire d'une étoile
-    souvenir = { id: e.id, fin: performance.now() + 11000, arrive() {
+    souvenir = { id: e.id, fin: performance.now() + 15000, arrive() {
       const jours = Math.round((Date.now() - e.date) / 86400000), quand = quandImpose || (jours <= 0 ? t('aujourd’hui') : jours === 1 ? t('hier') : t('il y a {n} jours', { n: jours }));
       const brut = e.text.replace(/^ *(-{3,}|—+) *$/gm, '').replace(/^(#{1,4}|[-•*]|\d+\.|>) +/gm, '').replace(/\s+/g, ' ').trim(), court = brut.length > 78 ? brut.slice(0, 76).replace(/\s+\S*$/, '') + '…' : brut;
       fx = { expr: { joie: 'joie', melancolie: 'triste', tempete: 'wow', elan: 'leve', calme: null }[e.mood] || null, jusqu: performance.now() + 5000 };
-      dire((EN ? '“' + court + '”' : '« ' + court + ' »') + ' · ' + quand, { duree: 7500, priorite: true, clic: () => ouvrirPensee(e.id) });
+      dire(commentaire(e, quandImpose ? quand : null), { duree: 6500, priorite: true, clic: () => ouvrirPensee(e.id) });
     } };
   }
 
