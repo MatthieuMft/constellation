@@ -1025,3 +1025,11 @@ body.joy-on #joystick { display: grid; right: 24px; bottom: calc(84px + var(--sa
 /* v54 : la rangée de rubriques de la boutique se colle juste sous l'aperçu (plus de bande vide au-dessus où le contenu passait) */
 #boutique .bq-rubriques { top: -16px; margin: -16px -16px 14px; padding: 10px 16px; background: var(--bg); }
 @media (max-width: 720px) { #boutique .bq-rubriques { top: -14px; margin: -14px -14px 14px; padding: 10px 14px; } }
+/* v59 : la vitrine de ses trouvailles */
+.vitrine .vit-detail { display: flex; gap: 14px; align-items: center; min-height: 112px; margin-bottom: 12px; }
+.vitrine .vit-grand { width: 112px; height: 112px; flex: none; }
+.vitrine .vit-info { min-width: 0; } .vitrine .vit-nom { margin: 0 0 4px; font-size: 1.02rem; } .vitrine .vit-txt { margin: 0 0 6px; color: var(--soft); line-height: 1.4; font-size: .92rem; } .vitrine small { color: var(--soft); font-size: .78rem; }
+.vitrine .vit-grille { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; max-height: 34vh; overflow-y: auto; margin-bottom: 14px; }
+.vitrine .vit-grille button { position: relative; min-width: 0; width: 100%; overflow: hidden; aspect-ratio: 1; padding: 0; border: 1px solid var(--line); background: transparent; display: grid; place-items: center; cursor: pointer; }
+.vitrine .vit-grille button canvas { position: absolute; inset: 0; width: 100%; height: 100%; } .vitrine .vit-grille button.on { border-color: var(--soft); }
+.vitrine .vit-grille button.vide { color: var(--line); font-size: .9rem; cursor: default; }

@@ -38,6 +38,8 @@ import * as PL from './planetes.js';
 import { verrou } from './verrou.js';
 import { creerFigures, lendemain, dernierJour, constellationDe } from './figures.js';
 import { PICTOS } from './pictos.js';
+import { creerTrouvailles } from './trouvailles.js';
+import { creerAmitie, PALIERS } from './amitie.js';
 import { son } from './son.js';
 import { monterActivites, ACTIVITES, nomActivite } from './activites.js';
 import { creerVoyage } from './voyage.js';
@@ -468,9 +470,10 @@ function reglerPlanetes(direct = false) { const v = PL.visibles(); nbPlanetes = 
 const scenes = creerScenes({ scene, camera, particules, meteores, melange, texHalo, evenements, secousse }); scenesRef = scenes; scenes.redim(innerWidth, innerHeight);
 
 // La petite lueur : un esprit de lumière qui vit dans la galaxie, dessiné nettement par-dessus les effets (voir creature.js).
+const trouvailles = creerTrouvailles(), amitie = creerAmitie(() => jours.filter(j => !j.sample).length);   // v59
 const creature = creerCreature({
   sceneUI, camera, controls, particules, texHalo, entrees: () => joursHumeur, couleurDe: e => new THREE.Color(e.color || cm(e.mood)), surMessage: t => statutTemporaire(t, 6500),
-  etoiles: () => visuelsVisibles, ouvrirPensee: id => choisir(id), mobile, jouer: k => { if (k === 'cache') jouerCache(); else if (k === 'filante') { if (meteores.attraperUne()) son.tinte(); recompenseFilante(true); } },
+  etoiles: () => visuelsVisibles, ouvrirPensee: id => choisir(id), mobile, amitie, jouer: k => { if (k === 'cache') jouerCache(); else if (k === 'filante') { if (meteores.attraperUne()) son.tinte(); recompenseFilante(true); } },
 });
 { const f = creature.fete; creature.fete = (...a) => { son.fete(); return f(...a); }; }   // v48 : un tintement aux moments de fête
 const pointeur = { x: 0, y: 0, t: -1e9 };
@@ -534,7 +537,8 @@ function boucle() {
   // éclats : une étoile visible s'embrase de temps en temps
   eclatDans -= dt;
   if (eclatDans <= 0 && R.animation > 0 && visuelsVisibles.size) { const a = [...visuelsVisibles.values()]; a[Math.floor(Math.random() * a.length)].pulse = .8; eclatDans = (2.5 + Math.random() * 5) / R.animation; }
-  meteores.update(dt, etoiles.actif('filantes-or') ? R.animation * 2.5 : etoiles.actif('filantes') ? R.animation : 0);
+  humeurCiel(dt, now);
+  { const fr = etoiles.actif('filantes-or') ? R.animation * 2.5 : etoiles.actif('filantes') ? R.animation : 0; meteores.update(dt, humK === 1 ? Math.max(fr * 1.5, R.animation * .12) : fr); }   // v59 : un jour joyeux, plus de filantes
   poussiere.update(t, R.animation, controls.target, camera.position.distanceTo(controls.target), etoiles.actif('poussiere') ? 1 : 0);
   lactee.material.uniforms.uA.value += ((etoiles.actif('lactee') ? 1 : 0) - lactee.material.uniforms.uA.value) * Math.min(1, dt * 1.2); lactee.visible = lactee.material.uniforms.uA.value > .01;
   { const u = nebuleusesLoin.userData.uA; u.value += ((etoiles.actif('nebuleuses-loin') && !T().clair ? 1 : 0) - u.value) * Math.min(1, dt * .8); nebuleusesLoin.visible = u.value > .01; }   // v55
@@ -557,7 +561,7 @@ function boucle() {
   }
   animerIntro(now);
   controls.autoRotate = niveau === 'annees' && !selection && !vol_cam && $('ecrire').hidden && Re.vitesse > 0 && !intro.actif;
-  controls.autoRotateSpeed = Re.vitesse;
+  controls.autoRotateSpeed = Re.vitesse * (humK === 2 || humK === 3 ? .6 : 1);   // v59 : calme ou triste, le ciel tourne plus lentement
   controls.update();
   creature.suivre(dAvant);
   marques.update(t, { niveau, masquer: intro.actif });
@@ -770,7 +774,7 @@ function jouerCache() {
 }
 function toucherCache(id) {
   const c = cacheJeu, cible = visuels.get(c.id), v = visuels.get(id); if (!cible) { cacheJeu = null; creature.sortir(false); return; }
-  if (id === c.id) { cacheJeu = null; son.tinte(); creature.sortir(true); setTimeout(() => gagnerJeu(tirage('cache'), t('Trouvée !'), 'cache'), 600); return; }
+  if (id === c.id) { cacheJeu = null; son.tinte(); creature.sortir(true); setTimeout(() => { gagnerJeu(tirage('cache'), t('Trouvée !'), 'cache'); amitie.jouer(aujourdhui()); }, 600); return; }
   c.essais++; if (v) v.pulse = Math.max(v.pulse, .5);
   const a = ecranDe(cible.groupe.position), b = v ? ecranDe(v.groupe.position) : a, d = Math.hypot(a.x - b.x, a.y - b.y);
   toast(d < 100 ? t('Chaud !') : d < 230 ? t('Tiède…') : t('Froid…'), 1600);
@@ -798,7 +802,7 @@ canvas.addEventListener('pointerup', e => {
   clearTimeout(calinMinuteur); if (calinFait) { calinFait = false; creature.calin(false); return; }
   if (!bas || Math.hypot(e.clientX - bas[0], e.clientY - bas[1]) > 5) return;
   { const m = meteores.proche(e.clientX, e.clientY, 80);   // v57 : on touche une étoile filante, la lueur file l'attraper
-    if (m >= 0 && creature.attraper(e.clientX, e.clientY, () => recompenseFilante(false))) { meteores.attraper(m); son.tinte(); return; } }
+    if (m >= 0 && creature.attraper(e.clientX, e.clientY, () => { recompenseFilante(false); amitie.jouer(aujourdhui()); })) { meteores.attraper(m); son.tinte(); return; } }
   const s = sous(e);
   if (s && s.type === 'etoile' && cacheJeu) { toucherCache(s.id); return; }   // v57 : cache-cache, on cherche derrière les étoiles
   if (!s) {
@@ -808,7 +812,7 @@ canvas.addEventListener('pointerup', e => {
     effacerRecherche(); if (selection) fermerFiche();
     if (R.animation > 0 && !intro.actif) scenes.onde(ray.ray.at(26, new THREE.Vector3()));          // une onde de lumière dans le vide
   }
-  else if (s.type === 'creature') creature.caresse();                  // un clic : une caresse
+  else if (s.type === 'creature') { creature.caresse(); amitie.jouer(aujourdhui()); }                  // un clic : une caresse
   else if (s.type === 'etoile') choisir(s.id);
   else if (s.type === 'vide') choisir(s.cle);
   else if (s.type === 'noeud') plonger(s.noeud);
@@ -1367,9 +1371,11 @@ function lignesMenu() {
       if (s) l.push({ ic: 'bilan', nom: t('Bilan de ta dernière semaine'), sous: figures.vraiNom(s), action: () => ouvrirBilan(s) });
       return l;
     } },
-    { ic: 'lueur', titre: t('Ma lueur'), sous: t('Personnaliser, renommer, un souvenir'), items: () => [
+    { ic: 'lueur', titre: t('Ma lueur'), sous: t('Personnaliser, trouvailles, amitié'), items: () => [
       { ic: 'lueur', nom: t('Personnaliser ma lueur'), sous: t('Ce que tu as débloqué dans la boutique'), action: () => ouvrirPerso() },
       { ic: 'nom', nom: t('Renommer'), sous: creature.nom() || null, action: ouvrirNommer },
+      { ic: 'carnet', nom: t('Ses trouvailles'), sous: t('{n} sur {m}', { n: trouvailles.nombre(), m: trouvailles.total }), action: () => trouvailles.ouvrir() },   // v59
+      { ic: 'lueur', nom: t('Votre amitié'), sous: amitie.nom(), action: () => ouvrirAmitie() },
       { ic: 'souvenir', nom: t('Raconte-moi un souvenir'), sous: t('Elle va relire une ancienne pensée'), action: () => { if (!creature.souvenirMaintenant()) statutTemporaire(t('Pas encore de souvenir à portée de ciel.')); } },
     ] },
     { ic: 'ciel', titre: t('Mon ciel'), sous: t('Ambiance, astres, animations'), items: () => [
@@ -1412,7 +1418,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v58'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v59'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1557,6 +1563,61 @@ function questionDuSoir(d = new Date()) {
   if (hier && (hier.mood === 'joie' || hier.mood === 'elan')) return pioche([t('Hier brillait. Ça continue ?'), t('Qu’est-ce qui t’a donné de l’élan aujourd’hui ?')]);
   if (h >= 22 || h < 5) return pioche([t('Avant de dormir : une chose à garder de ta journée ?'), t('Qu’est-ce qui tourne dans ta tête ce soir ?')]);
   return pioche([t('Une pensée pour ce soir ?'), t('Quel moment de ta journée mérite une étoile ?'), t('Qu’est-ce qui t’a surpris aujourd’hui ?'), t('Une personne à qui tu as pensé aujourd’hui ?'), t('Qu’as-tu appris aujourd’hui ?')]);
+}
+
+// ───────────── v59 : trouvailles, amitié, ciel selon l'humeur du jour ─────────────
+let accueilAmi = false, humK = 0, humLueur = 1, humT = 0, trouvailleApres = performance.now() + 30000, consoleDite = null;
+const humeurAujourdhui = () => { const j = joursHumeur.find(x => x.id === aujourdhui() && !x.sample); return j ? j.mood : null; };
+function humeurCiel(dt, now) {
+  if ((humT -= dt) <= 0) {
+    humT = 2; const m = humeurAujourdhui(); humK = m === 'joie' || m === 'elan' ? 1 : m === 'calme' ? 2 : m === 'melancolie' || m === 'tempete' ? 3 : 0;
+    const libre = !intro.actif && !accueil.actif() && $('ecrire').hidden && $('fiche').hidden && $('menu').hidden && boutique && !boutique.ouvert() && !voyageEnCours && !trouvailles.ouverte();
+    if (humK === 3 && consoleDite !== aujourdhui() && libre && now > trouvailleApres - 5000) {   // un jour triste : elle vient tout près, une fois par jour
+      consoleDite = aujourdhui(); creature.consoler(t(m === 'tempete' ? 'Je reste là pendant l’orage.' : 'Je reste près de toi, d’accord ?'));
+    }
+    // une trouvaille : seulement les jours écrits, une seule par jour, quand rien d'autre ne se passe
+    if (libre && now > trouvailleApres && trouvailles.dernier() !== aujourdhui() && jours.some(j => j.id === aujourdhui() && !j.sample) && !creature.occupee() && creature.etat().etat !== 'dort') {
+      const it = trouvailles.tirer(aujourdhui());
+      if (it) { trouvailleApres = now + 60000; creature.chercher({ ...it, nom: t(it.nom) }, () => trouvailles.ouvrir(it.id), () => { son.fete(); setTimeout(() => toast(t('Nouvelle trouvaille : {o}', { o: t(it.nom) }), 3200), 900); }); }
+      else trouvailleApres = now + 600000;
+    }
+    if (libre) { const np = amitie.nouveauPalier(); if (np) palierAtteint(np); }
+    if (!accueilAmi && libre && now > 12000 && amitie.palier() >= 4) { accueilAmi = true; const p = amitie.prenom(); creature.fete(p ? t('Te voilà, {p} !', { p }) : t('Te voilà !')); }   // étoiles jumelles : elle t'accueille
+  }
+  humLueur += ((humK === 1 ? 1.2 : humK === 3 ? .8 : humK === 2 ? .9 : 1) - humLueur) * Math.min(1, dt * .4);
+  if (bloom.enabled) bloom.strength = Re.lueur * humLueur;
+}
+function palierAtteint(i) {
+  setTimeout(() => {
+    creature.fete(t('Notre amitié grandit : {nom} !', { nom: amitie.nom(i) }));
+    if (i >= 1 && !amitie.prenom()) setTimeout(demanderPrenom, 2600);
+  }, 600);
+}
+function demanderPrenom() {
+  document.querySelector('.prenom')?.remove();
+  const b = document.createElement('div'); b.className = 'prenom boite-figure'; b.setAttribute('role', 'dialog');
+  const h = document.createElement('p'); h.className = 'lab'; h.textContent = t('Comment tu t’appelles ?');
+  const sous = document.createElement('p'); sous.className = 'sous'; sous.textContent = t('{nom} aimerait t’appeler par ton prénom.', { nom: creature.nom() || t('Ta lueur') });
+  const rang = document.createElement('div'); rang.className = 'rang';
+  const champ = document.createElement('input'); champ.type = 'text'; champ.maxLength = 24; champ.value = amitie.prenom(); champ.placeholder = t('Ton prénom');
+  const ok = document.createElement('button'); ok.type = 'button'; ok.textContent = 'OK';
+  const valider = () => { const p = champ.value.trim(); b.remove(); if (!p) return; amitie.nommer(p); creature.fete(t('Enchantée, {p} !', { p })); };
+  ok.addEventListener('click', valider); champ.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); valider(); } if (e.key === 'Escape') b.remove(); e.stopPropagation(); });
+  const plus = document.createElement('button'); plus.type = 'button'; plus.className = 'lien annuler'; plus.textContent = t('Plus tard'); plus.addEventListener('click', () => b.remove());
+  rang.append(champ, ok); b.append(h, sous, rang, plus); document.body.append(b); champ.focus();
+}
+function ouvrirAmitie() {
+  document.querySelector('.amitie')?.remove();
+  const i = amitie.palier(), b = document.createElement('div'); b.className = 'amitie carnet boite-figure'; b.setAttribute('role', 'dialog');
+  const h = document.createElement('p'); h.className = 'lab'; h.textContent = t('Votre amitié · {nom}', { nom: amitie.nom() });
+  const r = amitie.reste(), sous = document.createElement('p'); sous.className = 'sous';
+  sous.textContent = r ? t('Encore {n} points avant le palier suivant. Un jour écrit en donne 10, jouer avec elle jusqu’à 3 par jour.', { n: r }) : t('Le plus beau palier. Elle ne te quitte plus.');
+  const ol = document.createElement('ol'); ol.className = 'carnet-etapes';
+  PALIERS.forEach((P, k) => { const li = document.createElement('li'); li.className = k <= i ? 'fait' : 'cache'; li.style.cursor = 'default'; li.textContent = t(P.nom) + (P.debloque ? ' · ' + (k <= i ? t(P.debloque) : t('à {n} points', { n: P.min })) : ''); ol.append(li); });
+  const rang = document.createElement('div'); rang.className = 'rang';
+  if (i >= 1) { const p = document.createElement('button'); p.type = 'button'; p.className = 'lien'; p.textContent = amitie.prenom() ? t('Changer ton prénom') : t('Lui dire ton prénom'); p.addEventListener('click', () => { b.remove(); demanderPrenom(); }); rang.append(p); }
+  const f = document.createElement('button'); f.type = 'button'; f.className = 'lien'; f.textContent = t('Fermer'); f.addEventListener('click', () => b.remove()); rang.append(f);
+  b.append(h, sous, ol, rang); document.body.append(b);
 }
 
 // ───────────── v49 : le voyage de la lueur ─────────────
@@ -1857,5 +1918,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };
