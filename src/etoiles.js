@@ -167,6 +167,7 @@ export const actif = k => possede(k) && !((PAR_CLE[k] || {}).type === 'interrupt
 // v79 : essayer avant d'acheter (Matthieu). Un objet du ciel à l'essai s'allume comme s'il était à toi, le temps de l'essai.
 // Rien n'est enregistré : l'essai vit en mémoire, et possede() ne change pas.
 let essai = null;
+const HUMEURS_ESSAI = { joie: '#ffb3d1', elan: '#ff9a5c', calme: '#7fe3d0', melancolie: '#9d8cff', tempete: '#5f7bff' };   // un exemple, pour essayer « Couleurs des humeurs »
 export const essayer = k => { essai = k && PAR_CLE[k] ? k : null; };
 export const enEssai = () => essai;
 const essaiCiel = k => k === essai && (PAR_CLE[k] || {}).cat === 'ciel';
@@ -213,7 +214,7 @@ function effectif(source, o) {
   const r = { ...o };
   for (const a of ARTICLES) {
     if (a.source !== source) continue;
-    if (essaiCiel(a.cle) && source === 'reglage') { if (a.type === 'choix') { r[a.champ] = a.val; if (a.champ === 'theme') r.humeurs = {}; } else if (a.type === 'interrupteur') r[a.champ] = true; continue; }
+    if (essaiCiel(a.cle) && source === 'reglage') { if (a.type === 'choix') { r[a.champ] = a.val; if (a.champ === 'theme') r.humeurs = {}; } else if (a.type === 'interrupteur') r[a.champ] = true; else if (a.cle === 'couleurs-humeurs') r.humeurs = { ...HUMEURS_ESSAI }; continue; }
     if (a.type === 'choix') { if (!possede(a.cle) && r[a.champ] === a.val) r[a.champ] = DEFAUT_CHOIX[a.champ]; }
     else if (a.type === 'reglage') { if (!possede(a.cle)) for (const [k, v] of Object.entries(a.defaut)) r[k] = copie(v); }
     else r[a.champ] = actif(a.cle);

@@ -1312,7 +1312,8 @@ export const EN = {
 "À l’essai": "Trying on",
 "Arrêter l’essai": "Stop trying",
 "Il te manque ✦{n}": "You need ✦{n} more",
-"Acheter ✦{n}": "Buy ✦{n}"
+"Acheter ✦{n}": "Buy ✦{n}",
+"À l’essai · un exemple": "Trying on · an example"
 };
 
 export const EN_HTML = {

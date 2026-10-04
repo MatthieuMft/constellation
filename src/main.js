@@ -1550,7 +1550,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => g.action()) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: true }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v79'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v80'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -2064,7 +2064,8 @@ const boutique = monterBoutique($('boutique'), {
   surChange: cle => { appliquerObjets(); montrerDansLeCiel(cle); },
   vignette3D: (toile, o) => creature.vignette(toile, o),   // vignettes de la lueur : la vraie lueur 3D portant l'article
   apercu: (toile, o) => creature.apercu(toile, o),         // l'aperçu fixe en haut : la lueur telle qu'elle est (o : l'objet à l'essai, v79)
-  essayer: a => essayerCiel(a),                            // v79 : un objet du ciel à l'essai s'allume dans le vrai ciel, sans rien enregistrer
+  essayer: a => essayerCiel(a),
+  planeteEssai: (c, cle) => { const p = planeteEssai(cle); if (p) PL.photo(c, p); },                            // v79 : un objet du ciel à l'essai s'allume dans le vrai ciel, sans rien enregistrer
   apercuCiel: c => apercusCiel.push(c),                    // onglet « Ton ciel » (téléphone) : le ciel en direct
   equipe: a => etoiles.porte(a, creature.perso(), R) || (a.type === 'interrupteur' && etoiles.actif(a.cle)),
   equiper: (a, oui) => {
@@ -2107,9 +2108,19 @@ function decale(dir) {
 function essayerCiel(a) {
   const k = a && a.cat === 'ciel' && a.groupe !== 'planetes' ? a.cle : null;
   if (k === etoiles.enEssai()) return;
-  const av = Re.theme; etoiles.essayer(k); appliquerObjets();
-  if (Re.theme !== av) appliquerTheme();
-  if (k) montrerDansLeCiel(k);
+  const av = Re.theme, avH = JSON.stringify(Re.humeurs); etoiles.essayer(k); appliquerObjets();
+  if (Re.theme !== av) appliquerTheme(); else if (JSON.stringify(Re.humeurs) !== avH) recolorer();
+  if (k === 'couleurs-humeurs') voirLeCiel(); else if (k) montrerDansLeCiel(k);
+}
+// v79 : essayer une planète ou une option : ta première planète qui la porte (sinon la planète d'exemple de la vignette)
+function planeteEssai(cle) {
+  const ex = PL.EXEMPLES[cle], a = etoiles.article(cle); if (!ex || !a) return null;
+  const mien = PL.liste()[0]; if (a.type === 'nouvelle' || !mien) return ex;
+  const p = PL.effective(mien), opt = Object.keys(PL.OPTIONS).find(o => PL.OPTIONS[o] === cle);
+  if (['cerisier', 'sapin', 'cristal', 'maisons', 'aurores', 'nuages', 'couleurs'].includes(opt) && p.type !== 'solide') return ex;
+  const patch = { nuages: { nuages: true }, cerisier: { arbres: 'cerisier' }, sapin: { arbres: 'sapin' }, cristal: { arbres: 'cristal' }, maisons: { maisons: true },
+    anneaux: { anneaux: p.anneaux || 'large' }, double: { anneaux: p.anneaux || 'fin', double: true }, couleurs: { couleurs: ex.couleurs }, lune: { lune: true }, aurores: { aurores: true } }[opt];
+  return patch ? { ...p, ...patch } : ex;
 }
 function montrerDansLeCiel(cle) {
   const a = etoiles.article(cle); if (!a || a.cat !== 'ciel' || a.type !== 'interrupteur' || !etoiles.actifOuEssai(cle)) return;
