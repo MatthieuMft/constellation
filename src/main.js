@@ -38,6 +38,7 @@ import * as PL from './planetes.js';
 import { verrou } from './verrou.js';
 import { creerFigures, lendemain, dernierJour, constellationDe, offerts } from './figures.js';
 import { dessinerSemaine, envoyer } from './partage.js';
+import { creerLivre } from './livre.js';
 import { PICTOS } from './pictos.js';
 import { creerTrouvailles } from './trouvailles.js';
 import { creerNoms } from './noms.js';
@@ -1464,6 +1465,7 @@ function lignesMenu() {
       return l;
     } },
     { ic: 'souvenir', titre: t('Relire mon journal'), sous: t('Page par page, comme un livre'), action: () => { if (!lecture.ouvrir()) statutTemporaire(t('Rien à relire pour l’instant.')); } },   // v60
+    { ic: 'livre', titre: t('Mon livre du mois'), sous: t('Ton mois mis en page, à garder en PDF'), action: () => { if (!livre.ouvrir()) statutTemporaire(t('Rien à relire pour l’instant.')); } },   // v77
     { ic: 'partage', titre: t('Envoyer ma constellation'), sous: t('Une image de ta semaine, sans aucun texte'), action: () => ouvrirPartage(derniereNee()) },   // v76
     { ic: 'recherche', titre: t('Chercher dans mon journal'), sous: t('Un mot, un @prénom, un #lieu'), action: () => recherche.ouvrir() },   // v74
     { ic: 'nom', titre: t('Personnes et lieux'), sous: (() => { const n = personnes.index().size; return n ? tn(n, '{n} album', '{n} albums') : t('Écris @Léa ou #parc dans une note'); })(), action: () => personnes.page() },
@@ -1514,7 +1516,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v76'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v77'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1903,6 +1905,10 @@ function ouvrirPartage(s) {
   rang.append(go, non); boite.append(img, sous, rang); document.body.append(boite);
 }
 const derniereNee = () => figures.finies().filter(s => figures.figure(s)).at(-1) || null;
+// v77 : mon livre du mois (le mois mis en page, à enregistrer en PDF par l'impression du téléphone)
+const livre = creerLivre({ items: () => items, humeur: cle => humeurDuJour(cle, items, meta), couleur: cm, nomHumeur: k => (MOODS[k] || {}).label || k, mediaUrl: k => media.url(k),
+  constellations: m => { const [y, mo] = m.split('-').map(Number), n = new Date(y, mo, 0).getDate(), S = [...new Set(Array.from({ length: n }, (_, i) => figures.semaineDe(m + '-' + String(i + 1).padStart(2, '0'))))].filter(s => figures.figure(s));
+    return S.map(s => { const o = donneesPartage(s), c = dessinerSemaine(o), r = document.createElement('canvas'); r.width = 360; r.height = 450; r.getContext('2d').drawImage(c, 0, 0, 360, 450); return { nom: o.nom, image: r.toDataURL('image/jpeg', .86) }; }); } });
 // ───────────── v72 : le bilan du mois ─────────────
 // À la première ouverture après la fin d'un mois : jours écrits (une pastille par jour, à la couleur de son humeur), mots, humeur la plus présente,
 // personne et lieu les plus cités, note la plus longue (sa date, jamais son texte), constellations nées. Tout est recalculé depuis le journal ;
@@ -1937,10 +1943,11 @@ function ouvrirBilanMois(m) {
   if (B.lieu) lignes.push(ligne(tn(B.lieu.j, 'Le lieu du mois : {p}, {n} jour', 'Le lieu du mois : {p}, {n} jours', { p: '#' + B.lieu.nom }), null, () => { boite.remove(); personnes.album('#', B.lieu.nom); }));
   if (B.longue) lignes.push(ligne(tn(B.longue.mots, 'Ta plus longue note : le {d}, {n} mot', 'Ta plus longue note : le {d}, {n} mots', { d: dateDeCle(B.longue.jour).toLocaleDateString(LOC, { day: 'numeric', month: 'long' }) }), null, () => { boite.remove(); lecture.ouvrir(B.longue.jour); }));
   if (B.constellations.length) lignes.push(ligne(tn(B.constellations.length, '{n} constellation née : {l}', '{n} constellations nées : {l}', { l: B.constellations.join(', ') })));
-  const rang = el('div', 'rang'), relire = el('button', '', t('Relire ce mois')), ok = el('button', 'lien', t('Fermer'));
+  const rang = el('div', 'rang'), relire = el('button', '', t('Relire ce mois')), ok = el('button', 'lien', t('Fermer')), lv = el('button', 'lien', t('Mon livre du mois'));
+  lv.type = 'button'; lv.addEventListener('click', () => { boite.remove(); livre.ouvrir(m); });   // v77
   relire.type = ok.type = 'button'; ok.addEventListener('click', () => boite.remove());
   relire.addEventListener('click', () => { boite.remove(); lecture.ouvrir(B.jrs.find(j => j.ecrit)?.cle || m + '-01'); });
-  rang.append(relire, ok);
+  rang.append(relire, lv, ok);
   boite.append(el('p', 'lab', t('Ton mois · {m}', { m: nomMois })), el('p', 'sous', t('Un mois de plus dans ton ciel.')), grille, ...lignes, rang);
   document.body.append(boite);
   creature.dire(B.n >= 20 ? t('Quel mois ! Je suis fière de toi.') : t('Un mois de plus dans ton ciel !'), { priorite: true, duree: 4200 });
@@ -2126,5 +2133,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { ouvrirPartage, derniereNee, donneesPartage, proposerBienfait, donneesBienfaits, recherche, proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { livre, ouvrirPartage, derniereNee, donneesPartage, proposerBienfait, donneesBienfaits, recherche, proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };

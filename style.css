@@ -1159,3 +1159,41 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .boite-figure.partage img { display: block; width: min(100%, 300px); aspect-ratio: 4 / 5; margin: 0 auto 10px; border: 1px solid var(--line); }
 .boite-figure.partage .sous { margin-bottom: 12px; }
 .boite-figure.partage .rang { justify-content: center; align-items: center; }
+
+/* v77 : mon livre du mois. À l'écran : des pages de papier les unes sous les autres. À l'impression : seul le livre, une page par jour. */
+.livre-ecran { position: fixed; inset: 0; z-index: 9; display: flex; flex-direction: column; background: color-mix(in srgb, var(--bg) 96%, transparent); backdrop-filter: blur(10px); }
+.livre-barre { display: flex; align-items: center; gap: 6px; padding: calc(10px + env(safe-area-inset-top)) 10px 10px; border-bottom: 1px solid var(--line); }
+.livre-barre .livre-mois { flex: 1; text-align: center; font-weight: 400; font-size: 1.15rem; }
+.livre-pages { flex: 1; overflow-y: auto; padding: 18px 14px 30px; }
+.livre-pied { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); font: italic 13px var(--serif); color: var(--soft); }
+.livre-page { background: #f7f3ea; color: #1d1a16; max-width: 560px; margin: 0 auto 18px; padding: 34px 30px 40px; box-shadow: 0 6px 24px rgba(0,0,0,.45); font: 1.02rem/1.65 Georgia, var(--serif); }
+.livre-tete { border-bottom: 1px solid #d8d0c0; padding-bottom: 12px; margin-bottom: 16px; }
+.livre-tete small { display: block; font-style: italic; color: #7a7266; }
+.livre-page h2 { font-weight: 400; font-size: 1.6rem; margin: 2px 0 6px; } .livre-page h3 { font-weight: 400; font-size: 1.25rem; margin: 10px 0 6px; }
+.livre-humeur { display: flex; align-items: center; gap: 8px; font: 11px var(--mono); letter-spacing: .12em; text-transform: uppercase; color: #7a7266; margin: 0; }
+.livre-humeur i { width: 10px; height: 10px; border-radius: 50%; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.livre-texte p { white-space: pre-wrap; overflow-wrap: anywhere; margin: 0 0 .75em; }
+.livre-texte h4 { font-weight: 400; margin: 1em 0 .4em; } .livre-texte h4.titre-1 { font-size: 1.4rem; } .livre-texte h4.titre-2 { font-size: 1.2rem; } .livre-texte h4.titre-3 { text-transform: uppercase; letter-spacing: .04em; font-size: 1rem; } .livre-texte h4.titre-4 { font-style: italic; }
+.livre-texte ul, .livre-texte ol { margin: .2em 0 .85em; padding-left: 1.4em; }
+.livre-texte blockquote { margin: .6em 0 .9em; padding-left: 14px; border-left: 2px solid #b9ae9a; font-style: italic; white-space: pre-wrap; }
+.livre-texte hr { border: 0; border-top: 1px solid #cfc6b4; width: 40%; margin: 1.6em auto; }
+.livre-photos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 12px; } .livre-photos img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.livre-couverture { text-align: center; padding-top: 60px; }
+.livre-sur { font: 11px var(--mono); letter-spacing: .3em; text-transform: uppercase; color: #7a7266; margin: 0 0 14px; }
+.livre-couverture h1 { font-weight: 400; font-style: italic; font-size: 2.6rem; margin: 0 0 10px; }
+.livre-chiffres { color: #5d564c; margin: 0 0 26px; }
+.livre-cons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.livre-cons figure { margin: 0; } .livre-cons img { width: 100%; display: block; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.livre-cons figcaption { font-style: italic; font-size: .9rem; margin-top: 4px; color: #5d564c; }
+.livre-vide { font-style: italic; color: #7a7266; }
+@media print {
+  @page { size: A5; margin: 14mm; }
+  body.livre-ouvert > *:not(.livre-ecran) { display: none !important; }
+  html, body.livre-ouvert { background: #fff !important; overflow: visible !important; height: auto !important; }
+  .livre-ecran { position: static; display: block; background: none; backdrop-filter: none; }
+  .livre-barre, .livre-pied { display: none !important; }
+  .livre-pages { overflow: visible; padding: 0; }
+  .livre-page { box-shadow: none; margin: 0; padding: 0; max-width: none; background: none; break-after: page; page-break-after: always; }
+  .livre-page:last-child { break-after: auto; page-break-after: auto; }
+  .livre-photos img, .livre-cons figure { break-inside: avoid; }
+}
