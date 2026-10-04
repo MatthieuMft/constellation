@@ -1253,3 +1253,11 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 #vignettes-ecrire .mini-voix .voix-lecteur { padding-right: 34px; }
 #vignettes-ecrire .mini-voix .voix-jouer { position: static; width: 40px; height: 40px; background: none; color: var(--ink); border: 1px solid var(--line); }
 .lec-medias .voix-fig { width: 100%; }
+
+/* ── v83 : transmettre sa galaxie ── */
+.e-texte { font: 400 16px/1.5 var(--serif); color: var(--soft); margin: 14px 0 4px; }
+.e-champ + .e-champ { margin-top: 8px; }
+.e-case { display: flex; align-items: center; gap: 10px; margin: 18px 0 4px; font: 400 16px var(--serif); }
+.e-case input { width: 20px; height: 20px; accent-color: #ffd98a; }
+.e-action { width: 100%; min-height: 48px; margin-top: 18px; }
+.e-msg { margin-top: 12px; font: italic 15px/1.45 var(--serif); color: var(--soft); min-height: 1.4em; }

@@ -3,7 +3,7 @@
 //   chaque mise en ligne change VERSION : le navigateur installe alors la nouvelle version en arrière-plan,
 //   puis la page se recharge d'elle-même (voir main.js). Donc : incrémenter VERSION à chaque livraison ;
 // - rappel du soir : notification (periodic background sync, quand le navigateur l'autorise) et clic qui rouvre l'appli.
-const VERSION = 'constellation-v82';
+const VERSION = 'constellation-v83';
 const COQUILLE = ['./', 'index.html', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'app.js'];   // v18 : tout le code tient dans app.js
 
 self.addEventListener('install', e => {          // cache: 'reload' : on prend les fichiers frais, pas ceux du cache HTTP

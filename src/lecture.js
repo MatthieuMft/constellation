@@ -150,7 +150,7 @@ export function creerLecture(ctx) {
         el('button', { type: 'button', class: 'lec-suiv nav-jour', 'aria-label': t('Jour suivant'), onclick: () => voisin(1) }, '›'),
         el('button', { type: 'button', class: 'fermer', 'aria-label': t('Fermer'), onclick: fermer }, '×')),
       el('div', { class: 'lec-livre' }, el('div', { class: 'lec-corps' })),
-      el('div', { class: 'lec-pied' }, el('span', { class: 'lec-pos' }), el('button', { type: 'button', class: 'lien', onclick: () => { const k = cle; fermer(); ctx.ouvrirJour(k); } }, t('Voir dans le ciel'))));
+      el('div', { class: 'lec-pied' }, el('span', { class: 'lec-pos' }), ctx.ouvrirJour ? el('button', { type: 'button', class: 'lien', onclick: () => { const k = cle; fermer(); ctx.ouvrirJour(k); } }, t('Voir dans le ciel')) : null));
     geste(ecran.querySelector('.lec-livre'));
     ecran.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') voisin(-1); if (e.key === 'ArrowRight') voisin(1); if (e.key === 'Escape') fermer(); });
     document.body.append(ecran); page(0, cle); ecran.tabIndex = -1; ecran.focus(); return true;

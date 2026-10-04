@@ -40,6 +40,7 @@ import { creerFigures, lendemain, dernierJour, constellationDe, offerts } from '
 import { dessinerSemaine, envoyer } from './partage.js';
 import { creerLivre } from './livre.js';
 import { enregistrer as enregistrerVoix, lecteur } from './voix.js';
+import * as galaxie from './galaxie.js';
 import { el, ouvrirEspace, fermerEspace, espaceOuvert, titreSection, rangee, groupe } from './espace.js';
 import { PICTOS } from './pictos.js';
 import { creerTrouvailles } from './trouvailles.js';
@@ -1513,7 +1514,12 @@ function accueilJournal(fermer) {
     if (c) b.style.setProperty('--c', c); return b; };
   return [el('div', { class: 'e-raccourcis' }, raccourci('souvenir', t('Relire'), () => { if (!lecture.ouvrir()) statutTemporaire(t('Rien à relire pour l’instant.')); }),
       raccourci('nom', t('Personnes et lieux'), () => personnes.page()), raccourci('livre', t('Livre du mois'), () => { if (!livre.ouvrir()) statutTemporaire(t('Rien à relire pour l’instant.')); })),
-    titreSection(t('Derniers jours')), derniers.length ? el('div', { class: 'album-etoiles' }, derniers.map(ligne)) : el('p', { class: 'album-vide' }, t('Rien à relire pour l’instant.'))];
+    titreSection(t('Derniers jours')), derniers.length ? el('div', { class: 'album-etoiles' }, derniers.map(ligne)) : el('p', { class: 'album-vide' }, t('Rien à relire pour l’instant.')),
+    // v83 : transmettre sa galaxie en souvenir, ouvrir celles qu'on a reçues (lecture seule)
+    titreSection(t('Transmettre')), groupe(
+      rangee({ ic: 'partage', nom: t('Transmettre ma galaxie'), sous: t('Un fichier protégé par un mot de passe, à lire en souvenir'), action: () => { fermer(); ouvrirTransmettre(); } }),
+      ...galaxie.recues().map(g => rangee({ ic: 'ciel', nom: t('La galaxie de {nom}', { nom: g.auteur || t('quelqu’un') }), sous: tn(g.n, '{n} jour écrit', '{n} jours écrits'), action: () => { fermer(); ouvrirRecue(g.id); } })),
+      rangee({ ic: 'souvenir', nom: t('Ouvrir une galaxie reçue'), sous: t('Le fichier .constellation qu’on t’a envoyé'), action: () => { fermer(); choisirGalaxie(); } }))];
 }
 function ouvrirMonJournal(q = '') { fermerMenu(); fermerEspace(); recherche.ouvrir(q); }
 // Ma lueur et mon ciel : les deux anciens sous-menus réunis
@@ -1531,6 +1537,85 @@ function ouvrirLueurCiel() {
       rangee({ ic: 'noms', nom: t(noms ? 'Masquer les noms des mois et des années' : 'Afficher les noms des mois et des années'), action: () => $('btn-noms').click() })),
     el('div', { class: 'e-boutique' }, rangee({ ic: 'boutique', nom: t('Boutique'), sous: t('Des objets pour ta lueur et ton ciel'), d: '✦ ' + etoiles.solde(), action: () => ouvrirBoutique() })));
 }
+// ───────────── v83 : transmettre sa galaxie en souvenir (galaxie.js) ─────────────
+function champ(attrs) { return el('input', { class: 'e-champ', autocomplete: 'off', ...attrs }); }
+function ouvrirTransmettre() {
+  fermerMenu();
+  const nom = champ({ type: 'text', value: amitie.prenom() || '', placeholder: t('Ton prénom'), maxlength: '30', 'aria-label': t('Ton prénom') });
+  const mdp = champ({ type: 'password', placeholder: t('Un mot de passe'), 'aria-label': t('Mot de passe'), autocomplete: 'new-password' });
+  const mdp2 = champ({ type: 'password', placeholder: t('Le même, encore une fois'), 'aria-label': t('Confirmer le mot de passe'), autocomplete: 'new-password' });
+  const avec = el('input', { type: 'checkbox', checked: true }), msg = el('p', { class: 'e-msg', role: 'status' });
+  const bouton = el('button', { type: 'button', class: 'plein e-action', onclick: async () => {
+    if (mdp.value.length < 4) { msg.textContent = t('Choisis un mot de passe d’au moins 4 caractères.'); return; }
+    if (mdp.value !== mdp2.value) { msg.textContent = t('Les deux mots de passe ne sont pas pareils.'); return; }
+    bouton.disabled = true; msg.textContent = t('Je prépare ta galaxie…');
+    try {
+      const g = await paquetGalaxie(nom.value.trim(), avec.checked), fichier = await galaxie.chiffrer(g, mdp.value);
+      const n = 'galaxie-' + ((nom.value.trim() || 'constellation').normalize('NFD').replace(/[^\w]+/g, '').toLowerCase() || 'constellation') + '.constellation';
+      const r = await envoyerFichier(fichier, n, t('Ma galaxie'));
+      msg.textContent = r === 'annule' ? '' : r === 'partage' ? t('Envoyée. Donne-lui le mot de passe à part, de vive voix si tu peux.') : t('Le fichier est dans tes téléchargements. Envoie-le, puis donne le mot de passe à part.');
+    } catch (e) { msg.textContent = t('Je n’ai pas réussi à préparer le fichier.'); }
+    bouton.disabled = false;
+  } }, t('Créer le fichier'));
+  ouvrirEspace({ titre: t('Transmettre ma galaxie'), sous: t('En souvenir, à lire seulement') },
+    el('p', { class: 'e-texte' }, t('Tes jours, tes humeurs et tes constellations dans un fichier que tu envoies à qui tu veux. Il ne s’ouvre qu’avec le mot de passe que tu choisis ici. La personne pourra le lire, jamais écrire dedans.')),
+    titreSection(t('Signé')), nom, titreSection(t('Mot de passe')), mdp, mdp2,
+    el('label', { class: 'e-case' }, avec, t('Avec les photos et les voix')), bouton, msg);
+}
+async function paquetGalaxie(auteur, avecMedias) {
+  const liste = [];
+  for (const i of items.filter(x => !x.sample && x.jour)) {
+    const brut = (i.medias || []).concat(i.media ? [i.media] : []), medias = [];
+    if (avecMedias) for (const m of brut) if (m.kind === 'image' || m.kind === 'audio') { const d = await media.enDataURL(m.cle); if (d) medias.push({ kind: m.kind, nom: m.nom, duree: m.duree, donnee: d }); }
+    liste.push({ id: i.id, jour: i.jour, date: i.date, type: i.type, titre: i.titre, texte: i.texte, legende: i.legende, mood: i.mood, color: i.color, medias: medias.length ? medias : undefined });
+  }
+  const jours = {}; for (const k of new Set(liste.map(i => i.jour))) if (meta[k]) jours[k] = { humeur: meta[k].humeur, couleur: meta[k].couleur };
+  const noms = {}; for (const k of figures.finies()) { const f = figures.figure(k); if (f && f.nom) noms[k] = f.nom; }
+  return { v: 1, auteur, cree: Date.now(), items: liste, jours, noms };
+}
+async function envoyerFichier(blob, nom, titre) {
+  const f = new File([blob], nom, { type: 'application/octet-stream' });
+  try { if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], title: titre }); return 'partage'; } } catch (e) { if (e && e.name === 'AbortError') return 'annule'; }
+  const a = document.createElement('a'), u = URL.createObjectURL(blob); a.href = u; a.download = nom; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); return 'telecharge';
+}
+function choisirGalaxie() {
+  const i = el('input', { type: 'file', accept: '.constellation,application/octet-stream,*/*', hidden: true }); document.body.append(i);
+  i.addEventListener('change', async () => { const f = i.files[0]; i.remove(); if (!f) return; const txt = await f.text();
+    if (!galaxie.estGalaxie(txt)) { statutTemporaire(t('Ce fichier n’est pas une galaxie Constellation.'), 5000); return; } demanderMotDePasse(txt); });
+  i.click();
+}
+function demanderMotDePasse(txt) {
+  const mdp = champ({ type: 'password', placeholder: t('Le mot de passe'), 'aria-label': t('Mot de passe'), autocomplete: 'off' }), msg = el('p', { class: 'e-msg', role: 'status' });
+  const ouvrir = async () => { msg.textContent = t('J’ouvre la galaxie…'); try { const g = await galaxie.dechiffrer(txt, mdp.value); if (!g || !Array.isArray(g.items)) throw new Error('format'); const id = await galaxie.garder(g); ouvrirRecue(id); }
+    catch (e) { msg.textContent = e.message === 'mdp' ? t('Ce n’est pas le bon mot de passe.') : t('Je n’arrive pas à lire ce fichier.'); } };
+  mdp.addEventListener('keydown', e => { if (e.key === 'Enter') ouvrir(); });
+  ouvrirEspace({ titre: t('Ouvrir une galaxie reçue'), sous: t('Il te faut le mot de passe qu’on t’a donné') }, mdp, el('button', { type: 'button', class: 'plein e-action', onclick: ouvrir }, t('Ouvrir')), msg);
+  setTimeout(() => mdp.focus(), 50);
+}
+// une galaxie reçue : ses chiffres, ses constellations, ses jours à relire. Rien ne s'y écrit.
+const urlsRecues = [];
+async function ouvrirRecue(id) {
+  fermerMenu(); const g = await galaxie.lire(id).catch(() => null); if (!g) { statutTemporaire(t('Cette galaxie n’est plus là.')); return; }
+  urlsRecues.splice(0).forEach(u => URL.revokeObjectURL(u));
+  const urls = {}; let n = 0;
+  for (const i of g.items) for (const m of i.medias || []) { if (m.donnee) { try { const u = URL.createObjectURL(await (await fetch(m.donnee)).blob()); m.cle = 'r' + (n++); urls[m.cle] = u; urlsRecues.push(u); } catch (e) {} delete m.donnee; } }
+  const jours = [...new Set(g.items.map(i => i.jour))].sort(), duJour = k => g.items.filter(i => i.jour === k).sort((a, b) => a.date - b.date);
+  const couleur = k => { const j = g.jours && g.jours[k], i = duJour(k).find(x => x.mood); const m = (j && j.humeur) || (i && i.mood); return (j && j.couleur) || (i && i.color) || (m && MOODS[m] ? MOODS[m].color : null); };
+  const lec = creerLecture({ jours: () => jours, items: duJour, couleurJour: couleur, mediaUrl: c => Promise.resolve(urls[c] || null),
+    voirMedia: (item, m) => { if (m.kind !== 'image' || !urls[m.cle]) return; const c = $('vis-contenu'); c.replaceChildren(Object.assign(document.createElement('img'), { src: urls[m.cle], alt: '' })); $('visionneuse').hidden = false; },
+    album: () => {}, ouvrirJour: null });
+  const qui = g.auteur || t('quelqu’un'), fmt = k => dateDeCle(k).toLocaleDateString(LOC, { day: 'numeric', month: 'long', year: 'numeric' });
+  const mots = g.items.reduce((s, i) => s + ((i.titre || '') + ' ' + (i.texte || '')).split(/\s+/).filter(Boolean).length, 0);
+  const semaines = [...new Set(jours.map(k => figures.semaineDe(k)))].filter(s => jours.filter(k => figures.semaineDe(k) === s).length >= 3).reverse();
+  const tuile = s => { const C = constellationDe(s), ks = jours.filter(k => figures.semaineDe(k) === s), couleurs = new Map(ks.map(k => [(dateDeCle(k).getDay() + 6) % 7, couleur(k) || '#ffe7b0']));
+    return el('button', { type: 'button', onclick: () => lec.ouvrir(ks[0]) }, el('span', { class: 'e-cons-svg', html: svgFigure(C, couleurs) }), el('strong', {}, (g.noms && g.noms[s]) || figures.vraiNom(s)), el('small', {}, fmt(ks[0]).replace(/ \d{4}$/, ''))); };
+  ouvrirEspace({ titre: t('La galaxie de {nom}', { nom: qui }), sous: jours.length ? t('Du {a} au {b}', { a: fmt(jours[0]), b: fmt(jours.at(-1)) }) : null, classe: 'e-recue' },
+    el('p', { class: 'e-texte' }, tn(jours.length, '{n} jour écrit', '{n} jours écrits') + ' · ' + tn(mots, '{n} mot', '{n} mots') + '. ' + t('Un souvenir à lire : rien ne s’y écrit.')),
+    groupe(rangee({ ic: 'souvenir', nom: t('Relire ses jours'), sous: t('Une page par jour, du premier au dernier'), garder: true, action: () => lec.ouvrir(jours[0]) })),
+    titreSection(t('Ses constellations')), semaines.length ? el('div', { class: 'e-cons' }, semaines.map(tuile)) : el('p', { class: 'album-vide' }, t('Pas encore de constellation complète.')),
+    el('div', { class: 'e-boutique' }, rangee({ ic: 'reglages', nom: t('Retirer cette galaxie'), sous: t('Elle disparaît de ce téléphone seulement'), garder: true, action: async () => { if (!confirm(t('Retirer la galaxie de {nom} de ce téléphone ?', { nom: qui }))) return; await galaxie.oublier(id); fermerEspace(); statutTemporaire(t('Galaxie retirée.')); } })));
+}
+window.__galaxie = { paquet: paquetGalaxie, garder: galaxie.garder, chiffrer: galaxie.chiffrer, dechiffrer: galaxie.dechiffrer, ouvrirRecue, demanderMotDePasse };
 function ligneMenu({ nom, sous, d, chev, ic }, action) {
   const b = document.createElement('button'); b.type = 'button'; b.className = 'm-ligne';
   if (ic && PICTOS[ic]) { const i = document.createElement('span'); i.className = 'm-ic'; i.innerHTML = PICTOS[ic]; b.append(i); }
@@ -1562,7 +1647,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => g.action()) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: true }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v82'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v83'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
