@@ -1118,3 +1118,11 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .lec-entree hr { border: 0; border-top: 1px solid var(--line); width: 40%; margin: 1.7em auto; }
 .carte hr { margin: 1.3em 0; }
 .editeur > hr { margin: 1.3em 0; }
+
+/* v70 : « Un coup de pouce ? » (lien discret au-dessus du texte, note vide seulement) et ses modèles */
+#ecrire .coup-pouce { display: block; margin: 10px 0 -4px auto; padding: 4px 0; font: italic 13px var(--serif); color: var(--soft); background: none; border: 0; }
+#ecrire .coup-pouce[hidden] { display: none; }
+.pouce-boite { z-index: 40; }
+.pouce-liste { display: flex; flex-direction: column; gap: 8px; }
+.pouce-liste button { text-align: left; padding: 12px 14px; font: 1rem var(--serif); background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 0; }
+.pouce-liste button:active { background: rgba(255,255,255,.1); }

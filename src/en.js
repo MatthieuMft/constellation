@@ -1246,6 +1246,8 @@ export const EN = {
 "Personnaliser, trouvailles, amitié": "Customise, finds, friendship",
 "Te voilà, {p} !": "There you are, {p}!",
 "Te voilà !": "There you are!",
+"Un coup de pouce ?": "Need a nudge?",
+"Un début de page, pour ne pas partir de rien.": "A start of a page, so you don’t begin from nothing.",
 };
 
 export const EN_HTML = {

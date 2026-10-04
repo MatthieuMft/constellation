@@ -18,7 +18,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1307441"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1323857"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -123,6 +123,7 @@
         <button type="button" role="menuitem" data-bloc="fichier"><b class="bm-i"><svg viewBox="0 0 20 20"><path d="M5 2.5h7l3 3v12H5z M12 2.5v3h3"/></svg></b>Fichier</button>
       </div></div>
     <textarea id="texte" hidden rows="5" maxlength="4000" placeholder="Écrivez. Ce texte ne quitte jamais cet appareil."></textarea>
+    <button id="coup-pouce" class="lien coup-pouce" type="button" hidden>Un coup de pouce ?</button>
     <div id="editeur" class="editeur" aria-label="Texte de l’entrée"></div>
     <div id="zone-media">
       <div class="rang-media"><button id="dicter" type="button" aria-pressed="false" title="Dicter à la voix" class="ajout-media">Dicter</button><button type="button" id="choisir-media" class="ajout-media">+ Ajouter un média</button></div>

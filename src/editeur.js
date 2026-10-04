@@ -158,5 +158,5 @@ export function creerEditeur(div, ta) {
   }
 
   depuisTexte(ta.value); surligner();
-  return { element: div, poser, motCourant, completer, retirerSlash, surSlash: f => { surSlash = f; }, actualiser: () => { depuisTexte(ta.value); surligner(); } };
+  return { element: div, finir: () => { div.focus(); placerFin(); }, poser, motCourant, completer, retirerSlash, surSlash: f => { surSlash = f; }, actualiser: () => { depuisTexte(ta.value); surligner(); } };
 }

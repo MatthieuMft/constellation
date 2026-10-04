@@ -45,6 +45,7 @@ import { creerAmitie, PALIERS } from './amitie.js';
 import { son } from './son.js';
 import { monterActivites, ACTIVITES, nomActivite } from './activites.js';
 import { creerVoyage } from './voyage.js';
+import { modeles, questionPour } from './questions.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
@@ -582,7 +583,7 @@ function boucle() {
   evenements.update(dt, R.animation, T().clair, { cometes: etoiles.actif('cometes'), aurores: etoiles.actif('aurores'), dessins: etoiles.actif('dessins'), baleine: etoiles.actif('baleine'), satellites: etoiles.actif('satellites'), planetes: nbPlanetes > 0, lune: etoiles.actif('lune') });
   lucioles.maj(dt, R.animation, etoiles.actif('lucioles') ? 1 : 0); decor.update(dt, R.animation); scenes.update(dt);
   { const h = new Date().getHours(), occupe = palette.ouverte() || ["fiche", "reglages", "analyse", "nommer", "perso", "dateqc", "menu", "boutique"].some(id => !$(id).hidden), ecr = !$("ecrire").hidden, ta = $("texte");
-    if (ecr && (ta.value.length === 0 ? now - ouvertureEcriture > 10000 : now - dernierTexte > 12000)) creature.patiente();
+    if (ecr) poserQuestion(now, ta);
     creature.update(dt, t, { W: innerWidth, H: hauteurVue || innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, rectTitre: ecr ? $('ecrire-titre').getBoundingClientRect() : null, rectMedia: ecr ? $('choisir-media').getBoundingClientRect() : null, basVue: window.visualViewport ? visualViewport.offsetTop + visualViewport.height : innerHeight, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
       selection: selection && visuelsVisibles.get(selection) ? visuelsVisibles.get(selection).groupe.position : null,
       guide: parcours && parcours.courbe ? parcours.courbe.getPoint(Math.min(1, parcours.t + .07)) : null,
@@ -951,7 +952,7 @@ function ouvrirEcrire({ jour = null, item = null } = {}) {
   $('valider').textContent = item ? t('Enregistrer') : t('Cristalliser');
   $('ecrire').hidden = false; document.body.classList.add('ecriture'); accueil.surPlus();
   $('editeur').dataset.ph = $('texte').placeholder;   // v22 : pas de clavier d'office, on touche le texte pour écrire
-  ouvertureEcriture = performance.now(); dernierTexte = ouvertureEcriture;
+  ouvertureEcriture = performance.now(); dernierTexte = ouvertureEcriture; questionsPosees = 0; derniereQuestion = 0; majCoupPouce();
 }
 const CLE_BROUILLON = 'constellation.brouillon';
 function garderBrouillon() {
@@ -971,6 +972,36 @@ $('ecrire-fermer').addEventListener('click', fermerEcrire);
 // Le texte reste du texte : « # », « ## », « ### » pour les titres, « - » pour les puces, « 1. » pour les listes numérotées.
 // v22 : l'éditeur affiche les blocs tels quels (editeur.js) ; le texte enregistré garde « # », « - », « 1. », « > », « --- ».
 const ed = creerEditeur($('editeur'), $('texte'));
+// v70 : « Un coup de pouce ? » (Matthieu). Un lien discret, seulement quand la note du jour est vide : jamais de modèle imposé.
+// Au plus 3 modèles qui suivent l'humeur choisie juste avant, plus « Lettre à moi dans un an ».
+function majCoupPouce() { const b = $('coup-pouce'); b.textContent = t('Un coup de pouce ?'); b.hidden = !!edition || $('humeurs').hidden || $('texte').value.trim().length > 0; }
+$('texte').addEventListener('input', majCoupPouce);
+$('coup-pouce').addEventListener('click', () => {
+  document.querySelector('.boite-figure')?.remove();
+  const b = document.createElement('div'); b.className = 'pouce-boite boite-figure'; b.setAttribute('role', 'dialog');
+  const lab = document.createElement('p'); lab.className = 'lab'; lab.textContent = t('Un coup de pouce ?');
+  const sous = document.createElement('p'); sous.className = 'sous'; sous.textContent = t('Un début de page, pour ne pas partir de rien.');
+  const liste = document.createElement('div'); liste.className = 'pouce-liste';
+  for (const m of modeles(humeur)) {
+    const x = document.createElement('button'); x.type = 'button'; x.textContent = m.nom;
+    x.addEventListener('click', () => { b.remove(); const ta = $('texte'), v = ta.value.trim(); ta.value = v ? v + '\n\n' + m.texte : m.texte; ta.dispatchEvent(new Event('input')); ed.finir(); });
+    liste.append(x);
+  }
+  const non = document.createElement('button'); non.type = 'button'; non.className = 'lien annuler'; non.textContent = t('Annuler'); non.addEventListener('click', () => b.remove());
+  b.append(lab, sous, liste, non); document.body.append(b);
+});
+// v70 : les 100 questions. Quand on bloque une vingtaine de secondes, la lueur en pose une, choisie d'après ce qui est écrit (ou l'humeur).
+// Une question toutes les 45 s au plus, 3 au plus par ouverture de l'éditeur. Toucher la bulle la met dans la note, en citation.
+let questionsPosees = 0, derniereQuestion = 0;
+function poserQuestion(now, ta) {
+  if (document.querySelector('.boite-figure')) return;
+  const bloque = ta.value.trim().length === 0 ? now - ouvertureEcriture > 20000 : now - dernierTexte > 20000;
+  if (!bloque || questionsPosees >= 3 || now - derniereQuestion < 45000 || now - dernierTexte < 20000) return;
+  if ($('humeurs').hidden) { creature.patiente(); return; }                      // une tâche ou une légende : juste « Prends ton temps. »
+  const q = questionPour(ta.value, humeur);
+  const ok = creature.dire(q, { duree: 12000, priorite: true, clic: () => { const v = ta.value.replace(/\s+$/, ''); ta.value = (v ? v + '\n\n' : '') + '> ' + q + '\n'; ta.dispatchEvent(new Event('input')); ed.finir(); } });
+  if (ok !== false) { questionsPosees++; derniereQuestion = now; }
+}
 const ENTREES = { image: ['fichiers-media', 'image/*'], video: ['fichiers-media', 'video/*'], fichier: ['fichiers-autres', ''] };
 let blocSlash = false;                                                   // menu ouvert par un « / » tapé, à effacer quand on choisit
 function ouvrirBlocs(slash = false) { blocSlash = slash; $('bloc-menu').hidden = false; $('bloc-plus').setAttribute('aria-expanded', 'true'); requestAnimationFrame(() => $('bloc-menu').scrollIntoView({ block: 'nearest', behavior: 'smooth' })); }
@@ -1455,7 +1486,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v69'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v70'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
