@@ -1497,7 +1497,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v71'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v72'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1862,6 +1862,57 @@ function ouvrirBilan(s) {
   const ok = document.createElement('button'); ok.type = 'button'; ok.className = f && !f.nom ? 'lien' : ''; ok.textContent = t('Semaine suivante'); ok.addEventListener('click', fermer); rang.append(ok);
   boite.append(h, sous, ...(lg ? [lg] : []), pastilles, ...lignes, rang); document.body.append(boite);
 }
+// ───────────── v72 : le bilan du mois ─────────────
+// À la première ouverture après la fin d'un mois : jours écrits (une pastille par jour, à la couleur de son humeur), mots, humeur la plus présente,
+// personne et lieu les plus cités, note la plus longue (sa date, jamais son texte), constellations nées. Tout est recalculé depuis le journal ;
+// seuls les mois déjà montrés sont gardés (constellation.bilanmois.v1).
+const CLE_BILAN_MOIS = 'constellation.bilanmois.v1';
+const moisPrecedent = () => { const d = dateDeCle(aujourdhui()); return cleJour(new Date(d.getFullYear(), d.getMonth() - 1, 15)).slice(0, 7); };
+function bilanMois(m) {
+  const [y, mo] = m.split('-').map(Number), n = new Date(y, mo, 0).getDate(), cles = Array.from({ length: n }, (_, i) => m + '-' + String(i + 1).padStart(2, '0'));
+  const ecrits = new Set(joursEcrits()), humeurs = {};
+  const jrs = cles.map(cle => { const h = ecrits.has(cle) ? humeurDuJour(cle, items, meta) : null; if (h) humeurs[h.mood] = (humeurs[h.mood] || 0) + 1; return { cle, ecrit: ecrits.has(cle), couleur: h ? (h.color || cm(h.mood)) : null }; });
+  const nbMots = i => ((i.titre || '') + ' ' + (i.texte || '')).replace(/<[^>]+>/g, ' ').split(/\s+/).filter(Boolean).length;
+  const notes = items.filter(i => !i.sample && i.jour && i.jour.startsWith(m + '-'));
+  const longue = notes.filter(i => i.type === 'journal').reduce((a, i) => !a || nbMots(i) > nbMots(a) ? i : a, null);
+  const top = k => [...personnes.index().values()].filter(o => o.k === k).map(o => ({ k: o.k, nom: o.nom, j: [...o.jours].filter(x => x.startsWith(m + '-')).length })).filter(o => o.j > 1).sort((a, b) => b.j - a.j)[0] || null;
+  const semaines = [...new Set(cles.map(c => figures.semaineDe(c)))].filter(s => figures.figure(s));
+  const humeur = Object.entries(humeurs).sort((a, b) => b[1] - a[1])[0];
+  return { m, jrs, n: jrs.filter(j => j.ecrit).length, mots: notes.reduce((a, i) => a + nbMots(i), 0), humeur: humeur ? humeur[0] : null, personne: top('@'), lieu: top('#'),
+    longue: longue && nbMots(longue) > 0 ? { jour: longue.jour, mots: nbMots(longue) } : null, constellations: semaines.map(s => { const f = figures.figure(s); return f.nom || figures.vraiNom(s); }) };
+}
+function ouvrirBilanMois(m) {
+  document.querySelector('.boite-figure')?.remove();
+  const B = bilanMois(m), nomMois = dateDeCle(m + '-15').toLocaleDateString(LOC, { month: 'long', year: 'numeric' });
+  const el = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const boite = el('div', 'boite-figure bilan bilan-mois'); boite.setAttribute('role', 'dialog');
+  const grille = el('div', 'bilan-mois-jours'), decal = (dateDeCle(m + '-01').getDay() + 6) % 7;
+  for (let i = 0; i < decal; i++) grille.append(el('i'));
+  for (const j of B.jrs) { const p = el('span'); p.title = libelleJour(dateDeCle(j.cle)); if (j.ecrit) { p.className = 'on'; p.style.background = j.couleur || 'var(--ink)'; } grille.append(p); }
+  const ligne = (txt, avant, clic) => { const l = el(clic ? 'button' : 'p', 'bilan-ligne' + (clic ? ' lien-ligne' : '')); if (clic) { l.type = 'button'; l.addEventListener('click', clic); } if (avant) l.append(avant); l.append(document.createTextNode(txt)); return l; };
+  const lignes = [ligne(tn(B.n, '{n} jour écrit sur {m}', '{n} jours écrits sur {m}', { m: B.jrs.length })), ligne(tn(B.mots, '{n} mot écrit', '{n} mots écrits'))];
+  if (B.humeur) { const d = el('span', 'bilan-point'); d.style.background = cm(B.humeur); lignes.push(ligne(t('Humeur la plus présente : {h}', { h: MOODS[B.humeur].label }), d)); }
+  if (B.personne) lignes.push(ligne(tn(B.personne.j, 'Le plus souvent : {p}, {n} jour', 'Le plus souvent : {p}, {n} jours', { p: '@' + B.personne.nom }), null, () => { boite.remove(); personnes.album('@', B.personne.nom); }));
+  if (B.lieu) lignes.push(ligne(tn(B.lieu.j, 'Le lieu du mois : {p}, {n} jour', 'Le lieu du mois : {p}, {n} jours', { p: '#' + B.lieu.nom }), null, () => { boite.remove(); personnes.album('#', B.lieu.nom); }));
+  if (B.longue) lignes.push(ligne(tn(B.longue.mots, 'Ta plus longue note : le {d}, {n} mot', 'Ta plus longue note : le {d}, {n} mots', { d: dateDeCle(B.longue.jour).toLocaleDateString(LOC, { day: 'numeric', month: 'long' }) }), null, () => { boite.remove(); lecture.ouvrir(B.longue.jour); }));
+  if (B.constellations.length) lignes.push(ligne(tn(B.constellations.length, '{n} constellation née : {l}', '{n} constellations nées : {l}', { l: B.constellations.join(', ') })));
+  const rang = el('div', 'rang'), relire = el('button', '', t('Relire ce mois')), ok = el('button', 'lien', t('Fermer'));
+  relire.type = ok.type = 'button'; ok.addEventListener('click', () => boite.remove());
+  relire.addEventListener('click', () => { boite.remove(); lecture.ouvrir(B.jrs.find(j => j.ecrit)?.cle || m + '-01'); });
+  rang.append(relire, ok);
+  boite.append(el('p', 'lab', t('Ton mois · {m}', { m: nomMois })), el('p', 'sous', t('Un mois de plus dans ton ciel.')), grille, ...lignes, rang);
+  document.body.append(boite);
+  creature.dire(B.n >= 20 ? t('Quel mois ! Je suis fière de toi.') : t('Un mois de plus dans ton ciel !'), { priorite: true, duree: 4200 });
+}
+function proposerBilanMois(forcer = false) {
+  if (!forcer && (!$('ecrire').hidden || !$('menu').hidden || document.querySelector('.boite-figure') || palette.ouverte() || lecture.ouvert() || personnes.ouvert())) return false;
+  const m = moisPrecedent(); let vus = [];
+  try { vus = JSON.parse(localStorage.getItem(CLE_BILAN_MOIS)) || []; } catch (e) {}
+  if (!forcer && vus.includes(m)) return false;
+  if (!joursEcrits().some(k => k.startsWith(m + '-'))) return false;
+  try { localStorage.setItem(CLE_BILAN_MOIS, JSON.stringify([...vus.filter(x => x !== m), m].slice(-24))); } catch (e) {}
+  ouvrirBilanMois(m); return true;
+}
 // pour les tests (non affiché) : la semaine en cours se termine tout de suite
 function simulerFinSemaine() { const s = figures.semaineDe(aujourdhui()); figures.forcer(s); figures.annoncee(s, false); proposerFigure(true); }
 
@@ -1870,6 +1921,7 @@ function apresIntro() {
   marquerAccueil(); creature.montrer();
   setTimeout(() => { const l = datesDuJour(aujourdhui()); if (l.length) creature.fete(t('Aujourd’hui : {titre} !', { titre: l[0].titre })); }, 2500);
   setTimeout(() => { if ($('ecrire').hidden && !proposerAnniversaire()) proposerFigure(); }, 5000);
+  setTimeout(() => proposerBilanMois(), 26000); setTimeout(() => proposerBilanMois(), 52000);   // v72 : le bilan du mois, quand rien d'autre n'est ouvert
   setTimeout(() => { if ($('ecrire').hidden) proposerFigure(); }, 16000);
   if (new URLSearchParams(location.search).get('ecrire') === '1') setTimeout(() => ouvrirEcrire(), 1200);       // depuis la notification du rappel
 }
@@ -2032,5 +2084,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };
