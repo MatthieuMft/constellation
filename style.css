@@ -1223,3 +1223,13 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 /* Suivi : même en-tête que les autres espaces */
 #analyse .p-titre { font-size: 1.3rem; }
 #analyse .ana-mois { margin-top: 4px; }
+
+/* ── v79 : essayer avant d'acheter ── */
+#boutique { display: flex; flex-direction: column; }
+.bq-art.essai { border-color: #ffd98a; opacity: 1; box-shadow: 0 0 0 1px #ffd98a, 0 0 18px color-mix(in srgb, #ffd98a 35%, transparent); }
+.bq-essai { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 16px calc(10px + var(--safe-b, 0px)); border-top: 1px solid #ffd98a66; background: var(--panel-s); }
+.bq-essai[hidden] { display: none; }
+.bq-essai-t { flex: 1; min-width: 0; font: 400 16px var(--serif); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bq-essai-t small { display: block; font: 10px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: #ffd98a; }
+.bq-essai button { flex: none; min-height: 44px; padding: 0 14px; white-space: nowrap; }
+.bq-essai-oui:disabled { opacity: .55; cursor: default; }

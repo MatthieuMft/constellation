@@ -82,9 +82,12 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
   function vignette(toile, o = {}) { fileV.push(toile, o); }
   // aperçu (v21) : on la fait tourner en glissant le doigt (ou la souris) dessus ; chaque canvas garde son angle de vue
   const vues = new WeakMap();
-  function apercu(toile, o = {}) {
-    let v = vues.get(toile); if (!v) { v = { az: -.35, el: .12 }; vues.set(toile, v); tournable(toile, v); }
-    vignette(toile, { perso: perso(), etoiles: yeuxEt === 1, S: toile.width, az: v.az, el: v.el, ...o });
+  // v79 : o (facultatif) est gardé pour ce canvas : l'essai de la boutique reste quand on la fait tourner ; {} revient à la lueur telle qu'elle est
+  function apercu(toile, o) {
+    let v = vues.get(toile); if (!v) { v = { az: -.35, el: .12, o: {} }; vues.set(toile, v); tournable(toile, v); }
+    if (o) v.o = o;
+    const { patch, ...reste } = v.o;
+    vignette(toile, { perso: patch ? { ...perso(), ...patch } : perso(), etoiles: yeuxEt === 1, S: toile.width, az: v.az, el: v.el, ...reste });
   }
   function tournable(toile, v) {
     let x0 = null, y0 = 0, attente = false; toile.style.touchAction = 'none'; toile.style.cursor = 'grab';

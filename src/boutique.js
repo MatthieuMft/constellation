@@ -425,8 +425,38 @@ export function monterBoutique(zone, ctx) {
   const apercu = el('canvas', { width: '480', height: '480', 'aria-hidden': 'true' }), boiteApercu = el('div', { class: 'bq-apercu' }, apercu);
   const ciel = el('canvas', { width: '720', height: '440', 'aria-hidden': 'true' }), boiteCiel = el('div', { class: 'bq-apercu apercu-ciel' }, ciel);
   corps.before(boiteApercu, boiteCiel); if (ctx.apercuCiel) ctx.apercuCiel(ciel);
-  const majApercu = () => { const on = onglet === 'lueur' && !!ctx.apercu; boiteApercu.hidden = !on; boiteCiel.hidden = on || !ctx.apercuCiel; zone.classList.add('plein'); if (on) ctx.apercu(apercu); };
+  const majApercu = () => { const on = onglet === 'lueur' && !!ctx.apercu; boiteApercu.hidden = !on; boiteCiel.hidden = on || !ctx.apercuCiel; zone.classList.add('plein'); if (on) ctx.apercu(apercu, essaiLueur()); };
   let onglet = 'lueur', minuteur = 0;
+  // v79 : essayer avant d'acheter (Matthieu). Toucher un objet pas encore à toi l'essaie, même trop cher : la lueur le porte dans l'aperçu,
+  // ou le ciel l'allume pour de vrai (ctx.essayer). Une barre en bas propose de l'acheter. Fermer, changer d'onglet ou toucher un autre objet arrête l'essai.
+  let essai = null;
+  const barre = el('div', { class: 'bq-essai', hidden: true }); zone.append(barre);
+  function essaiLueur() {
+    if (!essai || essai.cat !== 'lueur') return {};
+    const v = [].concat(LUEUR3D[essai.cle] || {})[0], { perso, cx, cy, R, ...autre } = v, reste = v.apres ? { cx, cy, R, ...autre } : autre;   // un effet dessiné garde son cadrage
+    return { ...reste, patch: { ...(perso || {}), ...(essai.champ ? E.patch(essai, true) : {}) }, ...(essai.cle === 'yeux-etoiles' ? { etoiles: true } : {}) };
+  }
+  function essayer(a) {
+    essai = a; if (ctx.essayer) ctx.essayer(a && a.cat === 'ciel' ? a : null);
+    corps.querySelectorAll('.bq-art.essai').forEach(n => n.classList.remove('essai'));
+    if (a) { const n = corps.querySelector(`[data-cle="${a.cle}"]`); if (n) n.classList.add('essai'); }
+    majBarre(); majApercu();
+  }
+  function majBarre() {
+    barre.hidden = !essai; if (!essai) return;
+    const manque = essai.prix - E.solde();
+    barre.replaceChildren(
+      el('span', { class: 'bq-essai-t' }, el('small', {}, t('À l’essai')), essai.nom),
+      el('button', { type: 'button', class: 'bq-essai-non', 'aria-label': t('Arrêter l’essai'), onclick: () => essayer(null) }, t('Retirer')),
+      manque > 0 ? el('button', { type: 'button', class: 'bq-essai-oui', disabled: true }, t('Il te manque ✦{n}', { n: manque }))
+        : el('button', { type: 'button', class: 'bq-essai-oui plein', onclick: () => acheter(essai) }, t('Acheter ✦{n}', { n: essai.prix })));
+  }
+  function acheter(a) {
+    essai = null; if (ctx.essayer) ctx.essayer(null); barre.hidden = true;
+    if (!E.acheter(a.cle)) { dire(t('Encore ✦{n} à gagner en écrivant.', { n: a.prix - E.solde() })); rendre(true); return; }
+    if (a.type === 'choix' || a.source === 'perso' && a.type === 'interrupteur') equiper(a, true);
+    signaler(a); if (ctx.surAchat) ctx.surAchat(a.cle); rendre(true); briller(a.cle, false);
+  }
   const toiles = {};                                   // une vignette n'est dessinée qu'une fois
   const toile = a => toiles[a.cle] || (toiles[a.cle] = (() => { const c = el('canvas', { width: '160', height: '160', 'aria-hidden': 'true' }), v3 = ctx.vignette3D && LUEUR3D[a.cle];
     if (a.groupe === 'planetes' && ctx.vignettePlanete) { const x = c.getContext('2d'); x.fillStyle = '#05060f'; x.fillRect(0, 0, 160, 160); ctx.vignettePlanete(c, a.cle); }
@@ -445,11 +475,8 @@ export function monterBoutique(zone, ctx) {
       if (E.solde() < a.prix) { dire(t('Encore ✦{n} à gagner en écrivant.', { n: a.prix - E.solde() })); return; }
       const non = ctx.nouvellePlanete && ctx.nouvellePlanete(a); if (non) dire(non); else rendre(true); return;
     }
-    if (!E.possede(a.cle)) {
-      if (!E.acheter(a.cle)) { dire(t('Encore ✦{n} à gagner en écrivant.', { n: a.prix - E.solde() })); return; }
-      if (a.type === 'choix' || a.source === 'perso' && a.type === 'interrupteur') equiper(a, true);
-      signaler(a); if (ctx.surAchat) ctx.surAchat(a.cle); rendre(true); briller(a.cle, false); return;
-    }
+    if (!E.possede(a.cle)) { essayer(essai && essai.cle === a.cle ? null : a); return; }   // v79 : on essaie d'abord ; on achète depuis la barre
+    if (essai) essayer(null);
     if (a.type === 'choix') equiper(a, !equipe(a));
     else if (a.type === 'interrupteur') { const v = E.basculer(a.cle); if (a.source === 'perso') equiper(a, v); }
     else { if (ctx.ouvrirReglage) ctx.ouvrirReglage(a); return; }
@@ -459,7 +486,7 @@ export function monterBoutique(zone, ctx) {
     const pris = E.possede(a.cle);
     let ligne, cls = 'bq-art', presse = null;
     if (a.type === 'nouvelle') { ligne = '+ ✦ ' + a.prix; if (E.solde() < a.prix) cls += ' cher'; }
-    else if (!pris) { ligne = '✦ ' + a.prix; if (E.solde() < a.prix) cls += ' cher'; }
+    else if (!pris) { ligne = '✦ ' + a.prix; if (E.solde() < a.prix) cls += ' cher'; if (essai && essai.cle === a.cle) cls += ' essai'; }
     else if (a.type === 'choix') { presse = equipe(a); ligne = presse ? (a.cat === 'lueur' ? t('Porté') : t('Choisi')) : t('À toi'); cls += ' pris' + (presse ? ' on' : ''); }
     else if (a.type === 'interrupteur') { presse = E.actif(a.cle); ligne = presse ? t('Allumé') : t('Éteint'); cls += ' pris' + (presse ? ' on' : ''); }
     else { ligne = t('Débloqué') + ' ›'; cls += ' pris regle'; }
@@ -479,7 +506,7 @@ export function monterBoutique(zone, ctx) {
     // v38 : une rangée de rubriques en haut, pour aller droit à Forme, Expressions, Accessoires…
     if (rubriques.length > 3) blocs.unshift(el('nav', { class: 'bq-rubriques', 'aria-label': t('Rubriques') },
       rubriques.map(([g, s]) => el('button', { type: 'button', onclick: () => { const r = s.getBoundingClientRect(), rc = corps.getBoundingClientRect(); corps.scrollTo({ top: corps.scrollTop + r.top - rc.top - 52, behavior: 'smooth' }); } }, g.nom))));
-    blocs.push(el('p', { class: 'bq-note' }, t('Tu gagnes ✦10 chaque jour où tu écris. Touche un objet à toi pour le porter, l’allumer ou le régler.')));
+    blocs.push(el('p', { class: 'bq-note' }, t('Tu gagnes ✦10 chaque jour où tu écris. Touche un objet pour l’essayer, même s’il est trop cher. Touche un objet à toi pour le porter, l’allumer ou le régler.')));
     return blocs;
   }
   function rendre(garder = false) {
@@ -494,7 +521,7 @@ export function monterBoutique(zone, ctx) {
     if (defiler) { const r = n.getBoundingClientRect(), rc = corps.getBoundingClientRect(); corps.scrollTop += (r.top - rc.top) - (rc.height - r.height) / 2; }
     n.classList.remove('eclat'); void n.offsetWidth; n.classList.add('eclat'); setTimeout(() => n.classList.remove('eclat'), 1900);
   }
-  function choisirOnglet(o) { onglet = o === 'ciel' ? 'ciel' : 'lueur'; rendre(); }
+  function choisirOnglet(o) { if (essai) essayer(null); onglet = o === 'ciel' ? 'ciel' : 'lueur'; rendre(); }
   onglets.forEach(b => b.addEventListener('click', () => choisirOnglet(b.dataset.onglet)));
   const liste = onglets[0] && onglets[0].parentElement;
   if (liste) liste.addEventListener('keydown', e => {
@@ -506,10 +533,10 @@ export function monterBoutique(zone, ctx) {
   function ouvrir(o = 'lueur', cle) {
     const a = cle && E.article(cle);
     onglet = a ? a.cat : o === 'ciel' ? 'ciel' : 'lueur';
-    zone.hidden = false; rendre();
+    if (essai) essayer(null); zone.hidden = false; rendre();
     if (a) requestAnimationFrame(() => briller(a.cle));
   }
-  const fermer = () => { zone.hidden = true; mot.classList.remove('on'); };
+  const fermer = () => { if (essai) essayer(null); zone.hidden = true; mot.classList.remove('on'); };
   zone.querySelector('#bq-fermer').addEventListener('click', fermer);
-  return { ouvrir, fermer, rendre: () => rendre(true), ouvert: () => !zone.hidden };
+  return { ouvrir, fermer, rendre: () => rendre(true), ouvert: () => !zone.hidden, essayer: k => { const a = E.article(k); if (a && !E.possede(k)) essayer(a); }, enEssai: () => essai && essai.cle };
 }

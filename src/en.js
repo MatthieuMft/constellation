@@ -617,7 +617,7 @@ export const EN = {
 "Débloqué": "Unlocked",
 "Pour commencer": "To begin",
 "Un premier cadeau, pour ✦10.": "A first gift, for ✦10.",
-"Tu gagnes ✦10 chaque jour où tu écris. Touche un objet à toi pour le porter, l’allumer ou le régler.": "You earn ✦10 every day you write. Tap an item you own to wear it, switch it on or adjust it.",
+"Tu gagnes ✦10 chaque jour où tu écris. Touche un objet pour l’essayer, même s’il est trop cher. Touche un objet à toi pour le porter, l’allumer ou le régler.": "You earn ✦10 every day you write. Tap an item to try it, even if it costs too much. Tap an item you own to wear it, switch it on or adjust it.",
 "Ciel {nom}, à débloquer pour ✦{prix}": "{nom} sky, unlock it for ✦{prix}",
 "Lumière": "Light",
 "Tout est débloqué pour ton ciel.": "Everything is unlocked for your sky.",
@@ -1307,7 +1307,12 @@ export const EN = {
 "Livre du mois": "Book of the month",
 "Derniers jours": "Latest days",
 "Voir dans le ciel": "See in the sky",
-"Chercher un mot, un @prénom, un #lieu": "Search a word, a @name, a #place"
+"Chercher un mot, un @prénom, un #lieu": "Search a word, a @name, a #place",
+// v79 : essayer avant d'acheter
+"À l’essai": "Trying on",
+"Arrêter l’essai": "Stop trying",
+"Il te manque ✦{n}": "You need ✦{n} more",
+"Acheter ✦{n}": "Buy ✦{n}"
 };
 
 export const EN_HTML = {
