@@ -1147,3 +1147,9 @@ button.qui-ou { border: 0; padding: 2px 0; min-height: 0; background: none; font
 .cherche-ecran .album-tete input { flex: 1; min-width: 0; font: 1.15rem var(--serif); padding: 10px 12px; }
 .cherche-ecran mark { background: color-mix(in srgb, #ffd98a 32%, transparent); color: inherit; padding: 0 1px; }
 .cherche-ecran .album-ciel { margin-bottom: 12px; }
+
+/* v75 : ce qui te fait du bien, en phrases */
+.act-liens.bienfaits li { grid-template-columns: 22px 1fr; align-items: start; line-height: 1.45; padding: 9px 0; }
+.act-liens.bienfaits .act-i { font: 15px var(--serif); font-style: normal; color: var(--soft); text-align: center; }
+.act-liens.bienfaits li.moins span { color: var(--soft); }
+.texte-ana + .ana-titre { margin-top: 26px; }

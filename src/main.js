@@ -49,6 +49,7 @@ import { modeles, questionPour } from './questions.js';
 import { legende } from './legendes.js';
 import * as etAlors from './etalors.js';
 import { creerRecherche } from './recherche.js';
+import * as bienfaits from './bienfaits.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
 import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
@@ -1383,11 +1384,22 @@ function animerParcours(dt) {
 $('par-stop').addEventListener('click', arreterParcours);
 
 // ───────────── Analyses : météo intérieure, bilan du mois ─────────────
+// v75 : pour « ce qui me fait du bien » : chaque jour écrit, son humeur, ses activités, ses @personnes et #lieux
+function donneesBienfaits() {
+  return joursHumeur.filter(j => !j.sample).map(j => ({ cle: j.id, mood: j.mood, activites: (meta[j.id] || {}).activites || [],
+    noms: [...new Map(items.filter(i => i.jour === j.id && !i.sample).flatMap(i => personnes.nomsDe(i)).map(([k, n]) => [(k + n).toLowerCase(), k + n])).values()] }));
+}
+function proposerBienfait() {
+  if (!$('ecrire').hidden || !$('menu').hidden || !$('analyse').hidden || document.querySelector('.boite-figure') || palette.ouverte() || lecture.ouvert() || personnes.ouvert() || recherche.ouvert()) return false;
+  const f = bienfaits.aDire(bienfaits.bienfaits(donneesBienfaits())); if (!f) return false;
+  if (creature.dire(bienfaits.phraseLueur(f), { priorite: true, duree: 8000, clic: () => { ouvrirAnalyse('meteo'); setTimeout(() => document.querySelector('#ana-corps .bienfaits')?.scrollIntoView({ block: 'center', behavior: 'smooth' }), 400); } }) === false) return false;
+  bienfaits.marquer(f); return true;
+}
 const rendreAnalyse = monterAnalyse($('analyse'), {
   entries: () => joursHumeur, couleur: k => cm(k), encre: () => T().ui.ink,
   survoler: (ids, titre) => { $('analyse').hidden = true; parcourir(ids, titre); },
   ouvrirJour: cle => choisir(cle), ecrire: () => ouvrirEcrire(),
-  activites: () => joursHumeur.filter(j => !j.sample).map(j => ({ cle: j.id, mood: j.mood, activites: (meta[j.id] || {}).activites || [] })),   // v48
+  activites: () => donneesBienfaits(),   // v48, v75 : avec les @personnes et #lieux du jour
 });
 $('btn-analyse').addEventListener('click', () => { const z = $('analyse'); z.hidden = !z.hidden; if (!z.hidden) { $('reglages').hidden = true; rendreAnalyse(); } });
 $('btn-reglages').addEventListener('click', () => { if (!$('reglages').hidden) $('analyse').hidden = true; });
@@ -1465,7 +1477,7 @@ function lignesMenu() {
       { ic: 'noms', nom: t(noms ? 'Masquer les noms des mois et des années' : 'Afficher les noms des mois et des années'), action: () => $('btn-noms').click() },
     ] },
     { ic: 'boutique', titre: t('Boutique'), sous: t('Des objets pour ta lueur et ton ciel'), d: '✦ ' + etoiles.solde(), action: () => ouvrirBoutique() },
-    { ic: 'suivi', titre: t('Suivi'), sous: t('Tes humeurs sur 30 jours et le résumé du mois'), action: () => ouvrirAnalyse('meteo') },
+    { ic: 'suivi', titre: t('Suivi'), sous: t('Tes humeurs, ce qui te fait du bien, le mois'), action: () => ouvrirAnalyse('meteo') },
     { ic: 'reglages', titre: t('Réglages'), sous: t('Rappel, son, verrou, tes données'), action: () => ouvrirReglages() },
   ];
 }
@@ -1500,7 +1512,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v74'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v75'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1924,7 +1936,8 @@ function apresIntro() {
   marquerAccueil(); creature.montrer();
   setTimeout(() => { const l = datesDuJour(aujourdhui()); if (l.length) creature.fete(t('Aujourd’hui : {titre} !', { titre: l[0].titre })); }, 2500);
   setTimeout(() => { if ($('ecrire').hidden && !proposerAnniversaire()) proposerFigure(); }, 5000);
-  setTimeout(() => proposerBilanMois(), 26000); setTimeout(() => proposerBilanMois(), 52000);   // v72 : le bilan du mois, quand rien d'autre n'est ouvert
+  setTimeout(() => proposerBilanMois(), 26000); setTimeout(() => proposerBilanMois(), 52000);
+  setTimeout(() => proposerBienfait(), 40000);   // v75 : un lien net entre ce que tu vis et ton humeur, dit une fois (au plus tous les 3 jours)   // v72 : le bilan du mois, quand rien d'autre n'est ouvert
   setTimeout(() => { if ($('ecrire').hidden) proposerFigure(); }, 16000);
   if (new URLSearchParams(location.search).get('ecrire') === '1') setTimeout(() => ouvrirEcrire(), 1200);       // depuis la notification du rappel
 }
@@ -2087,5 +2100,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { recherche, proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { proposerBienfait, donneesBienfaits, recherche, proposerBilanMois, montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };
