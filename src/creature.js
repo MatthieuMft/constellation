@@ -289,8 +289,9 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       case 'guide': cible.copy(ctx.guide).addScaledVector(_u, 2.2); raideur = 3.2; vmax = 22; break;
       case 'ecrit': {                                                    // elle flotte juste au-dessus de l'éditeur, devant le texte
         const r = ctx.rectEcriture; if (!r) { ndcPoint(0, .2, d * .7, cible); break; }
-        const m = ctx.rectMedia, yMedia = m && m.height ? m.top + m.height / 2 : r.bottom - 120, yClavier = Math.min(r.bottom, ctx.basVue || r.bottom) - 74;   // v33 : à hauteur de « Ajouter un média » ; clavier ouvert, elle suit le bas visible de l'écran (et redescend en douceur quand le clavier tombe)
-        const [nx, ny] = ndcDe(r.right - 46 + Math.sin(etatT * .5) * 6, (ctx.clavier ? yClavier : yMedia) + Math.sin(etatT * .8) * 4);   // v32 : calée en petit en bas à droite de la page (on écrit en haut à gauche), elle regarde le texte   // v27 : la page couvre l'écran : elle flotte dans la fenêtre sur le ciel, en haut
+        // v61 : en haut, juste à droite du titre « Journal » : elle te regarde taper, et sa bulle s'ouvre sous elle (Matthieu ne la voyait plus en bas, clavier ouvert)
+        const tt = ctx.rectTitre, tx = tt && tt.width ? Math.min(tt.right + 46, r.right - 90) : r.left + r.width * .45, ty = tt && tt.height ? tt.top + tt.height / 2 + 2 : r.top + 30;
+        const [nx, ny] = ndcDe(tx + Math.sin(etatT * .5) * 5, ty + Math.sin(etatT * .8) * 3);
         ndcPoint(nx, ny, d * .62, cible); raideur = 2.8; vmax = 18; break; }
       case 'curieux': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(clamp(nx + .12, -.82, .82), clamp(ny + .16, -.7, .75), d * .9, cible); raideur = 1.5; vmax = 9; break; }
       case 'calin': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(nx, ny, d * .7, cible); raideur = 4; vmax = 20; break; }
@@ -682,6 +683,7 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
     },
     prendre, tirer, lacher, tenue: () => !!tenue,
     chercher(item, clic, surRetour) { if (!montree || !sauve.visible) return false; chercheDemande = { item, clic, surRetour }; return true; },   // v59
+    ecran: () => proj(corps.position),   // v61 : où elle est à l'écran (pour l'animation de la trouvaille)
     occupee: () => etat === 'cherche' || !!chercheDemande || !!cache || !!tenue,
     consoler(texte) { if (!montree || etat === 'dort' || cache) return; base(); const p = ndcPoint(0, -.42, distRef() * .75, new THREE.Vector3());   // v59 : un jour triste, elle vient tout près
       forceCible = { point: p, vite: true, jusqu: performance.now() + 4000, surArrivee: () => { calin = true; setTimeout(() => { calin = false; }, 4500); dire(texte, { priorite: true, duree: 4800 }); } }; },
@@ -713,6 +715,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
       if (/[\p{L}\d)»”"][.!?…]\s?$/u.test(texte.slice(0, curseur)) && hoche <= 0) hoche = .7;   // une phrase finie : elle hoche la tête
       const m = texte.slice(0, curseur).match(/([\p{L}’'-]{3,})[\s.,;:!?…]$/u);                    // un mot vient d'être terminé
       if (m) { const mot = norm(m[1]); const r = LEXIQUE.find(x => x.re.test(mot)); if (r) { fx = { expr: r.expr, jusqu: performance.now() + 2800 }; if (bullesEcriture < 4 && dire(choix(r.dit), { duree: 2800 })) bullesEcriture++; } }
+      const n = texte.slice(0, curseur).match(/(?:^|[^\p{L}\d_])([@#])([\p{L}\d_-]{2,30})[\s.,;:!?…]$/u);   // v61 : un @nom ou un #lieu vient d'être écrit
+      if (n && bullesEcriture < 6 && dire(n[1] === '@' ? choix([tr('Ah, {n} !', { n: n[2] }), tr('Coucou {n} !', { n: n[2] }), tr('Je me souviendrai de {n}.', { n: n[2] })]) : choix([tr('{n}, je note.', { n: n[2] }), tr('J’aimerais voir {n}.', { n: n[2] }), tr('Ah, à {n} ?', { n: n[2] })]), { duree: 2600 })) { bullesEcriture++; hoche = .7; }
       if (texte.length > 240 && !longDit) { longDit = true; dire('Tu as beaucoup à dire…', { duree: 3000 }); }
     },
     allerVers(point, duree = 6500, surArrivee = null) { forceCible = { point: point.clone(), jusqu: performance.now() + duree, surArrivee }; },   // v49 : l'étape du voyage

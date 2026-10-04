@@ -18,7 +18,7 @@
 <body>
 <canvas id="scene" aria-label="Votre journal : une étoile par jour"></canvas>
 <noscript><p style="position:fixed;inset:0;display:grid;place-items:center;padding:24px;text-align:center">Constellation a besoin de JavaScript et de WebGL pour afficher le ciel.</p></noscript>
-<div id="chargement" data-app="app.js" data-taille="1259074"><span>Constellation</span>
+<div id="chargement" data-app="app.js" data-taille="1263587"><span>Constellation</span>
   <div id="langue-choix" hidden role="dialog" aria-label="Langue · Language">
     <p>Langue · Language</p>
     <div class="rang"><button type="button" data-langue="fr">Français</button><button type="button" data-langue="en">English</button></div>
@@ -270,6 +270,7 @@
 
 
 <div id="barre-clavier" class="barre-clavier" role="toolbar" aria-label="Mise en forme" hidden>
+  <div id="bc-noms" class="bc-noms" aria-label="Suggestions" hidden></div>
   <button type="button" data-barre="menu" aria-label="Ajouter un bloc"><svg viewBox="0 0 20 20"><path d="M10 3v14M3 10h14"/></svg></button>
   <button type="button" data-barre="dicter" class="bc-micro" aria-label="Dicter à la voix" aria-pressed="false"><svg viewBox="0 0 20 20"><rect x="7.5" y="2.5" width="5" height="9"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0M10 15v3"/></svg></button>
   <button type="button" data-bloc="1" aria-label="Titre 1">H1</button>

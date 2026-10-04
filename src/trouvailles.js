@@ -192,5 +192,33 @@ export function creerTrouvailles() {
     const der = etat.liste.length ? par(etat.liste.at(-1).id) : null; montrer(choix ? par(choix) || der : der);
     const t0 = performance.now(); const tour = () => { if (!boite) return; if (actif) try { dessiner(actif, grand, (performance.now() - t0) / 1000 * .7); } catch (e) {} anim = requestAnimationFrame(tour); }; tour();
   }
-  return { tirer, ouvrir, fermer, ouverte: () => !!boite, nombre: () => etat.liste.length, total: CATALOGUE.length, dernier: () => etat.dernier, nomDe: id => { const i = par(id); return i ? t(i.nom) : ''; } };
+  // v61 : le retour de la lueur se voit. L'objet sort d'elle en grandissant, tourne en 3D au-dessus d'elle avec des éclats
+  // et son nom, puis file se ranger dans le menu (là où sont ses trouvailles). Le toucher ouvre la vitrine.
+  let pop = null;
+  function celebrer(id, depuis, vers, clic) {
+    const it = par(id); if (!it) return;
+    if (pop) pop.remove();
+    const e = document.createElement('div'); e.className = 'trouvaille-pop'; pop = e;
+    const halo = document.createElement('i'); halo.className = 'tp-halo';
+    const toile = document.createElement('canvas'); toile.width = toile.height = 192;
+    const nom = document.createElement('b'); nom.textContent = t(it.nom);
+    const eclats = Array.from({ length: 10 }, (_, i) => { const x = document.createElement('i'); x.className = 'tp-eclat'; x.style.setProperty('--a', (i * 36) + 'deg'); x.style.setProperty('--d', (i * .07) + 's'); return x; });
+    e.append(halo, ...eclats, toile, nom); document.body.append(e);
+    e.addEventListener('click', () => { fin(); clic && clic(); });
+    const t0 = performance.now(), H = 5.2, haut = Math.max(90, Math.min(depuis.y - 70, 150));
+    const ease = x => 1 - Math.pow(1 - Math.min(1, Math.max(0, x)), 3);
+    function fin() { if (pop === e) pop = null; e.remove(); }
+    (function tour() {
+      if (!e.isConnected) return;
+      const k = (performance.now() - t0) / 1000;
+      if (k > H) { fin(); const b = document.getElementById('btn-palette'); if (b) { b.classList.remove('recoit'); void b.offsetWidth; b.classList.add('recoit'); } return; }
+      let x = depuis.x, y = depuis.y - haut * ease(k / .7), sc = .15 + .85 * ease(k / .6), op = Math.min(1, k * 4);
+      if (k > 4.3) { const f = ease((k - 4.3) / .9); x += (vers.x - x) * f; y += (vers.y - y) * f; sc *= 1 - .8 * f; op = 1 - f * .6; e.classList.add('part'); }
+      y += k > .7 && k < 4.3 ? Math.sin((k - .7) * 2.2) * 5 : 0;
+      e.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${sc})`; e.style.opacity = op;
+      try { dessiner(it, toile, k * 1.6); } catch (err) {}
+      requestAnimationFrame(tour);
+    })();
+  }
+  return { tirer, ouvrir, fermer, celebrer, ouverte: () => !!boite, nombre: () => etat.liste.length, total: CATALOGUE.length, dernier: () => etat.dernier, nomDe: id => { const i = par(id); return i ? t(i.nom) : ''; } };
 }

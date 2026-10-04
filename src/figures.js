@@ -66,6 +66,16 @@ export function semaineDe(cle) {
   const [y, m, d] = cle.split('-').map(Number), w = Math.floor((d - 1 + ((new Date(y, m - 1, 1).getDay() + 6) % 7)) / 7);
   return `${y}-${String(m).padStart(2, '0')}-s${w}`;
 }
+// v61 : étoiles offertes. Une semaine coupée au changement de mois (ex. jeudi 1er → dimanche 4) n'a pas ses 7 jours,
+// et les jours d'avant ta toute première note n'ont jamais pu être écrits : ces étoiles-là sont offertes, déjà allumées
+// d'un blanc doux, pour que la constellation puisse toujours être complétée avec les jours vraiment possibles.
+export function offerts(cleS, premier = null) {
+  const [y, m] = cleS.split('-'), n = new Date(+y, +m, 0).getDate(), dans = new Map(), r = new Set();
+  for (let d = 1; d <= n; d++) { const k = `${y}-${m}-${String(d).padStart(2, '0')}`; if (semaineDe(k) === cleS) dans.set(jourDeSemaine(k), k); }
+  for (let i = 0; i < 7; i++) { const k = dans.get(i); if (!k || (premier && k < premier)) r.add(i); }
+  return r;
+}
+export const BLANC_OFFERT = '#e6e9ff';
 const jourDeSemaine = cle => { const [y, m, d] = cle.split('-').map(Number); return (new Date(y, m - 1, d).getDay() + 6) % 7; };   // lundi = 0
 export const constellationDe = cleS => { const [y, m, sw] = cleS.split('-'), i = (+y * 12 + +m) * 5 + +sw.slice(1); return CONSTELLATIONS[((i % 7) + 7) % 7]; };   // semaines voisines : constellations différentes
 
@@ -92,22 +102,23 @@ export function creerFigures({ scene, camera, melange, centreSemaine, texHalo, e
     memo = { jours, clair, encre }; vider(); parSemaine = new Map();
     pale.set(clair ? encre : '#c9d3ff');
     for (const j of jours) { const s = semaineDe(j.cle); if (!parSemaine.has(s)) parSemaine.set(s, []); parSemaine.get(s).push(j); }
-    const { noms } = lire();
+    const { noms } = lire(), premier = jours.reduce((a, j) => !a || j.cle < a ? j.cle : a, null);
     for (const [s, liste] of parSemaine) {
       if (!forcees.has(s) && !finie(s)) continue;                               // pendant la semaine : rien, juste tes étoiles
-      const C = constellationDe(s), allume = new Map(liste.map(j => [jourDeSemaine(j.cle), j.couleur])), g = new THREE.Group(); racine.add(g);
+      const C = constellationDe(s), allume = new Map(liste.map(j => [jourDeSemaine(j.cle), j.couleur])), offre = offerts(s, premier), g = new THREE.Group(); racine.add(g);
       const c = centreSemaine(s), P = pointsSemaine(s, c);
       // traits : pâles partout, lumineux entre deux étoiles allumées
       const faibles = [], forts = [];
+      for (const i of offre) if (!allume.has(i)) allume.set(i, null);
       for (const [a, b] of C.t) (allume.has(a) && allume.has(b) ? forts : faibles).push(P[a].x, P[a].y, P[a].z, P[b].x, P[b].y, P[b].z);
       const traits = (pos, op) => { if (!pos.length) return null; const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         const l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: pale, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: melange() })); l.userData = { op, trait: true }; l.renderOrder = 2; l.frustumCulled = false; g.add(l); return l; };
       traits(faibles, clair ? .3 : .26); traits(forts, clair ? .85 : .8);
       // étoiles : petites et pâles, ou allumées à la couleur du jour
       C.e.forEach(([, , eclat], i) => {
-        const on = allume.has(i), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: on ? new THREE.Color(allume.get(i)).lerp(new THREE.Color('#ffffff'), .35) : pale, transparent: true, depthTest: false, depthWrite: false, blending: melange(), opacity: 0, fog: false }));
-        const taille = (on ? 2.6 : 1.1) * (.7 + .5 * eclat);
-        sp.position.copy(P[i]); sp.scale.setScalar(taille); sp.userData = { op: on ? 1 : (clair ? .55 : .5), on, ph: i * 1.7, i, taille }; sp.renderOrder = 3; g.add(sp);
+        const on = allume.has(i), cj = allume.get(i), sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: on ? (cj ? new THREE.Color(cj).lerp(new THREE.Color('#ffffff'), .35) : new THREE.Color(clair ? encre : BLANC_OFFERT)) : pale, transparent: true, depthTest: false, depthWrite: false, blending: melange(), opacity: 0, fog: false }));
+        const taille = (on ? (cj ? 2.6 : 1.9) : 1.1) * (.7 + .5 * eclat);
+        sp.position.copy(P[i]); sp.scale.setScalar(taille); sp.userData = { op: on ? (cj ? 1 : .75) : (clair ? .55 : .5), on, ph: i * 1.7, i, taille }; sp.renderOrder = 3; g.add(sp);
       });
       // noms au-dessus : le tien (s'il existe), et le vrai nom en petit
       const haut = c.clone().addScaledVector(HAUT, FORME * .5 + 4.5);

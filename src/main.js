@@ -583,7 +583,7 @@ function boucle() {
   lucioles.maj(dt, R.animation, etoiles.actif('lucioles') ? 1 : 0); decor.update(dt, R.animation); scenes.update(dt);
   { const h = new Date().getHours(), occupe = palette.ouverte() || ["fiche", "reglages", "analyse", "nommer", "perso", "dateqc", "menu", "boutique"].some(id => !$(id).hidden), ecr = !$("ecrire").hidden, ta = $("texte");
     if (ecr && (ta.value.length === 0 ? now - ouvertureEcriture > 10000 : now - dernierTexte > 12000)) creature.patiente();
-    creature.update(dt, t, { W: innerWidth, H: innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, rectMedia: ecr ? $('choisir-media').getBoundingClientRect() : null, basVue: window.visualViewport ? visualViewport.offsetTop + visualViewport.height : innerHeight, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
+    creature.update(dt, t, { W: innerWidth, H: innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, rectTitre: ecr ? $('ecrire-titre').getBoundingClientRect() : null, rectMedia: ecr ? $('choisir-media').getBoundingClientRect() : null, basVue: window.visualViewport ? visualViewport.offsetTop + visualViewport.height : innerHeight, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
       selection: selection && visuelsVisibles.get(selection) ? visuelsVisibles.get(selection).groupe.position : null,
       guide: parcours && parcours.courbe ? parcours.courbe.getPoint(Math.min(1, parcours.t + .07)) : null,
       curseur: pointeur, curseurActif: now - pointeur.t < 12000 && !intro.actif, curseurImmobile: (now - pointeur.t) / 1000, inactivite: (now - dernierGeste) / 1000,
@@ -908,12 +908,26 @@ function configurer(type) {
   majSugg();
 }
 // étiquettes déjà utilisées : un appui pour les réinsérer dans le texte
-function majSugg() {
-  const z = $('tags-sugg'), liste = [...personnes.index().values()].sort((a, b) => b.jours.size - a.jours.size).slice(0, 8).map(o => o.k + o.nom);   // v60 : @personnes et #lieux déjà utilisés
-  z.replaceChildren(); z.hidden = !liste.length || typeEdite() === 'media';
-  liste.forEach(x => { const b = document.createElement('button'); b.type = 'button'; b.className = 'tag'; b.textContent = x; b.addEventListener('click', () => {
-    const ta = $('texte'), v = ta.value, avant = v && !/\s$/.test(v) ? ' ' : ''; ta.value = v + avant + x + ' '; ta.dispatchEvent(new Event('input')); ta.focus(); }); z.append(b); });
+function majSugg() { $('tags-sugg').hidden = true; nomsConnus = null; }   // v61 : plus de rangée sous l'éditeur (Matthieu : de la place perdue), la suggestion passe dans la barre du clavier
+
+// v61 : autocomplétion de @personne et #lieu dans la barre au-dessus du clavier. On tape @L : Léa, Lucas… apparaissent ; un appui complète le mot.
+let nomsConnus = null;
+const sansAccent = x => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function majCompletion() {
+  const z = $('bc-noms'); if (!z) return;
+  const m = !$('ecrire').hidden && document.activeElement === $('editeur') ? ed.motCourant() : null;
+  let l = [];
+  if (m) {
+    if (!nomsConnus) nomsConnus = [...personnes.index().values()].sort((a, b) => b.jours.size - a.jours.size).map(o => o.k + o.nom);
+    const d = sansAccent(m.debut), deja = new Set();
+    l = nomsConnus.filter(x => x[0] === m.k && sansAccent(x.slice(1)).startsWith(d) && !deja.has(x.toLowerCase()) && deja.add(x.toLowerCase())).slice(0, 8);
+    if (l.length === 1 && l[0].slice(1) === m.debut) l = [];                    // déjà écrit en entier : la barre normale revient
+  }
+  const cle = l.join('|'); if (z.dataset.cle === cle) return; z.dataset.cle = cle;
+  z.replaceChildren(...l.map(x => { const b = document.createElement('button'); b.type = 'button'; b.className = 'bc-nom ' + (x[0] === '@' ? 'personne' : 'lieu'); b.dataset.nom = x; b.textContent = x; return b; }));
+  z.hidden = !l.length; barre.classList.toggle('suggere', !!l.length); if (l.length) barre.scrollLeft = 0;
 }
+document.addEventListener('selectionchange', () => { if (!$('ecrire').hidden) majCompletion(); });
 
 function jourParDefaut() {
   const a = aujourdhui();
@@ -998,13 +1012,14 @@ suivreClavier();
 barre.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });   // garder le clavier ouvert
 barre.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.nom) { ed.completer(b.dataset.nom); majCompletion(); return; }   // v61
   if (b.dataset.barre === 'menu') { $('bloc-menu').hidden ? ouvrirBlocs() : fermerBlocs(); return; }
   if (b.dataset.barre === 'dicter') { $('dicter').click(); return; }
   if (b.dataset.barre === 'valider') { $('editeur').blur(); montrerBarre(false); $('valider').click(); return; }   // v32 : cristalliser depuis la barre, clavier ouvert       // v26 : la dictée aussi dans la barre du clavier
   if (b.dataset.barre === 'fermer') { fermerBlocs(); $('texte').blur(); montrerBarre(false); return; }
   poserBloc(b.dataset.bloc);
 });
-$('texte').addEventListener('input', () => { $('nbc').textContent = $('texte').value.length + ' / 4000'; });
+$('texte').addEventListener('input', () => { $('nbc').textContent = $('texte').value.length + ' / 4000'; majCompletion(); });
 
 // photos et vidéos en attente d'enregistrement (glissées dans l'entrée du jour)
 function rendreVignettes() {
@@ -1436,7 +1451,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => rendreMenu(g)) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: !!g.items }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v60'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v61'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1584,19 +1599,26 @@ function questionDuSoir(d = new Date()) {
 }
 
 // ───────────── v59 : trouvailles, amitié, ciel selon l'humeur du jour ─────────────
+let trouvailleAMontrer = null;
+const estLibre = () => !intro.actif && !accueil.actif() && $('ecrire').hidden && $('fiche').hidden && $('menu').hidden && boutique && !boutique.ouvert() && !voyageEnCours && !trouvailles.ouverte();
+function montrerTrouvaille(it) {                                   // v61 : l'objet sort de la lueur, tourne au-dessus d'elle, puis file se ranger dans le menu
+  const d = creature.ecran(), b = $('btn-palette').getBoundingClientRect(), depuis = d && d.vu ? d : { x: innerWidth / 2, y: innerHeight * .62 };
+  son.fete(); trouvailles.celebrer(it.id, depuis, { x: b.left + b.width / 2, y: b.top + b.height / 2 }, () => trouvailles.ouvrir(it.id));
+}
 let accueilAmi = false, humK = 0, humLueur = 1, humT = 0, trouvailleApres = performance.now() + 30000, consoleDite = null;
 const humeurAujourdhui = () => { const j = joursHumeur.find(x => x.id === aujourdhui() && !x.sample); return j ? j.mood : null; };
 function humeurCiel(dt, now) {
   if ((humT -= dt) <= 0) {
     humT = 2; const m = humeurAujourdhui(); humK = m === 'joie' || m === 'elan' ? 1 : m === 'calme' ? 2 : m === 'melancolie' || m === 'tempete' ? 3 : 0;
-    const libre = !intro.actif && !accueil.actif() && $('ecrire').hidden && $('fiche').hidden && $('menu').hidden && boutique && !boutique.ouvert() && !voyageEnCours && !trouvailles.ouverte();
+    const libre = estLibre();
     if (humK === 3 && consoleDite !== aujourdhui() && libre && now > trouvailleApres - 5000) {   // un jour triste : elle vient tout près, une fois par jour
       consoleDite = aujourdhui(); creature.consoler(t(m === 'tempete' ? 'Je reste là pendant l’orage.' : 'Je reste près de toi, d’accord ?'));
     }
+    if (trouvailleAMontrer && libre) { const it = trouvailleAMontrer; trouvailleAMontrer = null; montrerTrouvaille(it); }   // v61 : jamais ratée, même si on a ouvert l'éditeur entre-temps
     // une trouvaille : seulement les jours écrits, une seule par jour, quand rien d'autre ne se passe
     if (libre && now > trouvailleApres && trouvailles.dernier() !== aujourdhui() && jours.some(j => j.id === aujourdhui() && !j.sample) && !creature.occupee() && creature.etat().etat !== 'dort') {
       const it = trouvailles.tirer(aujourdhui());
-      if (it) { trouvailleApres = now + 60000; creature.chercher({ ...it, nom: t(it.nom) }, () => trouvailles.ouvrir(it.id), () => { son.fete(); setTimeout(() => toast(t('Nouvelle trouvaille : {o}', { o: t(it.nom) }), 3200), 900); }); }
+      if (it) { trouvailleApres = now + 60000; creature.chercher({ ...it, nom: t(it.nom) }, () => trouvailles.ouvrir(it.id), () => { if (estLibre()) montrerTrouvaille(it); else trouvailleAMontrer = it; }); }
       else trouvailleApres = now + 600000;
     }
     if (libre) { const np = amitie.nouveauPalier(); if (np) palierAtteint(np); }
@@ -1936,5 +1958,5 @@ function choisirLangue() {
   boucle(); window.__charge_fini = true; etape(100, 'prêt');
   const ch = $('chargement'); if (ch) { ch.classList.add('fin'); setTimeout(() => ch.remove(), 1200); }
 })();
-window.__constellation = { personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
+window.__constellation = { montrerTrouvaille: id => montrerTrouvaille({ id }), personnes, lecture, trouvailles, amitie, demanderPrenom: () => demanderPrenom(), ouvrirAmitie: () => ouvrirAmitie(), jouerCache: () => jouerCache(), cacheJeu: () => cacheJeu, simulerFinSemaine: () => simulerFinSemaine(), voyage, ouvrirCarnet: () => ouvrirCarnet(), simulerJour: () => simulerJour(), figures, ouvrirNommerFigure, proposerFigure, ouvrirAnalyse: o => ouvrirAnalyse(o), ouvrirReglages: () => ouvrirReglages(), etoiles, boutique, accueil, nEcrits: () => nEcrits, items: () => items, jours: () => jours, visuels, visuelsVisibles, camera, controls, composer, renderer, scene, dof, bloom, U, parcourir, arreterParcours, meteores, evenements, scenes, lucioles, creature, monde, PL, decor, cielUI: () => cielUI,
   niveau: () => niveau, foyer: () => foyer, voler, choisir, recalculer, meta: () => meta, ouvrirPerso, ouvrirCielPerso };

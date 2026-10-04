@@ -13,7 +13,7 @@
 //   voyage.jourEcrit(cle) -> null | { etape, texte, point, fin, objet }   (null : jour déjà compté)
 //   voyage.etat() · voyage.voyageCourant() · voyage.point(i) · voyage.jouer(i)   (rejoue la scène de l'étape i, 1…7)
 import * as THREE from 'three';
-import { pointsSemaine, semaineDe } from './figures.js';
+import { pointsSemaine, semaineDe, offerts, BLANC_OFFERT } from './figures.js';
 
 const CLE = 'constellation.voyage.v1';
 export const VOYAGES = [
@@ -45,13 +45,14 @@ export function creerVoyage({ scene, camera, melange, texHalo, posJour, particul
   function reconstruire(o = {}) {
     if ('clair' in o) clair = o.clair; if (o.encre) encre = o.encre; vider();
     const cleS = semaineDe(aujourdhui()); if (estFinie(cleS)) return;         // semaine finie : c'est la constellation qu'on voit
-    const P = pointsDe(cleS), ecrits = new Set(joursEcrits().filter(k => semaineDe(k) === cleS).map(jds)), g = new THREE.Group(); groupe.add(g);
+    const tous = joursEcrits(), premier = tous.length ? tous.reduce((a, k) => k < a ? k : a) : aujourdhui();
+    const P = pointsDe(cleS), ecrits = new Set(tous.filter(k => semaineDe(k) === cleS).map(jds)), offre = offerts(cleS, premier), g = new THREE.Group(); groupe.add(g);
     const courbe = new THREE.CatmullRomCurve3(P, false, 'centripetal', .4), geo = new THREE.BufferGeometry().setFromPoints(courbe.getPoints(160));
     const ligne = new THREE.Line(geo, new THREE.LineDashedMaterial({ color: clair ? encre : '#e8dcc0', dashSize: .45, gapSize: .55, transparent: true, opacity: 0, depthTest: false, depthWrite: false, blending: melange() }));
     ligne.computeLineDistances(); ligne.renderOrder = 2; ligne.frustumCulled = false; g.add(ligne);
     const bornes = P.map((p, i) => {
-      const fait = ecrits.has(i), s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: fait ? or : (clair ? new THREE.Color(encre) : new THREE.Color('#c9d3ff')), transparent: true, depthTest: false, depthWrite: false, blending: melange(), opacity: 0 }));
-      s.position.copy(p); s.scale.setScalar(fait ? 1.5 : .9); s.userData = { fait, base: fait ? .8 : .35 }; s.renderOrder = 3; g.add(s); return s;
+      const don = !ecrits.has(i) && offre.has(i), fait = ecrits.has(i) || don, s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: don ? new THREE.Color(clair ? encre : BLANC_OFFERT) : fait ? or : (clair ? new THREE.Color(encre) : new THREE.Color('#c9d3ff')), transparent: true, depthTest: false, depthWrite: false, blending: melange(), opacity: 0 }));
+      s.position.copy(p); s.scale.setScalar(don ? 1.15 : fait ? 1.5 : .9); s.userData = { fait, base: don ? .55 : fait ? .8 : .35 }; s.renderOrder = 3; g.add(s); return s;
     });
     objets = { g, ligne, bornes, c: centreSemaine(cleS) };
   }
