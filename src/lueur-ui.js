@@ -25,11 +25,15 @@ export function monterPerso({ zone, corps, creature, nommer, objets }) {
   const apercu = el('canvas', { width: '480', height: '480', 'aria-hidden': 'true' });
   corps.before(el('div', { class: 'bq-apercu' }, apercu)); zone.classList.add('plein');
   const majApercu = () => { if (creature.apercu) creature.apercu(apercu); };
-  function pastilles(valeur, surChoix, { suit = false, defaut = false } = {}) {
+  // v81 (Matthieu : « ça saute sur mobile ») : choisir une couleur ne reconstruit plus la page, on met juste à jour la rangée et l'aperçu
+  function pastilles(valeur, choisir, { suit = false, defaut = false } = {}) {
     const ligne = el('div', { class: 'pastilles' });
+    const marquer = v => ligne.querySelectorAll('[aria-pressed]').forEach(n => n.setAttribute('aria-pressed', String(
+      n.classList.contains('libre') ? !!v && !COULEURS.includes(v) : n.classList.contains('suit') || n.classList.contains('pastille-texte') ? v == null : n.dataset.c === v)));
+    const surChoix = v => { choisir(v); marquer(v); majApercu(); };
     if (suit) ligne.append(el('button', { class: 'pastille suit', 'aria-pressed': valeur == null, title: t('Suit mon humeur'), 'aria-label': t('Couleur : suit mon humeur'), onclick: () => surChoix(null) }));
-    COULEURS.forEach(c => { const b = el('button', { class: 'pastille', 'aria-pressed': valeur === c, 'aria-label': t('Couleur') + ' ' + c, onclick: () => surChoix(c) }); b.style.setProperty('--c', c); ligne.append(b); });
-    const libre = el('input', { type: 'color', value: valeur && !COULEURS.includes(valeur) ? valeur : '#c9a0ff', 'aria-label': t('Couleur libre'), onchange: e => surChoix(e.target.value) });
+    COULEURS.forEach(c => { const b = el('button', { class: 'pastille', 'data-c': c, 'aria-pressed': valeur === c, 'aria-label': t('Couleur') + ' ' + c, onclick: () => surChoix(c) }); b.style.setProperty('--c', c); ligne.append(b); });
+    const libre = el('input', { type: 'color', value: valeur && !COULEURS.includes(valeur) ? valeur : '#c9a0ff', 'aria-label': t('Couleur libre'), oninput: e => surChoix(e.target.value), onchange: e => surChoix(e.target.value) });
     ligne.append(el('label', { class: 'pastille libre', 'aria-pressed': !!valeur && !COULEURS.includes(valeur), title: t('Couleur libre') }, libre));
     if (defaut) ligne.append(el('button', { class: 'pastille-texte', 'aria-pressed': valeur == null, onclick: () => surChoix(null) }, t('Par défaut')));
     return ligne;
@@ -38,7 +42,7 @@ export function monterPerso({ zone, corps, creature, nommer, objets }) {
   const bloc = (cle, titre, ...contenu) => el('div', { class: 'perso-bloc', 'data-cle': cle }, titre && el('p', { class: 'reg-sous' }, titre), ...contenu);
 
   function rendre() {
-    const P = creature.perso(), maj = patch => { creature.personnaliser(patch); rendre(); };
+    const P = creature.perso(), maj = patch => { creature.personnaliser(patch); rendre(); }, teinte = patch => creature.personnaliser(patch, true);
     const a = k => E.possede(k), art = k => E.article(k), nomG = k => E.groupe('lueur', k).nom;
     // une rangée de choix exclusifs : le défaut gratuit d'abord, puis ce qui a été acheté
     const rangee = champ => {
@@ -63,28 +67,29 @@ export function monterPerso({ zone, corps, creature, nommer, objets }) {
     const ajoute = (cle, ...contenu) => { const c = contenu.filter(Boolean); if (c.length) sections.push(groupe(nomG(cle), cle, ...c)); return c.length; };
     // v38 : mêmes rubriques que la boutique (Forme, Matière, Expressions, Accessoires, Habits, Membres, Effets, Finitions)
     ajoute('forme', rangee('forme'));
-    ajoute('matiere', rangee('texture'), a('couleur-lueur') && bloc('couleur-lueur', art('couleur-lueur').nom, pastilles(P.couleur, c => maj({ couleur: c }), { suit: true })));
+    ajoute('matiere', rangee('texture'), a('couleur-lueur') && bloc('couleur-lueur', art('couleur-lueur').nom, pastilles(P.couleur, c => teinte({ couleur: c }), { suit: true })));
     ajoute('expression', rangee('expression'));
     const nAcc = ajoute('accessoire', rangee('acc')), nHabit = ajoute('habit', rangee('habit'));
     // la couleur de l'accessoire vaut aussi pour l'habit : seulement si l'un des deux est porté
     if (a('couleur-accessoire') && (nAcc || nHabit) && (P.acc || P.habit))
-      sections[sections.length - 1].append(bloc('couleur-accessoire', art('couleur-accessoire').nom, pastilles(P.accCouleur, c => maj({ accCouleur: c || '#ffd98a' }))));
+      sections[sections.length - 1].append(bloc('couleur-accessoire', art('couleur-accessoire').nom, pastilles(P.accCouleur, c => teinte({ accCouleur: c || '#ffd98a' }))));
     ajoute('membres', bascules(['membres-ailes', 'membres-bras', 'membres-pieds']));
     ajoute('effets', bascules(['orbite', 'traine', 'poudre', 'etincelles']));
     ajoute('finitions',
-      a('couleur-yeux') && bloc('couleur-yeux', art('couleur-yeux').nom, pastilles(P.yeuxCouleur, c => maj({ yeuxCouleur: c }), { defaut: true })),
+      a('couleur-yeux') && bloc('couleur-yeux', art('couleur-yeux').nom, pastilles(P.yeuxCouleur, c => teinte({ yeuxCouleur: c }), { defaut: true })),
       a('taille-yeux') && bloc('taille-yeux', art('taille-yeux').nom, el('div', { class: 'choix' }, YEUX.map(([n, v]) => el('button', { 'aria-pressed': Math.abs(P.yeux - v) < .05, onclick: () => maj({ yeux: v }) }, n)))),
       a('yeux-etoiles') && bloc('yeux-etoiles', null, bascules(['yeux-etoiles'])),
       a('taille-lueur') && bloc('taille-lueur', art('taille-lueur').nom, taille()));
 
     majApercu();
-    const reste = E.restants('lueur');
+    const reste = E.restants('lueur'), y = corps.scrollTop;
     corps.replaceChildren(
       ...(sections.length ? sections : [el('p', { class: 'reg-note' }, t('Tu n’as encore rien débloqué.'))]),
       el('p', { class: 'reg-note' }, reste ? tn(reste, 'Encore {n} chose à débloquer pour ta lueur dans la boutique.', 'Encore {n} choses à débloquer pour ta lueur dans la boutique.') : t('Tout est débloqué pour ta lueur.')),
       el('div', { class: 'choix' },
         el('button', { onclick: () => objets.boutique() }, t('Ouvrir la boutique')),
         el('button', { onclick: () => nommer() }, t('Changer de nom'))));
+    corps.scrollTop = y;
   }
   function briller(cle) {
     const n = cle && (corps.querySelector(`[data-cle="${cle}"]`) || corps.querySelector(`[data-groupe="${(E.article(cle) || {}).groupe}"]`)); if (!n) return;

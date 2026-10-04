@@ -94,7 +94,7 @@ export function monterCielPerso({ zone, corps, ctx }) {
       el('button', { 'aria-pressed': !!p.allumee, onclick: () => changer({ allumee: !p.allumee }, !p.allumee) }, p.allumee ? t('Visible') : t('Rangée')))));
     if (pasAchete) blocs.push(el('p', { class: 'reg-note' }, tn(pasAchete, 'Encore {n} chose à débloquer pour tes planètes.', 'Encore {n} choses à débloquer pour tes planètes.')),
       el('div', { class: 'choix' }, el('button', { onclick: () => ctx.boutique('pl-nuages') }, t('Ouvrir la boutique'))));
-    corps.replaceChildren(...blocs);
+    { const y = corps.scrollTop; corps.replaceChildren(...blocs); corps.scrollTop = y; }   // v81 : la page ne saute plus
   }
 
   function rendre() {
@@ -159,7 +159,7 @@ export function monterCielPerso({ zone, corps, ctx }) {
     const reste = E.restants('ciel');
     blocs.push(el('p', { class: 'reg-note' }, reste ? tn(reste, 'Encore {n} chose à débloquer pour ton ciel dans la boutique.', 'Encore {n} choses à débloquer pour ton ciel dans la boutique.') : t('Tout est débloqué pour ton ciel.')),
       el('div', { class: 'choix' }, el('button', { onclick: () => ctx.boutique() }, t('Ouvrir la boutique'))));
-    corps.replaceChildren(...blocs);
+    { const y = corps.scrollTop; corps.replaceChildren(...blocs); corps.scrollTop = y; }   // v81 : la page ne saute plus
   }
   function briller(cle) {
     const n = cle && (corps.querySelector(`[data-cle="${cle}"]`) || corps.querySelector(`[data-groupe="${(E.article(cle) || {}).groupe || cle}"]`)); if (!n) return;
