@@ -1444,5 +1444,11 @@ export const EN = {
 
 export const EN_HTML = {
 "aide-liste": "\n    <li><b>Pinch</b> or <b>scroll</b>: zoom from years down to a single day</li>\n    <li><b>Tap</b> a nebula or a star to dive into it</li>\n    <li><b>+</b> at the bottom: write · <b>◎</b> on the right: back to today</li>\n    <li><b>Drag</b> to rotate · <b>two fingers</b> to move</li>\n    <li><b>⋯</b>: the menu</li>\n  ",
-"aide-exemples": "This sky contains <b>example entries</b>, made up to show you what it looks like. None of it is yours: clear them whenever you like, here or later with <b>⋯</b> → <i>Settings</i>."
+"aide-exemples": "This sky contains <b>example entries</b>, made up to show you what it looks like. None of it is yours: clear them whenever you like, here or later with <b>⋯</b> → <i>Settings</i>.",
+  // v85 : le parcours guidé pour qui écrivait déjà
+  'Du nouveau dans ton univers !': 'Something new in your universe!',
+  'Je te montre, pas à pas, comment écrire ta journée et où trouver tout le reste.': 'Let me show you, step by step, how to write your day and where to find everything else.',
+  'On le fait une seule fois, avec ta vraie note du jour.': 'We only do this once, with your real note for today.',
+  'Écrivons ta journée d’aujourd’hui. Touche <b>+</b>.': 'Let’s write today. Tap <b>+</b>.',
+  'Et voilà ton étoile du jour !': 'And there’s your star of the day!',
 };

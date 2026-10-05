@@ -6,7 +6,11 @@ import { t, LANGUE, changer } from './langue.js';
 
 const CLE = 'constellation.accueil';
 export const dejaVu = () => { try { return localStorage.getItem(CLE) === '1'; } catch (e) { return true; } };
-export const marquerVu = () => { try { localStorage.setItem(CLE, '1'); } catch (e) {} };
+// v85 (Matthieu : « forcer pour tous au moins une fois le nouveau tuto ») : une clé à part pour le parcours guidé.
+// Il se lance une seule fois, à une ouverture où l'étoile du jour n'est pas encore écrite (voir apresIntro dans main.js).
+const CLE_PARCOURS = 'constellation.parcours.v85';
+export const parcoursVu = () => { try { return localStorage.getItem(CLE_PARCOURS) === '1'; } catch (e) { return true; } };
+export const marquerVu = () => { try { localStorage.setItem(CLE, '1'); localStorage.setItem(CLE_PARCOURS, '1'); } catch (e) {} };
 
 // ctx : { montrerLueur(), nom(), renommer(nom), ouvrirMenu(), fermerMenu(), fermerBoutique(), toast(txt), fini(),
 //         activerRappel(heure) → Promise<{ ok, message }>, peutInstaller(), installer() → Promise<bool>, astuceInstall() }
@@ -16,7 +20,7 @@ export function monterAccueil(ctx) {
   const bulle = $('ac-bulle'), proj = document.createElement('div'); proj.id = 'ac-projecteur'; proj.hidden = true; document.body.append(proj);
   const tactile = matchMedia('(pointer: coarse)').matches;
   const echap = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  let etape = -1, actif = false, passe = false, achete = false, humeurTouchee = false, minuteur = 0, rendu = '', repetition = false;   // v84 : « Revoir le parcours » = une répétition, la note d'essai n'est pas gardée
+  let etape = -1, actif = false, passe = false, achete = false, humeurTouchee = false, minuteur = 0, rendu = '', repetition = false, retour = false;   // v85 : retour = quelqu'un qui écrivait déjà avant le parcours guidé   // v84 : « Revoir le parcours » = une répétition, la note d'essai n'est pas gardée
 
   // ── ce qu'on regarde dans la page ──
   const ed = () => $('editeur');
@@ -34,11 +38,11 @@ export function monterAccueil(ctx) {
   const AIDE_OUTILS = () => t('Il y a d’autres outils : petits titres, listes, citation… Tout est expliqué dans Menu › Réglages › Guide de l’écriture.');
 
   const ETAPES = [
-    { n: 'bienvenue', carte: () => `<h2>${t('Bienvenue dans ton univers.')}</h2><p>${t('Chaque jour où tu écris devient une étoile. Tes semaines deviennent des constellations.')}</p><div class="ac-langue" role="group" aria-label="Langue · Language"><button type="button" data-langue="fr"${LANGUE === 'fr' ? ' class="actif"' : ''}>Français</button><button type="button" data-langue="en"${LANGUE === 'en' ? ' class="actif"' : ''}>English</button></div><div class="ligne"><button class="plein" data-a="suivant">${t('Commencer')}</button></div>` },
+    { n: 'bienvenue', carte: () => retour ? `<h2>${t('Du nouveau dans ton univers !')}</h2><p>${t('Je te montre, pas à pas, comment écrire ta journée et où trouver tout le reste.')}</p><p>${t('On le fait une seule fois, avec ta vraie note du jour.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>` : `<h2>${t('Bienvenue dans ton univers.')}</h2><p>${t('Chaque jour où tu écris devient une étoile. Tes semaines deviennent des constellations.')}</p><div class="ac-langue" role="group" aria-label="Langue · Language"><button type="button" data-langue="fr"${LANGUE === 'fr' ? ' class="actif"' : ''}>Français</button><button type="button" data-langue="en"${LANGUE === 'en' ? ' class="actif"' : ''}>English</button></div><div class="ligne"><button class="plein" data-a="suivant">${t('Commencer')}</button></div>` },
     { n: 'prive', carte: () => `<div class="ac-cadenas" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></div><h2>${t('Ici, tout reste à toi.')}</h2><p>${t('Ce que tu écris, tes humeurs, tes photos et ta voix restent sur ce téléphone. Pas de compte, pas de serveur.')}</p><p>${t('Personne d’autre ne peut lire ton journal. Pas même nous.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('D’accord')}</button></div>` },
-    { n: 'lueur', delai: 1700, carte: () => `<h2>${t('Salut, je suis ta lueur !')}</h2><p>${t('Je vais t’accompagner et grandir avec toi. Comment veux-tu m’appeler ?')}</p><input id="ac-nom" maxlength="18" autocomplete="off" placeholder="${t('Un prénom')}" value="${echap(ctx.nom())}" aria-label="${t('Un prénom')}"><div class="ligne"><button class="plein" data-a="nommer">${t('C’est mon nom')}</button><button data-a="suivant">${t('Plus tard')}</button></div>` },
+    { n: 'lueur', delai: 1700, carte: () => retour && ctx.nom() ? null : `<h2>${t('Salut, je suis ta lueur !')}</h2><p>${t('Je vais t’accompagner et grandir avec toi. Comment veux-tu m’appeler ?')}</p><input id="ac-nom" maxlength="18" autocomplete="off" placeholder="${t('Un prénom')}" value="${echap(ctx.nom())}" aria-label="${t('Un prénom')}"><div class="ligne"><button class="plein" data-a="nommer">${t('C’est mon nom')}</button><button data-a="suivant">${t('Plus tard')}</button></div>` },
     // ── la première note ──
-    { n: 'plus', ecrit: 1, cible: () => $('nouveau'), dire: () => [ctx.nom() ? t('Enchantée, {nom} ! Écrivons ta première journée. Touche <b>+</b>.', { nom: echap(ctx.nom()) }) : t('Écrivons ta première journée. Touche <b>+</b>.')], si: () => !$('ecrire').hidden },
+    { n: 'plus', ecrit: 1, cible: () => $('nouveau'), dire: () => [retour ? t('Écrivons ta journée d’aujourd’hui. Touche <b>+</b>.') : ctx.nom() ? t('Enchantée, {nom} ! Écrivons ta première journée. Touche <b>+</b>.', { nom: echap(ctx.nom()) }) : t('Écrivons ta première journée. Touche <b>+</b>.')], si: () => !$('ecrire').hidden },
     { n: 'humeur', ecrit: 1, cible: () => $('humeurs'), dire: () => [t('Choisis l’humeur qui colle à ta journée.'), t('Elle donnera sa couleur à ton étoile.')], si: () => humeurTouchee },   // une humeur peut être déjà cochée : on attend un vrai toucher
     { n: 'activites', ecrit: 1, attendre: 1600, cible: () => $('activites'), dire: () => [t('Coche ce que tu as fait aujourd’hui.'), t('Ça m’aidera à voir ce qui te fait du bien.')], bouton: () => t('Rien de tout ça'), si: () => passe || !!$('activites').querySelector('[aria-pressed="true"]') },
     { n: 'page', ecrit: 1, cible: () => ed(), dire: () => [t('Touche la page pour écrire.'), tactile ? t('Une barre d’outils apparaît au-dessus du clavier.') : ''], si: () => document.activeElement === ed() },
@@ -51,7 +55,7 @@ export function monterAccueil(ctx) {
     { n: 'nom', ecrit: 1, cible: () => ed(), dire: () => [t('Pour finir, ajoute quelqu’un avec un <b>@</b> devant son prénom, ou un lieu avec un <b>#</b>.'), t('Exemple : avec @Léa, au #parc. Le mot change de couleur.')], si: () => nomFini('@') || nomFini('#') },
     { n: 'cristal', ecrit: 1, cible: () => valider(), dire: () => [(nomFini('@') ? t('Doré : c’est une personne.') : t('Bleu : c’est un lieu.')) + ' ' + t('Parfait. Touche <b>Cristalliser</b> pour garder ta journée.'), tactile ? t('Clavier ouvert, c’est le ✓ de la barre.') : ''], si: () => false },
     // ── l'étoile, puis le menu ──
-    { n: 'etoile', carte: () => repetition ? `<h2>${t('Et voilà, ta journée deviendrait une étoile.')}</h2><p>${t('C’était une répétition : cette note d’essai n’a pas été gardée, ton journal n’a pas bougé.')}</p><p>${t('Sa couleur, c’est ton humeur. Chaque semaine prend la forme d’une vraie constellation.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>` : `<h2>${t('Regarde, ta première étoile !')}</h2><p>${t('Sa couleur, c’est ton humeur. Chaque jour où tu écris, j’en allume une nouvelle, et chaque semaine prend la forme d’une vraie constellation.')}</p><p>${t('Tu gagnes aussi de la poussière d’étoiles ✦. Elle s’échange dans la boutique.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>` },
+    { n: 'etoile', carte: () => retour && !repetition ? `<h2>${t('Et voilà ton étoile du jour !')}</h2><p>${t('Sa couleur, c’est ton humeur. Chaque semaine prend la forme d’une vraie constellation.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>` : repetition ? `<h2>${t('Et voilà, ta journée deviendrait une étoile.')}</h2><p>${t('C’était une répétition : cette note d’essai n’a pas été gardée, ton journal n’a pas bougé.')}</p><p>${t('Sa couleur, c’est ton humeur. Chaque semaine prend la forme d’une vraie constellation.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>` : `<h2>${t('Regarde, ta première étoile !')}</h2><p>${t('Sa couleur, c’est ton humeur. Chaque jour où tu écris, j’en allume une nouvelle, et chaque semaine prend la forme d’une vraie constellation.')}</p><p>${t('Tu gagnes aussi de la poussière d’étoiles ✦. Elle s’échange dans la boutique.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>` },
     { n: 'menu', voirMenu: 1, cible: () => $('btn-palette'), dire: () => [t('Tout le reste est rangé dans le menu. Touche <b>☰</b>.')], si: () => !$('menu').hidden },
     { n: 'suivi', voirMenu: 1, cible: () => ligne('suivi') || $('btn-palette'), dire: () => [t('Ta semaine, ton journal à relire, ta lueur, les réglages : tout est ici. Commençons par le <b>Suivi</b>.')], si: () => !$('analyse').hidden },
     { n: 'suivi-vu', voirMenu: 1, bas: 1, cible: () => $('analyse').querySelector('.p-corps') || $('analyse'), dire: () => [t('Ici, tu vois ton humeur jour après jour, et je te dis ce qui te fait du bien.'), t('Plus tu écris, plus c’est précis.')], bouton: () => t('Suivant'), si: () => passe },
@@ -128,7 +132,7 @@ export function monterAccueil(ctx) {
     setTimeout(() => { if (etape === n && actif) verifier(); }, e.attendre || 700);   // geste déjà fait en avance : on continue
   }
   function terminer() {
-    actif = false; repetition = false; marquerVu(); zone.hidden = true; bulle.hidden = true; proj.hidden = true; clearInterval(minuteur);
+    actif = false; repetition = false; retour = false; marquerVu(); zone.hidden = true; bulle.hidden = true; proj.hidden = true; clearInterval(minuteur);
     document.body.classList.remove('accueil', 'ac-ecrire', 'ac-menu', 'ac-fin'); ctx.fini();
   }
 
@@ -164,8 +168,8 @@ export function monterAccueil(ctx) {
     allerA(nom) { if (!actif) this.demarrer(); aller(idx(nom)); },   // pour les tests
     ecrireEnCours: () => actif && !!(E() && E().ecrit),
     repetition: () => actif && repetition,
-    revoir() { repetition = true; humeurTouchee = false; achete = false; this.demarrer(); },   // depuis Réglages › Aide
-    demarrer() { actif = true; zone.hidden = false; document.body.classList.add('accueil'); clearInterval(minuteur); minuteur = setInterval(verifier, 400); aller(0); },
+    revoir() { repetition = true; retour = false; humeurTouchee = false; achete = false; this.demarrer(); },   // depuis Réglages › Aide
+    demarrer(o = {}) { if (o.retour) retour = true; actif = true; zone.hidden = false; document.body.classList.add('accueil'); clearInterval(minuteur); minuteur = setInterval(verifier, 400); aller(0); },
     surPlus() {}, surHumeurNote() {}, surTexteNote() {},
     surEcrireFerme() { if (actif) setTimeout(verifier, 600); },
     // la première entrée est gardée : l'étoile naît, puis on la présente

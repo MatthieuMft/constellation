@@ -56,7 +56,7 @@ import * as etAlors from './etalors.js';
 import { creerRecherche } from './recherche.js';
 import * as bienfaits from './bienfaits.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
-import { monterAccueil, dejaVu as accueilVu, marquerVu as marquerAccueil } from './accueil.js';
+import { monterAccueil, dejaVu as accueilVu, parcoursVu, marquerVu as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
 
 traduirePage();
@@ -1650,7 +1650,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => { const b = g.semaine ? carteSemaine(() => g.action()) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: true }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); }); b.dataset.cle = g.ic || 'semaine'; L.append(b); });   // v84 : data-cle pour que le parcours guidé trouve la ligne
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v84'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v85'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -2108,7 +2108,9 @@ function proposerBilanMois(forcer = false) {
 function simulerFinSemaine() { const s = figures.semaineDe(aujourdhui()); figures.forcer(s); figures.annoncee(s, false); proposerFigure(true); }
 
 function apresIntro() {
-  if (!accueilVu() && !joursEcrits().length) { setTimeout(() => accueil.demarrer(), 700); return; }
+  const neuf = !accueilVu() && !joursEcrits().length;
+  // v85 : le parcours guidé se lance une fois pour tous, même ceux qui écrivaient déjà, mais seulement si l'étoile du jour n'est pas encore là
+  if (neuf || (!parcoursVu() && !joursEcrits().includes(aujourdhui()))) { setTimeout(() => accueil.demarrer({ retour: !neuf }), 700); return; }
   marquerAccueil(); creature.montrer();
   setTimeout(() => { const l = datesDuJour(aujourdhui()); if (l.length) creature.fete(t('Aujourd’hui : {titre} !', { titre: l[0].titre })); }, 2500);
   setTimeout(() => { if ($('ecrire').hidden && !proposerAnniversaire()) proposerFigure(); }, 5000);
