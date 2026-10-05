@@ -11,6 +11,8 @@ export const dejaVu = () => { try { return localStorage.getItem(CLE) === '1'; } 
 const CLE_PARCOURS = 'constellation.parcours.v85';
 export const parcoursVu = () => { try { return localStorage.getItem(CLE_PARCOURS) === '1'; } catch (e) { return true; } };
 export const marquerVu = () => { try { localStorage.setItem(CLE, '1'); localStorage.setItem(CLE_PARCOURS, '1'); } catch (e) {} };
+// v89 : l'ancien accueil seulement. Ouvrir l'appli quand l'étoile du jour est déjà écrite ne compte pas comme « parcours vu » (il viendra un autre jour).
+export const marquerAccueilSeul = () => { try { localStorage.setItem(CLE, '1'); } catch (e) {} };
 
 // ctx : { montrerLueur(), nom(), renommer(nom), ouvrirMenu(), fermerMenu(), fermerBoutique(), toast(txt), fini(),
 //         activerRappel(heure) → Promise<{ ok, message }>, peutInstaller(), installer() → Promise<bool>, astuceInstall() }
@@ -51,7 +53,7 @@ export function monterAccueil(ctx) {
     { n: 'humeur', ecrit: 1, cible: () => $('humeurs'), dire: () => [t('Choisis l’humeur qui colle à ta journée.'), t('Elle donnera sa couleur à ton étoile.')], si: () => humeurTouchee },   // une humeur peut être déjà cochée : on attend un vrai toucher
     { n: 'activites', ecrit: 1, attendre: 1600, cible: () => $('activites'), dire: () => [t('Coche ce que tu as fait aujourd’hui.'), t('Ça m’aidera à voir ce qui te fait du bien.')], bouton: () => t('Rien de tout ça'), si: () => passe || !!$('activites').querySelector('[aria-pressed="true"]') },
     { n: 'page', ecrit: 1, cible: () => ed(), dire: () => [t('Touche la page pour écrire.'), tactile ? t('Une barre d’outils apparaît au-dessus du clavier.') : ''], si: () => document.activeElement === ed() },
-    { n: 'h1', ecrit: 1, etat: () => barreCachee() + '|' + barreVue(), cible: () => barreBtn('1') || menuBtn('1') || ed(), dire: () => [barreCachee() ? t('Touche ta page : la barre d’outils revient au-dessus du clavier. Puis touche <b>H1</b> pour en faire le <b>titre</b>.') : tactile || barreVue() ? t('Touche <b>H1</b> : cette ligne devient le <b>titre</b> de ta note, écrit en grand.') : t('Tape <b>/</b> puis choisis <b>Titre 1</b> : cette ligne devient le <b>titre</b> de ta note.'), AIDE_OUTILS()], si: () => !!titre() },
+    { n: 'h1', ecrit: 1, entree: () => ctx.preparerTitre && ctx.preparerTitre(), etat: () => barreCachee() + '|' + barreVue(), cible: () => barreBtn('1') || menuBtn('1') || ed(), dire: () => [barreCachee() ? t('Touche ta page : la barre d’outils revient au-dessus du clavier. Puis touche <b>H1</b> pour en faire le <b>titre</b>.') : tactile || barreVue() ? t('Touche <b>H1</b> : cette ligne devient le <b>titre</b> de ta note, écrit en grand.') : t('Tape <b>/</b> puis choisis <b>Titre 1</b> : cette ligne devient le <b>titre</b> de ta note.'), AIDE_OUTILS()], si: () => !!titre() },
     { n: 'titre', ecrit: 1, etat: () => titreOk() + '|' + barreCachee() + '|' + barreVue(), cible: () => titreOk() ? (barreBtn('separateur') || menuBtn('separateur') || ed()) : ed(),
       dire: () => titreOk() ? [barreCachee() ? t('Beau titre ! Touche ta page pour faire revenir la barre d’outils, puis <b>—</b> pour le séparer du reste.') : tactile || barreVue() ? t('Beau titre ! Touche <b>—</b> pour le séparer du reste de ta note.') : t('Beau titre ! Tape <b>/</b> au début d’une ligne puis <b>Séparateur</b>.'), t('Le séparateur trace un trait fin entre deux parties.')]
         : [t('Écris ton titre : juste le nom de ta journée, en quelques mots.'), t('Par exemple : Premier jour.')], si: () => titreOk() && separe() },
@@ -83,7 +85,8 @@ export function monterAccueil(ctx) {
   function rendreBulle() {
     const e = E(); if (!e || e.carte) { bulle.hidden = true; rendu = ''; return; }
     const [txt, aide] = e.dire(), lib = e.bouton ? e.bouton() : '';
-    const html = `<span>${geste(txt)}</span>${aide ? `<small>${geste(aide)}</small>` : ''}${lib ? `<button type="button" class="plein" data-a="passe">${lib}</button>` : ''}`;
+    const feuille = !!document.querySelector('.feuille:not([hidden])');   // v89 : une page est ouverte, le « Passer » du haut est caché : on le propose dans la bulle
+    const html = `<span>${geste(txt)}</span>${aide ? `<small>${geste(aide)}</small>` : ''}${lib ? `<button type="button" class="plein" data-a="passe">${lib}</button>` : ''}${feuille ? `<a class="ac-quitter" role="button" data-a="quitter">${t('Passer le guide')}</a>` : ''}`;
     if (html !== rendu) { rendu = html; bulle.innerHTML = html; }
     bulle.classList.toggle('touchable', !!lib); bulle.hidden = false;
   }
@@ -115,7 +118,7 @@ export function monterAccueil(ctx) {
   function verifier() {
     if (!actif) return; const e = E(); if (!e || e.carte) return;
     if (e.etat) { const s = e.etat(); if (s !== e._etat) { e._etat = s; rendreBulle(); } }   // la phrase suit ce qu'on vient de faire
-    if (e.bouton) rendreBulle();
+    rendreBulle();   // v89 : la bulle suit aussi l'ouverture des pages (lien « Passer le guide »)
     if (e.si() && !e._part) { const ici = etape; e._part = true; setTimeout(() => { e._part = false; if (etape === ici && actif) aller(ici + 1); }, 450); }
     placer();
   }
@@ -160,6 +163,7 @@ export function monterAccueil(ctx) {
   bulle.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
   $('humeurs').addEventListener('click', e => { if (e.target.closest('button')) humeurTouchee = true; });
   bulle.addEventListener('click', e => { if (e.target.closest('[data-a=passe]')) { passe = true; verifier(); } });
+  bulle.addEventListener('click', e => { if (e.target.closest('[data-a=quitter]')) passer.click(); });
   passer.addEventListener('click', () => {
     if (!$('ecrire').hidden) $('ecrire-fermer').click();
     ctx.fermerBoutique(); ctx.fermerMenu(); $('analyse').hidden = true; ctx.montrerLueur(); aller(idx('fin'));

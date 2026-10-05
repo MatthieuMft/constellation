@@ -1454,4 +1454,6 @@ export const EN_HTML = {
   // v86
   'Touche ta page : la barre d’outils revient au-dessus du clavier. Puis touche <b>H1</b> pour en faire le <b>titre</b>.': 'Tap your page: the toolbar comes back above the keyboard. Then tap <b>H1</b> to make it the <b>title</b>.',
   'Beau titre ! Touche ta page pour faire revenir la barre d’outils, puis <b>—</b> pour le séparer du reste.': 'Nice title! Tap your page to bring the toolbar back, then <b>—</b> to separate it from the rest.',
+  // v89
+  'Passer le guide': 'Skip the guide',
 };

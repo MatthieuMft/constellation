@@ -1281,3 +1281,5 @@ body.accueil:has(.feuille:not([hidden])) .ac-points, body.accueil:has(.feuille:n
 
 /* v87 : sur ordinateur, le + ne se pose plus sur la page d'écriture pendant le parcours (le mobile ne change pas) */
 @media (hover: hover) and (pointer: fine) { body.accueil.ac-ecrire.ecriture footer #nouveau { opacity: 0; pointer-events: none; } }
+/* v89 : « Passer le guide » dans la bulle, seul endroit cliquable quand la bulle ne l'est pas */
+#ac-bulle .ac-quitter { display: block; width: max-content; margin: 8px 0 -4px auto; padding: 6px 0 4px 12px; font: 11px var(--mono); letter-spacing: .03em; text-decoration: underline; opacity: .6; cursor: pointer; pointer-events: auto; }

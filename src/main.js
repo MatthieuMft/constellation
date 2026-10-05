@@ -56,7 +56,7 @@ import * as etAlors from './etalors.js';
 import { creerRecherche } from './recherche.js';
 import * as bienfaits from './bienfaits.js';
 // v44 : la planète maison (v43, maison.js) est retirée du ciel à la demande de Matthieu ; le fichier reste de côté.
-import { monterAccueil, dejaVu as accueilVu, parcoursVu, marquerVu as marquerAccueil } from './accueil.js';
+import { monterAccueil, dejaVu as accueilVu, parcoursVu, marquerAccueilSeul as marquerAccueil } from './accueil.js';
 import { t, tn, LOC, LANGUE, EN, choisie as langueChoisie, memoriser as memoriserLangue, changer as changerLangue, traduirePage, DP } from './langue.js';
 
 traduirePage();
@@ -1650,7 +1650,7 @@ function rendreMenu(groupe = null) {
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
   if (!groupe) { lignesMenu().forEach(g => { const b = g.semaine ? carteSemaine(() => g.action()) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: true }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); }); b.dataset.cle = g.ic || 'semaine'; L.append(b); });   // v84 : data-cle pour que le parcours guidé trouve la ligne
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v88'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v89'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1759,6 +1759,13 @@ $('aide-ok').addEventListener('click', fermerAide);
 const accueil = monterAccueil({
   montrerLueur: () => creature.montrer(), guider: txt => creature.guider(txt), nom: () => creature.nom(), renommer: n => creature.renommer(n),
   ouvrirBoutique: () => ouvrirBoutique(null, 'lueur'), toast, fini: () => { creature.celebrer(null); },
+  // v89 : un brouillon déjà commencé reste du contenu : on ouvre une ligne vide tout en haut pour le titre, le curseur dedans
+  preparerTitre: () => {
+    const ta = $('texte'), v = ta.value; if (!v.trim() || /^# /.test(v)) return;
+    if (!v.startsWith('\n')) { ta.value = '\n' + v; ed.actualiser(); garderBrouillon(); }
+    const d = $('editeur'), b = d.firstElementChild; if (!b) return;
+    d.focus(); const r = document.createRange(); r.selectNodeContents(b); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+  },
   ouvrirMenu: () => ouvrirMenu(), fermerMenu: () => fermerMenu(), fermerBoutique: () => boutique.fermer(),   // v84 : le parcours guidé passe par le menu, le Suivi et la boutique
   activerRappel: heure => rappels.activer(true, heure, creature.nom()),
   peutInstaller: () => !!invitationInstall, astuceInstall,
@@ -2113,10 +2120,11 @@ function apresIntro() {
   if (neuf || (!parcoursVu() && !joursEcrits().includes(aujourdhui()))) { setTimeout(() => accueil.demarrer({ retour: !neuf }), 700); return; }
   marquerAccueil(); creature.montrer();
   setTimeout(() => { const l = datesDuJour(aujourdhui()); if (l.length) creature.fete(t('Aujourd’hui : {titre} !', { titre: l[0].titre })); }, 2500);
-  setTimeout(() => { if ($('ecrire').hidden && !proposerAnniversaire()) proposerFigure(); }, 5000);
+  const rienOuvert = () => $('ecrire').hidden && !document.querySelector('.feuille:not([hidden]), .album-ecran');   // v89 : l'affiche de la semaine ne surgit plus par-dessus une page ouverte
+  setTimeout(() => { if (rienOuvert() && !proposerAnniversaire()) proposerFigure(); }, 5000);
   setTimeout(() => proposerBilanMois(), 26000); setTimeout(() => proposerBilanMois(), 52000);
   setTimeout(() => proposerBienfait(), 40000);   // v75 : un lien net entre ce que tu vis et ton humeur, dit une fois (au plus tous les 3 jours)   // v72 : le bilan du mois, quand rien d'autre n'est ouvert
-  setTimeout(() => { if ($('ecrire').hidden) proposerFigure(); }, 16000);
+  setTimeout(() => { if (rienOuvert()) proposerFigure(); }, 16000);
   if (new URLSearchParams(location.search).get('ecrire') === '1') setTimeout(() => ouvrirEcrire(), 1200);       // depuis la notification du rappel
 }
 
