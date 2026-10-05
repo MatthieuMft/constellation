@@ -1278,3 +1278,6 @@ body.accueil.ac-menu footer #btn-palette { opacity: 1; pointer-events: auto; col
 .reg-outil b { font: 400 13px var(--mono); color: #ffd98a; } .reg-outil span { font-size: 15px; line-height: 1.45; }
 body.accueil:has(.feuille:not([hidden])) .ac-points, body.accueil:has(.feuille:not([hidden])) #ac-passer { display: none; }   /* v84 : pas par-dessus les titres des pages */
 #ac-bulle.compacte { padding: 9px 12px; font-size: 15px; } #ac-bulle.compacte small { display: none; } #ac-bulle.compacte button { margin-top: 8px; padding: 8px 14px; }
+
+/* v87 : sur ordinateur, le + ne se pose plus sur la page d'écriture pendant le parcours (le mobile ne change pas) */
+@media (hover: hover) and (pointer: fine) { body.accueil.ac-ecrire.ecriture footer #nouveau { opacity: 0; pointer-events: none; } }

@@ -33,6 +33,10 @@ export function monterAccueil(ctx) {
   const corps = () => { const hr = ed().querySelector('hr'); let s = ''; for (let b = hr && hr.nextElementSibling; b; b = b.nextElementSibling) if (!/^[1-4]$/.test(b.dataset.b || '')) s += ' ' + b.textContent; return s.trim(); };
   const corpsLong = () => corps().length >= 15;
   const nomFini = k => new RegExp(`(^|\\s)${k}[\\p{L}][\\p{L}\\-’']*\\s`, 'u').test(($('texte').value || '') + (document.activeElement === ed() ? '' : ' '));   // le mot est fini : espace après, ou clavier fermé
+  // v87 : sur ordinateur on clique, on ne touche pas (le mobile garde ses phrases telles quelles)
+  const geste = h => tactile ? h : String(h).replace(/Touche-la/g, 'Clique dessus').replace(/Touche-moi/g, 'Clique sur moi').replace(/Touche /g, 'Clique sur ').replace(/touche /g, 'clique sur ')
+    .replace(/ce téléphone/g, 'cet ordinateur').replace(/this phone/g, 'this computer').replace(/Tap it/g, 'Click it').replace(/Tap me/g, 'Click me').replace(/Tap /g, 'Click ').replace(/tap /g, 'click ');
+  const barreVue = () => visible($('barre-clavier'));   // v87 : la barre des blocs existe aussi sur ordinateur
   const barreCachee = () => tactile && !visible($('barre-clavier'));   // v86 : clavier fermé, la barre d'outils n'est plus là
   const valider = () => { const z = $('barre-clavier'); return z && !z.hidden ? z.querySelector('.bc-valider') : $('valider'); };
   const ligne = k => $('menu').hidden ? null : $('menu-liste').querySelector(`[data-cle="${k}"]`);
@@ -47,9 +51,9 @@ export function monterAccueil(ctx) {
     { n: 'humeur', ecrit: 1, cible: () => $('humeurs'), dire: () => [t('Choisis l’humeur qui colle à ta journée.'), t('Elle donnera sa couleur à ton étoile.')], si: () => humeurTouchee },   // une humeur peut être déjà cochée : on attend un vrai toucher
     { n: 'activites', ecrit: 1, attendre: 1600, cible: () => $('activites'), dire: () => [t('Coche ce que tu as fait aujourd’hui.'), t('Ça m’aidera à voir ce qui te fait du bien.')], bouton: () => t('Rien de tout ça'), si: () => passe || !!$('activites').querySelector('[aria-pressed="true"]') },
     { n: 'page', ecrit: 1, cible: () => ed(), dire: () => [t('Touche la page pour écrire.'), tactile ? t('Une barre d’outils apparaît au-dessus du clavier.') : ''], si: () => document.activeElement === ed() },
-    { n: 'h1', ecrit: 1, etat: () => barreCachee(), cible: () => barreBtn('1') || menuBtn('1') || ed(), dire: () => [barreCachee() ? t('Touche ta page : la barre d’outils revient au-dessus du clavier. Puis touche <b>H1</b> pour en faire le <b>titre</b>.') : tactile ? t('Touche <b>H1</b> : cette ligne devient le <b>titre</b> de ta note, écrit en grand.') : t('Tape <b>/</b> puis choisis <b>Titre 1</b> : cette ligne devient le <b>titre</b> de ta note.'), AIDE_OUTILS()], si: () => !!titre() },
-    { n: 'titre', ecrit: 1, etat: () => titreOk() + '|' + barreCachee(), cible: () => titreOk() ? (barreBtn('separateur') || menuBtn('separateur') || ed()) : ed(),
-      dire: () => titreOk() ? [barreCachee() ? t('Beau titre ! Touche ta page pour faire revenir la barre d’outils, puis <b>—</b> pour le séparer du reste.') : tactile ? t('Beau titre ! Touche <b>—</b> pour le séparer du reste de ta note.') : t('Beau titre ! Tape <b>/</b> au début d’une ligne puis <b>Séparateur</b>.'), t('Le séparateur trace un trait fin entre deux parties.')]
+    { n: 'h1', ecrit: 1, etat: () => barreCachee() + '|' + barreVue(), cible: () => barreBtn('1') || menuBtn('1') || ed(), dire: () => [barreCachee() ? t('Touche ta page : la barre d’outils revient au-dessus du clavier. Puis touche <b>H1</b> pour en faire le <b>titre</b>.') : tactile || barreVue() ? t('Touche <b>H1</b> : cette ligne devient le <b>titre</b> de ta note, écrit en grand.') : t('Tape <b>/</b> puis choisis <b>Titre 1</b> : cette ligne devient le <b>titre</b> de ta note.'), AIDE_OUTILS()], si: () => !!titre() },
+    { n: 'titre', ecrit: 1, etat: () => titreOk() + '|' + barreCachee() + '|' + barreVue(), cible: () => titreOk() ? (barreBtn('separateur') || menuBtn('separateur') || ed()) : ed(),
+      dire: () => titreOk() ? [barreCachee() ? t('Beau titre ! Touche ta page pour faire revenir la barre d’outils, puis <b>—</b> pour le séparer du reste.') : tactile || barreVue() ? t('Beau titre ! Touche <b>—</b> pour le séparer du reste de ta note.') : t('Beau titre ! Tape <b>/</b> au début d’une ligne puis <b>Séparateur</b>.'), t('Le séparateur trace un trait fin entre deux parties.')]
         : [t('Écris ton titre : juste le nom de ta journée, en quelques mots.'), t('Par exemple : Premier jour.')], si: () => titreOk() && separe() },
     { n: 'corps', ecrit: 1, etat: () => corpsLong(), cible: () => ed(), dire: () => [t('Sous le trait, c’est le <b>contenu</b> de ta note. Raconte un peu ta journée.'), corpsLong() ? t('Tu peux continuer, ou passer à la suite.') : t('Pas besoin d’en écrire beaucoup.')],
       bouton: () => corpsLong() ? t('C’est bon') : '', si: () => passe },
@@ -65,7 +69,7 @@ export function monterAccueil(ctx) {
     { n: 'essai', bas: 1, cible: () => $('bq-corps'), dire: () => [t('Touche un objet pour l’<b>essayer</b> sur moi, même s’il est trop cher.')], si: () => achete || visible(document.querySelector('#boutique .bq-essai')) },
     { n: 'achat', cible: () => document.querySelector('#boutique .bq-essai') || $('bq-corps'), dire: () => [t('Ça me va bien, non ? <b>Acheter</b> le garde, <b>Retirer</b> l’enlève.'), t('Chaque jour où tu écris, tu gagnes de la poussière.')], bouton: () => t('Suivant'), si: () => passe || achete },
     { n: 'rappel', entree: () => ctx.fermerBoutique(), carte: () => `<h2>${t('Un petit rappel ?')}</h2><p>${t('Je peux te faire signe chaque jour, à l’heure de ton choix, pour qu’on écrive ta journée ensemble.')}</p><label class="ac-heure">${t('Chaque jour à')} <input id="ac-heure" type="time" value="21:00" aria-label="${t('Heure du rappel')}"></label><div class="ligne"><button class="plein" data-a="rappel">${t('Activer le rappel')}</button><button data-a="suivant">${t('Non merci')}</button></div>` },
-    { n: 'appli', carte: () => (matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? null   // déjà ouverte comme une appli
+    { n: 'appli', carte: () => (!tactile || matchMedia('(display-mode: standalone)').matches || navigator.standalone) ? null   // v87 : pas d'« écran d'accueil » sur ordinateur   // déjà ouverte comme une appli
       : `<h2>${t('Comme une appli.')}</h2><p>${t('Mets-moi sur ton écran d’accueil : je m’ouvrirai en plein écran, sans la barre du navigateur, avec plus de place pour écrire.')}</p><p class="ac-astuce" id="ac-astuce" hidden></p><div class="ligne"><button class="plein" data-a="installer">${t('Ajouter à l’écran d’accueil')}</button><button data-a="suivant">${t('Plus tard')}</button></div>` },
     { n: 'fin', carte: () => `<h2>${t('Ton univers commence ici.')}</h2><p>${t('Reviens demain, on allumera une nouvelle étoile. Touche-moi quand tu veux : j’adore jouer.')}</p><p>${t('Pour tout savoir sur l’écriture : Menu › Réglages › Guide de l’écriture.')}</p><div class="ligne"><button class="plein" data-a="finir">${t('C’est parti')}</button></div>` },
   ];
@@ -73,13 +77,13 @@ export function monterAccueil(ctx) {
 
   function carte(html) {
     carteEl.classList.add('cache');
-    setTimeout(() => { carteEl.innerHTML = html || ''; carteEl.classList.toggle('cache', !html); }, 260);
+    setTimeout(() => { carteEl.innerHTML = geste(html || ''); carteEl.classList.toggle('cache', !html); }, 260);
   }
   // la bulle de la lueur : sa phrase, et parfois un bouton (« C'est bon », « Suivant », « Plus tard »)
   function rendreBulle() {
     const e = E(); if (!e || e.carte) { bulle.hidden = true; rendu = ''; return; }
     const [txt, aide] = e.dire(), lib = e.bouton ? e.bouton() : '';
-    const html = `<span>${txt}</span>${aide ? `<small>${aide}</small>` : ''}${lib ? `<button type="button" class="plein" data-a="passe">${lib}</button>` : ''}`;
+    const html = `<span>${geste(txt)}</span>${aide ? `<small>${geste(aide)}</small>` : ''}${lib ? `<button type="button" class="plein" data-a="passe">${lib}</button>` : ''}`;
     if (html !== rendu) { rendu = html; bulle.innerHTML = html; }
     bulle.classList.toggle('touchable', !!lib); bulle.hidden = false;
   }
