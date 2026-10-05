@@ -33,6 +33,7 @@ export function monterAccueil(ctx) {
   const corps = () => { const hr = ed().querySelector('hr'); let s = ''; for (let b = hr && hr.nextElementSibling; b; b = b.nextElementSibling) if (!/^[1-4]$/.test(b.dataset.b || '')) s += ' ' + b.textContent; return s.trim(); };
   const corpsLong = () => corps().length >= 15;
   const nomFini = k => new RegExp(`(^|\\s)${k}[\\p{L}][\\p{L}\\-’']*\\s`, 'u').test(($('texte').value || '') + (document.activeElement === ed() ? '' : ' '));   // le mot est fini : espace après, ou clavier fermé
+  const barreCachee = () => tactile && !visible($('barre-clavier'));   // v86 : clavier fermé, la barre d'outils n'est plus là
   const valider = () => { const z = $('barre-clavier'); return z && !z.hidden ? z.querySelector('.bc-valider') : $('valider'); };
   const ligne = k => $('menu').hidden ? null : $('menu-liste').querySelector(`[data-cle="${k}"]`);
   const AIDE_OUTILS = () => t('Il y a d’autres outils : petits titres, listes, citation… Tout est expliqué dans Menu › Réglages › Guide de l’écriture.');
@@ -46,9 +47,9 @@ export function monterAccueil(ctx) {
     { n: 'humeur', ecrit: 1, cible: () => $('humeurs'), dire: () => [t('Choisis l’humeur qui colle à ta journée.'), t('Elle donnera sa couleur à ton étoile.')], si: () => humeurTouchee },   // une humeur peut être déjà cochée : on attend un vrai toucher
     { n: 'activites', ecrit: 1, attendre: 1600, cible: () => $('activites'), dire: () => [t('Coche ce que tu as fait aujourd’hui.'), t('Ça m’aidera à voir ce qui te fait du bien.')], bouton: () => t('Rien de tout ça'), si: () => passe || !!$('activites').querySelector('[aria-pressed="true"]') },
     { n: 'page', ecrit: 1, cible: () => ed(), dire: () => [t('Touche la page pour écrire.'), tactile ? t('Une barre d’outils apparaît au-dessus du clavier.') : ''], si: () => document.activeElement === ed() },
-    { n: 'h1', ecrit: 1, cible: () => barreBtn('1') || menuBtn('1') || ed(), dire: () => [tactile ? t('Touche <b>H1</b> : cette ligne devient le <b>titre</b> de ta note, écrit en grand.') : t('Tape <b>/</b> puis choisis <b>Titre 1</b> : cette ligne devient le <b>titre</b> de ta note.'), AIDE_OUTILS()], si: () => !!titre() },
-    { n: 'titre', ecrit: 1, etat: () => titreOk(), cible: () => titreOk() ? (barreBtn('separateur') || menuBtn('separateur') || ed()) : ed(),
-      dire: () => titreOk() ? [tactile ? t('Beau titre ! Touche <b>—</b> pour le séparer du reste de ta note.') : t('Beau titre ! Tape <b>/</b> au début d’une ligne puis <b>Séparateur</b>.'), t('Le séparateur trace un trait fin entre deux parties.')]
+    { n: 'h1', ecrit: 1, etat: () => barreCachee(), cible: () => barreBtn('1') || menuBtn('1') || ed(), dire: () => [barreCachee() ? t('Touche ta page : la barre d’outils revient au-dessus du clavier. Puis touche <b>H1</b> pour en faire le <b>titre</b>.') : tactile ? t('Touche <b>H1</b> : cette ligne devient le <b>titre</b> de ta note, écrit en grand.') : t('Tape <b>/</b> puis choisis <b>Titre 1</b> : cette ligne devient le <b>titre</b> de ta note.'), AIDE_OUTILS()], si: () => !!titre() },
+    { n: 'titre', ecrit: 1, etat: () => titreOk() + '|' + barreCachee(), cible: () => titreOk() ? (barreBtn('separateur') || menuBtn('separateur') || ed()) : ed(),
+      dire: () => titreOk() ? [barreCachee() ? t('Beau titre ! Touche ta page pour faire revenir la barre d’outils, puis <b>—</b> pour le séparer du reste.') : tactile ? t('Beau titre ! Touche <b>—</b> pour le séparer du reste de ta note.') : t('Beau titre ! Tape <b>/</b> au début d’une ligne puis <b>Séparateur</b>.'), t('Le séparateur trace un trait fin entre deux parties.')]
         : [t('Écris ton titre : juste le nom de ta journée, en quelques mots.'), t('Par exemple : Premier jour.')], si: () => titreOk() && separe() },
     { n: 'corps', ecrit: 1, etat: () => corpsLong(), cible: () => ed(), dire: () => [t('Sous le trait, c’est le <b>contenu</b> de ta note. Raconte un peu ta journée.'), corpsLong() ? t('Tu peux continuer, ou passer à la suite.') : t('Pas besoin d’en écrire beaucoup.')],
       bouton: () => corpsLong() ? t('C’est bon') : '', si: () => passe },
@@ -95,7 +96,8 @@ export function monterAccueil(ctx) {
     const r = c.getBoundingClientRect(), m = 6;
     Object.assign(proj.style, { left: (r.left - m) + 'px', top: (r.top - m) + 'px', width: (r.width + 2 * m) + 'px', height: (r.height + 2 * m) + 'px' }); proj.hidden = false;
     if (bulle.hidden) return;
-    const z = $('barre-clavier'), barre = z && !z.hidden && z.getClientRects().length, bas = barre ? Math.min(H, z.getBoundingClientRect().top) : H;   // jamais sur la barre du clavier
+    const z = $('barre-clavier'), barre = z && !z.hidden && z.getClientRects().length, v = $('valider'), pied = visible(v) ? v.getBoundingClientRect().top - 8 : H,   // v86 : jamais sur Cristalliser (clavier fermé, ou tablette où il reste visible)
+      bas = Math.min(H, barre ? z.getBoundingClientRect().top : H, pied > 120 ? pied : H);   // jamais sur la barre du clavier
     bulle.classList.toggle('compacte', !!barre);   // clavier ouvert : la phrase seule, pour laisser voir le texte
     const h = bulle.offsetHeight || 80;
     let y;

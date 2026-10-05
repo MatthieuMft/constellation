@@ -1451,4 +1451,7 @@ export const EN_HTML = {
   'On le fait une seule fois, avec ta vraie note du jour.': 'We only do this once, with your real note for today.',
   'Écrivons ta journée d’aujourd’hui. Touche <b>+</b>.': 'Let’s write today. Tap <b>+</b>.',
   'Et voilà ton étoile du jour !': 'And there’s your star of the day!',
+  // v86
+  'Touche ta page : la barre d’outils revient au-dessus du clavier. Puis touche <b>H1</b> pour en faire le <b>titre</b>.': 'Tap your page: the toolbar comes back above the keyboard. Then tap <b>H1</b> to make it the <b>title</b>.',
+  'Beau titre ! Touche ta page pour faire revenir la barre d’outils, puis <b>—</b> pour le séparer du reste.': 'Nice title! Tap your page to bring the toolbar back, then <b>—</b> to separate it from the rest.',
 };
