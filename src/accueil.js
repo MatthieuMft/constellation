@@ -1,7 +1,7 @@
 // L'accueil raconté, au premier lancement. v84 (Matthieu : « un parcours guidé pas à pas ») : la lueur accompagne,
 // un projecteur montre où toucher, et on FAIT chaque chose une fois : nommer la lueur, choisir l'humeur, un titre (H1),
 // un séparateur, le contenu de la note, un @prénom ou un #lieu, cristalliser, puis le menu, le Suivi et la boutique.
-// « Passer » partout. (La langue se choisit sur la première carte.)
+// « Passer » partout. (v88 : la langue se choisit une seule fois, sur l'écran de chargement : plus de doublon sur la première carte.)
 import { t, LANGUE, changer } from './langue.js';
 
 const CLE = 'constellation.accueil';
@@ -43,7 +43,7 @@ export function monterAccueil(ctx) {
   const AIDE_OUTILS = () => t('Il y a d’autres outils : petits titres, listes, citation… Tout est expliqué dans Menu › Réglages › Guide de l’écriture.');
 
   const ETAPES = [
-    { n: 'bienvenue', carte: () => retour ? `<h2>${t('Du nouveau dans ton univers !')}</h2><p>${t('Je te montre, pas à pas, comment écrire ta journée et où trouver tout le reste.')}</p><p>${t('On le fait une seule fois, avec ta vraie note du jour.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>` : `<h2>${t('Bienvenue dans ton univers.')}</h2><p>${t('Chaque jour où tu écris devient une étoile. Tes semaines deviennent des constellations.')}</p><div class="ac-langue" role="group" aria-label="Langue · Language"><button type="button" data-langue="fr"${LANGUE === 'fr' ? ' class="actif"' : ''}>Français</button><button type="button" data-langue="en"${LANGUE === 'en' ? ' class="actif"' : ''}>English</button></div><div class="ligne"><button class="plein" data-a="suivant">${t('Commencer')}</button></div>` },
+    { n: 'bienvenue', carte: () => retour ? `<h2>${t('Du nouveau dans ton univers !')}</h2><p>${t('Je te montre, pas à pas, comment écrire ta journée et où trouver tout le reste.')}</p><p>${t('On le fait une seule fois, avec ta vraie note du jour.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Continuer')}</button></div>` : `<h2>${t('Bienvenue dans ton univers.')}</h2><p>${t('Chaque jour où tu écris devient une étoile. Tes semaines deviennent des constellations.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('Commencer')}</button></div>` },
     { n: 'prive', carte: () => `<div class="ac-cadenas" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg></div><h2>${t('Ici, tout reste à toi.')}</h2><p>${t('Ce que tu écris, tes humeurs, tes photos et ta voix restent sur ce téléphone. Pas de compte, pas de serveur.')}</p><p>${t('Personne d’autre ne peut lire ton journal. Pas même nous.')}</p><div class="ligne"><button class="plein" data-a="suivant">${t('D’accord')}</button></div>` },
     { n: 'lueur', delai: 1700, carte: () => retour && ctx.nom() ? null : `<h2>${t('Salut, je suis ta lueur !')}</h2><p>${t('Je vais t’accompagner et grandir avec toi. Comment veux-tu m’appeler ?')}</p><input id="ac-nom" maxlength="18" autocomplete="off" placeholder="${t('Un prénom')}" value="${echap(ctx.nom())}" aria-label="${t('Un prénom')}"><div class="ligne"><button class="plein" data-a="nommer">${t('C’est mon nom')}</button><button data-a="suivant">${t('Plus tard')}</button></div>` },
     // ── la première note ──
