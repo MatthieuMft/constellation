@@ -593,7 +593,7 @@ function boucle() {
   lucioles.maj(dt, R.animation, etoiles.actifOuEssai('lucioles') ? 1 : 0); decor.update(dt, R.animation); scenes.update(dt);
   { const h = new Date().getHours(), occupe = palette.ouverte() || ["fiche", "reglages", "analyse", "nommer", "perso", "dateqc", "menu", "boutique"].some(id => !$(id).hidden), ecr = !$("ecrire").hidden, ta = $("texte");
     if (ecr) poserQuestion(now, ta);
-    creature.update(dt, t, { W: innerWidth, H: hauteurVue || innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, rectTitre: ecr ? $('ecrire-titre').getBoundingClientRect() : null, rectMedia: ecr ? $('choisir-media').getBoundingClientRect() : null, basVue: window.visualViewport ? visualViewport.offsetTop + visualViewport.height : innerHeight, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
+    creature.update(dt, t, { W: innerWidth, H: hauteurVue || innerHeight, ecriture: ecr, rectEcriture: ecr ? $("ecrire").getBoundingClientRect() : null, rectTitre: ecr ? $('ecrire-titre').getBoundingClientRect() : null, rectMedia: ecr ? $('choisir-media').getBoundingClientRect() : null, rectPied: ecr ? $('valider').getBoundingClientRect() : null, basVue: window.visualViewport ? visualViewport.offsetTop + visualViewport.height : innerHeight, clavier: document.body.classList.contains('barre-on') && innerWidth <= 720, caret: (ta.selectionStart % 50) / 50,
       selection: selection && visuelsVisibles.get(selection) ? visuelsVisibles.get(selection).groupe.position : null,
       guide: parcours && parcours.courbe ? parcours.courbe.getPoint(Math.min(1, parcours.t + .07)) : null,
       curseur: pointeur, curseurActif: now - pointeur.t < 12000 && !intro.actif, curseurImmobile: (now - pointeur.t) / 1000, inactivite: (now - dernierGeste) / 1000,
@@ -948,7 +948,7 @@ function jourParDefaut() {
   return a;
 }
 function ouvrirEcrire({ jour = null, item = null } = {}) {
-  const brouillon = !item ? lireBrouillon() : null;
+  const brouillon = !item && !accueil.repetition() ? lireBrouillon() : null;   // v84 : la répétition du parcours ne touche pas au vrai brouillon
   edition = item; fichiersEnAttente = []; rendreVignettes();
   const ty = item ? item.type : 'journal';
   $('texte').value = item ? item.texte || item.legende || '' : ''; $('nbc').textContent = $('texte').value.length + ' / 4000';
@@ -976,6 +976,7 @@ function demanderEtAlors() {
 }
 const CLE_BROUILLON = 'constellation.brouillon';
 function garderBrouillon() {
+  if (accueil.repetition()) return;   // v84 : la note d'essai de « Revoir le parcours » n'écrase jamais le vrai brouillon
   if (edition) return;
   try { const texte = $('texte').value; if (texte.trim()) localStorage.setItem(CLE_BROUILLON, JSON.stringify({ type: 'journal', texte, jour: $('ecrire-date').value })); else localStorage.removeItem(CLE_BROUILLON); } catch (e) {}
 }
@@ -1123,6 +1124,7 @@ async function stockerFichiers() {
 // v33 : pendant l'écriture, la page couvre le ciel : on peut quand même toucher la créature
 $('ecrire').addEventListener('pointerdown', e => { if (creature.touche(e.clientX, e.clientY)) { e.preventDefault(); creature.caresse(); } });
 async function valider() {
+  if (accueil.repetition() && !edition) { fichiersEnAttente = []; fermerEcrire(); accueil.surEntree(0); return; }   // v84 : « Revoir le parcours » : la note d'essai n'est jamais enregistrée
   const jour = $('ecrire-date').value || aujourdhui(), texte = $('texte').value.trim(), type = typeEdite();
   const manque = m => { $('interim').textContent = m; $('texte').focus(); $('ecrire').animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(0)' }], { duration: 220 }); };
   if (type === 'journal' && texte.length < 3 && !fichiersEnAttente.length && !(edition && (edition.medias || []).length)) return manque(t('Écrivez au moins quelques mots.'));
@@ -1329,6 +1331,7 @@ const rendreReglages = monterReglages($('reglages'), {
       ? [[t('Changer le code'), async () => { await verrou.choisir(); rendreReglages(); }], [t('Retirer le verrou'), () => { verrou.retirer(); statutTemporaire(t('Le verrou est retiré.')); rendreReglages(); }]]
       : [[t('Ajouter un code'), async () => { if (await verrou.choisir()) statutTemporaire(t('Le code sera demandé à chaque ouverture.'), 5000); rendreReglages(); }]], 'verrou', verrou.actif() ? t('Code à 4 chiffres') : t('Aucun code')],
     [t('Aide'), [
+      [t('Revoir le parcours guidé'), () => { $('reglages').hidden = true; accueil.revoir(); }],
       [t('Comment voyager dans le ciel'), () => { $('reglages').hidden = true; ouvrirAide(); }],
       ...(dejaInstallee() ? [] : [[t('Ajouter à l’écran d’accueil'), () => { $('reglages').hidden = true; proposerInstall(); }]]),
     ], 'aide', t('Comment voyager dans le ciel')],
@@ -1646,8 +1649,8 @@ function rendreMenu(groupe = null) {
   const L = $('menu-liste'); L.replaceChildren(); L.scrollTop = 0;
   $('menu-retour').hidden = !groupe; $('menu-zone-recherche').hidden = !!groupe; $('menu').classList.toggle('dedans', !!groupe);
   $('menu-titre').textContent = groupe ? groupe.titre : t('Menu');
-  if (!groupe) { lignesMenu().forEach(g => L.append(g.semaine ? carteSemaine(() => g.action()) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: true }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); })));
-    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v83'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
+  if (!groupe) { lignesMenu().forEach(g => { const b = g.semaine ? carteSemaine(() => g.action()) : ligneMenu({ nom: g.titre, sous: g.sous, d: g.d, ic: g.ic, chev: true }, g.items ? () => rendreMenu(g) : () => { fermerMenu(); g.action(); }); b.dataset.cle = g.ic || 'semaine'; L.append(b); });   // v84 : data-cle pour que le parcours guidé trouve la ligne
+    const v = document.createElement('p'); v.className = 'm-version'; v.textContent = 'Constellation · v84'; L.append(v); return; }   // v40 : le numéro de version, en bas du menu
   groupe.items().forEach(i => {
     if (i.note) { const p = document.createElement('p'); p.className = 'm-note'; p.textContent = i.note; L.append(p); }
     else L.append(ligneMenu(i, () => { fermerMenu(); i.action(); }));
@@ -1756,6 +1759,7 @@ $('aide-ok').addEventListener('click', fermerAide);
 const accueil = monterAccueil({
   montrerLueur: () => creature.montrer(), guider: txt => creature.guider(txt), nom: () => creature.nom(), renommer: n => creature.renommer(n),
   ouvrirBoutique: () => ouvrirBoutique(null, 'lueur'), toast, fini: () => { creature.celebrer(null); },
+  ouvrirMenu: () => ouvrirMenu(), fermerMenu: () => fermerMenu(), fermerBoutique: () => boutique.fermer(),   // v84 : le parcours guidé passe par le menu, le Suivi et la boutique
   activerRappel: heure => rappels.activer(true, heure, creature.nom()),
   peutInstaller: () => !!invitationInstall, astuceInstall,
   installer: async () => { if (!invitationInstall) return false; invitationInstall.prompt(); const r = await invitationInstall.userChoice.catch(() => null); invitationInstall = null; $('installer').hidden = true; return !!r && r.outcome === 'accepted'; },   // v29 : même invitation que le bouton « Installer » (plus bas)

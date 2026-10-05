@@ -63,6 +63,23 @@ export function monterReglages(zoneP, ctx) {
           el('p', { class: 'note-reg' }, etat + ' ' + t('Appli fermée : il faut l’avoir installée (Chrome, Edge, Android) ; sur iPhone, ajoutez-la d’abord à l’écran d’accueil.')));
       } };
     }
+    // v84 : le guide de l'écriture (Matthieu : « une petite notice d'utilisation dans mes réglages »)
+    P.ecriture = { titre: t('Guide de l’écriture'), sous: t('Tous les outils du journal, expliqués'), corps: () => section(
+      el('p', { class: 'note-reg' }, t('Quand tu écris, une barre apparaît au-dessus du clavier. Voici ce que fait chaque outil.')),
+      ...[['H1 à H4', t('Des titres, du plus grand au plus petit. Retoucher le même revient au texte normal.')],
+        [t('Texte'), t('Revenir au texte normal.')],
+        ['•  1.', t('Une liste à puces ou numérotée.')],
+        ['❝', t('Une citation, pour une phrase qui t’a marqué.')],
+        ['—', t('Un séparateur, pour passer à un autre moment de la journée.')],
+        ['@' + t('prénom'), t('Le prénom devient doré. Une fois cristallisé, il ouvre l’album de la personne : tous les jours où elle apparaît.')],
+        ['#' + t('lieu'), t('Le lieu devient bleu, avec son album à lui aussi.')],
+        ['/', t('Au début d’une ligne, ouvre la liste de tous les blocs, comme le + de la barre.')],
+        [t('Ma voix'), t('Enregistre ta voix dans la note. Elle reste sur ton téléphone.')],
+        [t('Dicter'), t('Ta voix devient du texte. La dictée passe par le service de ton téléphone.')],
+        [t('Médias'), t('Une photo, une vidéo ou un fichier. « Qui ? Où ? » le range dans les albums.')],
+        [t('Coup de pouce'), t('Sur une page vide, une idée pour commencer. Si tu bloques, je peux aussi te poser une question.')],
+        ['✓', t('Cristalliser : ta journée devient une étoile. Tu peux encore la compléter jusqu’à minuit.')],
+      ].map(([k, v]) => el('div', { class: 'reg-outil' }, el('b', {}, k), el('span', {}, v)))) };
     P.langue = { titre: 'Langue · Language', sous: LANGUE === 'fr' ? 'Français' : 'English', corps: () => section(el('div', { class: 'choix' },
       el('button', { 'aria-pressed': String(LANGUE === 'fr'), lang: 'fr', onclick: () => changer('fr') }, 'Français'),
       el('button', { 'aria-pressed': String(LANGUE === 'en'), lang: 'en', onclick: () => changer('en') }, 'English'))) };
@@ -75,7 +92,7 @@ export function monterReglages(zoneP, ctx) {
     } };
     return P;
   }
-  const GROUPES = () => [[t('Chaque jour'), ['rappel', 'son']], [t('Affichage'), ['langue', 'mouvement']], [t('Protection'), ['verrou', 'donnees']], [t('Aide'), ['aide']]];
+  const GROUPES = () => [[t('Chaque jour'), ['rappel', 'son']], [t('Affichage'), ['langue', 'mouvement']], [t('Protection'), ['verrou', 'donnees']], [t('Aide'), ['ecriture', 'aide']]];
 
   function rendre() {
     const P = pages(); zone.replaceChildren(); zone.scrollTop = 0;
@@ -87,7 +104,7 @@ export function monterReglages(zoneP, ctx) {
       zone.append(el('h2', { class: 'reg-groupe' }, g));
       for (const k of ok) {
         const b = el('button', { type: 'button', class: 'm-ligne', onclick: () => { page = k; rendre(); } });
-        const ic = el('span', { class: 'm-ic' }); ic.innerHTML = PICTOS[k] || ''; const tx = el('span', { class: 'm-t' }, P[k].titre);
+        const ic = el('span', { class: 'm-ic' }); ic.innerHTML = PICTOS[k] || (k === 'ecriture' ? PICTOS.nom : ''); const tx = el('span', { class: 'm-t' }, P[k].titre);
         if (P[k].sous) tx.append(el('small', {}, P[k].sous));
         b.append(ic, tx, el('span', { class: 'm-chev' }, '›')); zone.append(b);
       }

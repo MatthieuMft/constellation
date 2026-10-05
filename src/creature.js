@@ -298,7 +298,8 @@ export function creerCreature({ sceneUI, camera, controls, particules, texHalo, 
         const r = ctx.rectEcriture; if (!r) { ndcPoint(0, .2, d * .7, cible); break; }
         // v61 : en bas à droite, juste au-dessus de la barre du clavier (Matthieu : c'est là qu'elle a le plus de place, sa bulle ne cache pas le texte qu'on tape).
         // Clavier fermé : à hauteur de « Ajouter un média ». La hauteur vient du ciel dessiné (ctx.H), sinon elle se retrouvait sous le clavier.
-        const m = ctx.rectMedia, yMedia = m && m.height ? m.top + m.height / 2 : r.bottom - 120, yClavier = Math.min(r.bottom, ctx.basVue || r.bottom) - 64;
+        // v84 : clavier fermé, jamais sous le bouton Cristalliser (Matthieu l'a vue cachée derrière)
+        const m = ctx.rectMedia, pied = ctx.rectPied && ctx.rectPied.height ? ctx.rectPied.top - 58 : r.bottom - 120, yMedia = Math.min(pied, m && m.height ? m.top + m.height / 2 : r.bottom - 120), yClavier = Math.min(r.bottom, ctx.basVue || r.bottom) - 64;
         const [nx, ny] = ndcDe(r.right - 52 + Math.sin(etatT * .5) * 5, (ctx.clavier ? yClavier : yMedia) + Math.sin(etatT * .8) * 3);
         ndcPoint(nx, ny, d * .62, cible); raideur = 2.8; vmax = 18; break; }
       case 'curieux': { const [nx, ny] = ndcDe(ctx.curseur.x, ctx.curseur.y); ndcPoint(clamp(nx + .12, -.82, .82), clamp(ny + .16, -.7, .75), d * .9, cible); raideur = 1.5; vmax = 9; break; }
